@@ -74,6 +74,7 @@ async fn main() -> io::Result<()> {
 
     // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
     let music_dir = config["music_dir"].as_str().unwrap().to_string();
+    let music_dir = music_dir.replace("\\", "/");
     println!("Music dir: {}", music_dir);
 
     let mut music_map = HashMap::new();
@@ -112,6 +113,7 @@ async fn main() -> io::Result<()> {
             });
         }
     }
+    println!("Music count: {}", music_map.len());
 
     // 启动 HTTP 服务
     HttpServer::new(move || {
