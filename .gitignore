@@ -1,2 +1,5 @@
-/target
-/music
+/server/target
+/server/music
+
+/web/dist
+/web/node_modules
