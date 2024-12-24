@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { IMeta, readMeta } from '../lib/readmeta';
 
 const audioFile = 'http://172.17.33.158:9090/music/1.mp3';
 
@@ -10,8 +11,8 @@ function AudioPlayer() {
   const [duration, setDuration] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-
   const [progressIntevalId, setProgressIntevalId] = useState<number | null>(null);
+  const [metadata, setMetadata] = useState<IMeta | null>(null);
 
   const inputRef = useRef(null);
 
@@ -24,6 +25,8 @@ function AudioPlayer() {
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
     setAudioBuffer(audioBuffer);
     setDuration(audioBuffer.duration);
+    const metadata = await readMeta(audioFile);
+    setMetadata(metadata);
   };
 
   const playAudio = (startTime: number = 0) => {
@@ -101,7 +104,24 @@ function AudioPlayer() {
 
   return (
     <div className='flex flex-col gap-4'>
-      <button onClick={loadAudioFile} disabled={audioBuffer!== null}>加载音频</button>
+      {
+        metadata && (
+          <div className='grid grid-cols-2 gap-4 p-4'>
+            <div className=' rounded-md overflow-hidden'>
+              <img src={metadata.cover} alt="" width={320} />
+            </div>
+            <div className="flex flex-col gap-2 justify-center items-center">
+              <h2>{metadata.title || '未知标题'}</h2>
+              <p>artist: {metadata.artist}</p>
+              <p>album: {metadata.album}</p>
+              <p>year: {metadata.year}</p>
+              <p>bitrate: {metadata.bitrate}</p>
+            </div>
+          </div>
+        )
+      }
+
+      <button onClick={loadAudioFile} disabled={audioBuffer !== null}>加载音频</button>
       <button onClick={() => {
         const end = currentTime >= duration;
         isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
