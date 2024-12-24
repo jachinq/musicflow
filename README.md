@@ -39,3 +39,6 @@ pnpm dev
 
 2024-12-24: Created the project structure, added the basic structure of the backend server.
 
+# License
+
+[MIT](LICENSE)
