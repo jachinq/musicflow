@@ -8,9 +8,11 @@
     "preview": "rsbuild preview"
   },
   "dependencies": {
+    "music-metadata": "^10.6.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "music-metadata": "^10.6.4"
+    "react-router-dom": "^7.1.1",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@rsbuild/core": "^1.1.8",
