@@ -1,5 +1,4 @@
 // pages/SettingsPage.tsx
-import React from 'react';
 import Settings from '../components/Settings';
 
 function SettingsPage() {

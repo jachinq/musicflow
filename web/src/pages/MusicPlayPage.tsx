@@ -13,7 +13,7 @@ function MusicPlayPage() {
     }
 
     return (
-        <div className="p-4">
+        <>
             {metadata ? (
                 <div>
                     {/* <MusicPlayer music={music} onTimeUpdate={handleTimeUpdate} currentTime={currentTime} /> */}
@@ -28,7 +28,7 @@ function MusicPlayPage() {
                     <Loader className='animate-spin' size={48} />
                 </div>
             )}
-        </div>
+        </>
     );
 }
 

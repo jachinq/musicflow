@@ -43,6 +43,7 @@
       grid-template-columns: repeat(10, minmax(0, 1fr));
   }
 }
+/* 
 @media (min-width: 1716px) {
   .card-container {
       grid-template-columns: repeat(11, minmax(0, 1fr));
@@ -72,4 +73,4 @@
   .card-container {
       grid-template-columns: repeat(16, minmax(0, 1fr));
   }
-}
+} */

@@ -33,7 +33,7 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
 
   return (
     <>
-    <div ref={setRef} className='fixed top-2 right-0 w-[calc(100vw/3)] min-w-[320px] h-[calc(100vh-120px)] bg-slate-900 rounded-md overflow-scroll z-10' style={{overscrollBehavior: 'contain'}}>      <div className='p-4 flex justify-between items-center'>
+    <div ref={setRef} className='fixed top-[72px] right-0 w-[calc(100vw/3)] min-w-[320px] h-[calc(100vh-160px)] bg-slate-900 rounded-md overflow-scroll z-10' style={{overscrollBehavior: 'contain'}}>      <div className='p-4 flex justify-between items-center'>
         <span className='font-bold'>播放列表</span>
         <Trash size={18} className='text-gray-500 hover:text-red-500 cursor-pointer' onClick={clearPlaylist} />
       </div>
