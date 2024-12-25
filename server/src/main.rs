@@ -60,7 +60,7 @@ async fn list_musics(
     if let Some(page_size1) = query.page_size {
         page_size = page_size1;
     }
-    println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
+    // println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
     let total = musics.len() as u32;
 
     // if let (Some(current_page), Some(page_size)) = (query.current_page, query.page_size) {
@@ -102,6 +102,18 @@ async fn tag_music(info: web::Json<TagMusic>, data: web::Data<AppState>) -> impl
     } else {
         HttpResponse::NotFound().body("Music not found")
     }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+struct FrontendLog {
+    level: String,
+    timestamp: String,
+    message: String,
+}
+
+async fn frontend_log(log: web::Json<FrontendLog>) -> impl Responder {
+    println!("[frontend_log]: {} {} {}", log.level, log.timestamp, log.message);
+    HttpResponse::Ok().json(log)
 }
 
 struct AppState {
@@ -179,6 +191,7 @@ async fn main() -> io::Result<()> {
             .route("/musics", web::get().to(list_musics))
             .route("/music-detail/{path}", web::get().to(get_music_link))
             .route("/tag", web::post().to(tag_music))
+            .route("/api/log", web::post().to(frontend_log))
             // 添加静态文件服务
             .service(actix_files::Files::new("/music", &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", "./web/dist").show_files_listing())

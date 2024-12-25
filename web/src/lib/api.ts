@@ -1,7 +1,7 @@
 import { Music } from "../def/CommDef";
 
-// export const API_URL = "http://192.168.2.128:9090";
-export const API_URL = "http://192.168.2.122:9090";
+export const API_URL = "http://127.0.0.1:9090";
+export const LOG_API = "http://127.0.0.1:9090/api/log";
 
 export const getMusicUrl = (music: Music) => {
     return `${API_URL}/music/${music.path}`;

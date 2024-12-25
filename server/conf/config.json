@@ -1,5 +1,5 @@
 {
-  "ip": "127.0.0.1",
+  "ip": "192.168.2.122",
   "port": 9090,
-  "music_dir": "./music"
+  "music_dir": "Z:\\music"
 }
