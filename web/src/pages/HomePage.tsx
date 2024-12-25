@@ -1,7 +1,6 @@
 // pages/HomePage.tsx
 import "../styles/HomePage.css"
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import MusicCard from "../components/MusicCard";
 
 import { API_URL, getMusicUrl } from "../lib/api";
@@ -10,21 +9,25 @@ import { Music } from "../def/CommDef";
 import { readMeta } from "../lib/readmeta";
 import { FlameKindling, Loader, Play } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
-import AudioPlayer from "../components/Player";
+import { useMusicList } from "../store/musicList";
+const pageSize = 30;
 
 function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [musicList, setMusicList] = useState<Music[]>([]);
+  const {musicList, setMusicList, totalCount, setTotalCount} = useMusicList();
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const navigate = useNavigate();
-  const { currentSong, setAllSongs, setCurrentSong } = usePlaylist();
+  const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
 
-  const fetchList = async (onSuccess: (data: any) => void, onError: (error: any) => void, currentPage: number, pageSize?: number) => {
+  const fetchList = async (
+    onSuccess: (data: any) => void,
+    onError: (error: any) => void,
+    currentPage: number,
+    pageSize?: number) => {
     let url = API_URL + "/musics";
     currentPage && (url += `?page=${currentPage}`);
     pageSize && (url += `&page_size=${pageSize}`);
+    console.log("fetching music list from", url);
 
     // 调用后端接口获取音乐列表
     fetch(url)
@@ -61,17 +64,27 @@ function HomePage() {
         console.error("获取音乐列表失败", error);
         setError(error);
       },
-      currentPage);
+      currentPage, pageSize);
     setLoading(false);
   };
 
 
   useEffect(() => {
+    if (musicList.length > 0) {
+      setLoading(false);
+      return;
+    }
     fetchMusicList(currentPage);
   }, []);
 
-  function handleMusicClick(musicId: string) {
-    navigate(`/music/${musicId}`);
+  function handleMusicClick(music: Music) {
+    // navigate(`/music/${musicId}`);
+    const index = allSongs.findIndex((song) => song.id === music.id);
+    if (index === -1) {
+      setAllSongs([...allSongs, music]);
+      console.log("add music to playlist", music);
+    }
+    setCurrentSong(music);
   }
 
   const onPageChange = (page: number) => {
@@ -95,7 +108,9 @@ function HomePage() {
 
   const playAllSongs = () => {
     fetchList((data) => {
-      setAllSongs(data.musics);
+      // 随机播放全部歌曲
+      const randomList = data.musics.sort(() => 0.5 - Math.random());
+      setAllSongs(randomList);
     },
       (error) => {
         console.error("获取音乐列表失败", error);
@@ -105,42 +120,29 @@ function HomePage() {
       totalCount);
   }
 
-  const onPlayEnd = () => { // 播放结束后，自动下一首
-    if (currentSong) {
-      const index = musicList.findIndex((music) => music.id === currentSong.id);
-      const nextIndex = (index + 1) % musicList.length;
-      const nextSong = musicList[nextIndex];
-      setCurrentSong(nextSong);
-    }
-  }
-
   return (
     <>
-      <div className="cursor-pointer hover:scale-105" onClick={playAllSongs}>
-        <Play />
+      <div className="mb-4 flex flex-col gap-2 items-start">
+        <div className="flex items-center gap-2 cursor-pointer hover:bg-blue-600 p-2 rounded-md bg-blue-900 transition-all duration-300" onClick={playAllSongs}>
+          <Play />播放全部
+        </div>
+        <div className="text-sm text-gray-500">
+          {/* <input type="checkbox" /> */}
+          随机播放全部歌曲
+        </div>
       </div>
       <div className="card-container grid gap-4">
         {musicList.map((music: any) => (
           <MusicCard
             key={music.id}
             music={music}
-            onClick={() => handleMusicClick(music.id)}
+            onClick={() => handleMusicClick(music)}
           />
         ))}
       </div>
       {totalCount > 0 && (
-        <Pagination currentPage={currentPage} total={totalCount} onPageChange={onPageChange} className={`mt-4 ${currentSong && "mb-16"}`} />
+        <Pagination currentPage={currentPage} limit={pageSize} total={totalCount} onPageChange={onPageChange} className="mt-4" />
       )}
-
-      {
-        currentSong && (
-          <div className="fixed bottom-0 left-0 w-full p-4 bg-gray-500">
-            <div className="flex justify-between items-center">
-              <AudioPlayer music={currentSong} fiexd={true} onPlayEnd={onPlayEnd} />
-            </div>
-          </div>
-        )
-      }
     </>
   );
 }

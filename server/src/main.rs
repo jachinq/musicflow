@@ -60,7 +60,7 @@ async fn list_musics(
     if let Some(page_size1) = query.page_size {
         page_size = page_size1;
     }
-    // println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
+    println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
     let total = musics.len() as u32;
 
     // if let (Some(current_page), Some(page_size)) = (query.current_page, query.page_size) {
@@ -73,9 +73,10 @@ async fn list_musics(
     // }
     let start = (current_page - 1) * page_size;
     let end = start + page_size;
+    let end = end.min(total); // 防止超过总数
     musics = musics
         .get(start as usize..end as usize)
-        .unwrap_or(&musics)
+        .unwrap_or(&[])
         .to_vec();
 
     HttpResponse::Ok().json(MusicList { musics, total })

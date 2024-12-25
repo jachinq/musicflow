@@ -5,7 +5,8 @@ interface PaginationProps {
   currentPage: number;
   total?: number;
   limit?: number;
-  onPageChange: (page: number) => void;
+  onPageChange?: (page: number) => void;
+  showTotal?: boolean;
 }
 
 export const Pagination = ({
@@ -13,6 +14,7 @@ export const Pagination = ({
   total = 0,
   limit = 10,
   onPageChange,
+  showTotal = true,
   className
 }: PaginationProps & React.HTMLAttributes<HTMLDivElement>) => {
   if (!total || total <= 0) {
@@ -40,25 +42,29 @@ export const Pagination = ({
 
   const handlePrevClick = () => {
     if (currentPage > 1) {
-      onPageChange(currentPage - 1);
+      onPageChange && onPageChange(currentPage - 1);
     }
   };
   const handleNextClick = () => {
     if (currentPage < totalPages) {
-      onPageChange(currentPage + 1);
+      onPageChange && onPageChange(currentPage + 1);
     }
   };
   const handlePageClick = (page: number) => {
-    onPageChange(page);
+    onPageChange && onPageChange(page);
   };
 
   return (
     <div className={`flex justify-center items-center ${className}`}>
-      <div className="flex items-center">
-        <div className="mr-2">
-          <span className="ml-2 ">{total} items</span>
-          <span className="ml-2 ">{totalPages} pages</span>
-        </div>
+      <div className="flex items-center flex-wrap">
+        {
+          showTotal && (
+            <div className="mr-2 text-sm text-gray-500">
+              <span className="ml-2 ">共 {total} 条</span>
+              <span className="ml-2 ">{totalPages} 页</span>
+            </div>
+          )
+        }
         {hasPrevious && (
           <PaginationLink onClick={handlePrevClick}>
             <ChevronLeft />
@@ -112,9 +118,8 @@ const PaginationLink = ({
   ...props
 }: PaginationLinkProps) => (
   <a
-    className={`px-2 py-1 cursor-pointer select-none hover:bg-blue-600 ${
-      isActive ? "bg-blue-400" : ""
-    } ${className}`}
+    className={`px-2 py-1 cursor-pointer select-none hover:bg-blue-600 ${isActive ? "bg-blue-400" : ""
+      } ${className}`}
     {...props}
   />
 );

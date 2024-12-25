@@ -2,12 +2,14 @@ import { create } from "zustand";
 import { Music } from "../def/CommDef";
 
 interface PlaylistState {
+  showPlaylist: boolean;
   allSongs: Music[];
   pageSongs: Music[];
   searchQuery: string;
   selectedSongs: Music[];
   currentSong: Music | null;
   currentPage: number;
+  setShowPlaylist: (show: boolean) => void;
   setAllSongs: (songs: Music[]) => void;
   setPageSongs: (songs: Music[]) => void;
   setCurrentPage: (page: number) => void;
@@ -17,15 +19,18 @@ interface PlaylistState {
   addSong: (song: Music) => void;
   removeSong: (song: Music) => void;
   clearPlaylist: () => void;
+  getTotal: () => number;
 }
 
 export const usePlaylist = create<PlaylistState>((set, get) => ({
+  showPlaylist: false,
   allSongs: [],
   pageSongs: [],
   searchQuery: "",
   selectedSongs: [],
   currentSong: null,
   currentPage: 1,
+  setShowPlaylist: (show) => set(() => ({ showPlaylist: show })),
   setAllSongs: (songs) => set(() => {
     if (songs.length === 0) {
       return { allSongs: [], pageSongs: [], selectedSongs: [], currentSong: null };
@@ -34,7 +39,17 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
     return { allSongs: songs, pageSongs, currentSong: pageSongs[0] };
   }),
   setPageSongs: (songs) => set(() => ({ pageSongs: songs })),
-  setCurrentPage: (page) => set(() => ({ currentPage: page })),
+  setCurrentPage: (page) => set(() => {
+    const pageSize = 10;
+    const total = get().getTotal();
+    const start = (page - 1) * pageSize;
+    let end = start + pageSize;
+    if (end > total) {
+      end = total;
+    }
+    const pageSongs = get().allSongs.slice(start, end);
+    return { pageSongs, currentPage: page };
+  }),
   setSearchQuery: (query) => set(() => {
     if (!query || query === "" || query.trim() === "") {
       return { searchQuery: query, pageSongs: get().allSongs };
@@ -66,4 +81,5 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
       selectedSongs: [],
       currentSong: null,
     })),
+    getTotal: () => (get().allSongs.length)
 }));

@@ -1,41 +1,46 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
-import { PauseCircle, PlayCircle } from "lucide-react";
-import { Music } from "../def/CommDef";
+import { ChevronFirst, ChevronLast, List, PauseCircle, PlayCircle } from "lucide-react";
 import { getMusicUrl } from "../lib/api";
 import { readMeta } from "../lib/readmeta";
+import { usePlaylist } from "../store/playlist";
+import { useLocation, useNavigate } from "react-router-dom";
+import { formatTime } from "../lib/utils";
+import Playlist from "./Playlist";
+// import useClickOutside from "../hooks/use-click-outside";
 
-function AudioPlayer({ music, fiexd = false, onPlayEnd }:
+function AudioPlayer({ fiexd = false }:
   {
-    music: Music,
     fiexd?: boolean,
-    onPlayEnd?: () => void,
   }) {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [source, setSource] = useState<AudioBufferSourceNode | null>(null);
-  const [progressIntevalId, setProgressIntevalId] = useState<number | null>(
-    null
-  );
+  const [progressIntevalId, setProgressIntevalId] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  // const clickOutsideRef = useClickOutside(()=>{
+  //   setShowPlaylist(false);
+  // })
 
   const {
     audioContext,
-    setAudioContext,
     currentTime,
-    setCurrentTime,
     duration,
-    setDuration,
     isPlaying,
-    setIsPlaying,
     metadata,
+    setAudioContext,
+    setCurrentTime,
+    setDuration,
+    setIsPlaying,
     setMusic,
     setMetadata,
   } = useCurrentPlay();
 
-  const inputRef = useRef(null);
+  const { showPlaylist, allSongs, currentSong, setCurrentSong, setShowPlaylist, setAllSongs } = usePlaylist();
 
   useEffect(() => {
     loadAudioFile();
-  }, []);
+  }, [currentSong]);
   useEffect(() => {
     if (fiexd && audioBuffer && audioContext) {
       pauseAudio();
@@ -48,33 +53,61 @@ function AudioPlayer({ music, fiexd = false, onPlayEnd }:
       setIsPlaying(false);
       clearInterval(progressIntevalId);
       setCurrentTime(duration);
-      onPlayEnd && onPlayEnd();
+      nextSong();
     }
   }, [currentTime]);
 
+
+  const nextSong = () => {
+    console.log("current song", currentSong);
+    if (currentSong) {
+      const index = allSongs.findIndex((music) => music.id === currentSong.id);
+      const nextIndex = (index + 1) % allSongs.length;
+      const nextSong = allSongs[nextIndex];
+      setCurrentSong(nextSong);
+      console.log("next song", nextSong);
+      if (currentSong.id === nextSong.id) {
+        loadAudioFile(); // 重新加载当前歌曲
+      }
+    }
+  }
+  const prevSong = () => {
+    if (currentSong) {
+      const index = allSongs.findIndex((music) => music.id === currentSong.id);
+      const prevIndex = (index - 1 + allSongs.length) % allSongs.length;
+      const prevSong = allSongs[prevIndex];
+      setCurrentSong(prevSong);
+    }
+  }
+
   const loadAudioFile = async () => {
+    if (!currentSong) {
+      return;
+    }
     let audioContextTmp = audioContext;
     if (!audioContextTmp) {
       audioContextTmp = new AudioContext();
       setAudioContext(audioContextTmp);
     }
     audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复
-    let response = null;
-    if (music.fileResponse) {
-      response = music.fileResponse;
+    let fileArrayBuffer = null;
+    if (currentSong.fileArrayBuffer) {
+      fileArrayBuffer = currentSong.fileArrayBuffer;
     } else {
       if (fiexd) {
-        music.url = getMusicUrl(music);
-        music.metadata = await readMeta(music.url);
-        setMetadata(music.metadata);
+        currentSong.url = getMusicUrl(currentSong);
+        currentSong.metadata = await readMeta(currentSong.url);
+        setMetadata(currentSong.metadata);
       }
-      response = await fetch(music.url);
-      music.fileResponse = response;
-      // console.log(music);
-      setMusic(music);
+      const response = await fetch(currentSong.url);
+      const arrayBuffer = await response.arrayBuffer();
+      fileArrayBuffer = arrayBuffer;
+      currentSong.fileArrayBuffer = fileArrayBuffer;
+      setMusic(currentSong);
     }
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await audioContextTmp.decodeAudioData(arrayBuffer);
+    // 克隆一个新的ArrayBuffer，避免影响到原数组
+    let copyBuffer = fileArrayBuffer.slice(0);
+    const audioBuffer = await audioContextTmp.decodeAudioData(copyBuffer);
     setAudioBuffer(audioBuffer);
     setDuration(audioBuffer.duration);
   };
@@ -103,13 +136,6 @@ function AudioPlayer({ music, fiexd = false, onPlayEnd }:
     if (progressIntevalId) {
       clearInterval(progressIntevalId);
     }
-    console.log(
-      "ccc",
-      currentTime,
-      audioContext.currentTime,
-      sourceStartTime,
-      startOffset
-    );
     // 更新当前播放时间
     const interval = setInterval(() => {
       setCurrentTime(audioContext.currentTime - sourceStartTime + startOffset);
@@ -141,30 +167,49 @@ function AudioPlayer({ music, fiexd = false, onPlayEnd }:
     playAudio(seekTime);
   };
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes.toString().padStart(2, "0")}:${seconds
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  const coverClick = () => {
+    if (!currentSong) {
+      return;
+    }
+    console.log(location.pathname);
+    if (location.pathname.startsWith("/music")) {
+      navigate(-1);
+      return;
+    }
+    navigate("/music/" + currentSong.id);
+  }
 
+  const clearPlaylist = () => {
+    setAllSongs([]);
+    setShowPlaylist(false);
+    pauseAudio();
+  }
 
   if (fiexd) {
     return (
+      <>
       <div className="flex flex-row gap-4 justify-center items-center">
         {metadata && (
-          <div className="flex">
-            <div className="flex flex-col gap-2 justify-center items-center">
-              <span>{metadata.title || "未知标题"}</span>
-              <span className="text-sm text-gray-400">{metadata.artist}</span>
+          <>
+            <div className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
+              onClick={coverClick}>
+              <img src={metadata.cover} alt="" width={42} className={isPlaying ? "album-spin" : ""} />
             </div>
-          </div>
+            <div className="flex">
+              <div className="flex flex-col gap-2 justify-center items-center">
+                <span>{metadata.title || "未知标题"}</span>
+                <span className="text-sm text-gray-400">{metadata.artist}</span>
+              </div>
+            </div>
+          </>
         )}
         {audioBuffer && (
           <div className="flex flex-row gap-2 justify-center items-center">
             <div className="flex justify-center items-center rounded-full"
             >
+              <div className="hover:text-blue-200 cursor-pointer" onClick={prevSong}>
+                <ChevronFirst />
+              </div>
               <div className="hover:text-blue-200 cursor-pointer "
                 onClick={() => {
                   const end = currentTime >= duration;
@@ -172,9 +217,11 @@ function AudioPlayer({ music, fiexd = false, onPlayEnd }:
                 }}>
                 {isPlaying ? <PauseCircle size={32} /> : <PlayCircle size={32} />}
               </div>
+              <div className="hover:text-blue-200 cursor-pointer" onClick={nextSong}>
+                <ChevronLast />
+              </div>
             </div>
             <input
-              ref={inputRef}
               type="range"
               min="0"
               max={duration}
@@ -184,9 +231,17 @@ function AudioPlayer({ music, fiexd = false, onPlayEnd }:
             <span>
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
+
+            <div onClick={() => setShowPlaylist(!showPlaylist)}>
+              <List />
+            </div>
           </div>
         )}
       </div>
+      <Playlist 
+      // ref={clickOutsideRef} 
+      clearPlaylist={clearPlaylist} />
+      </>
     )
   }
 
@@ -225,7 +280,6 @@ function AudioPlayer({ music, fiexd = false, onPlayEnd }:
             </div>
           </div>
           <input
-            ref={inputRef}
             type="range"
             min="0"
             max={duration}

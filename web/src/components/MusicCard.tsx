@@ -15,13 +15,13 @@ function MusicCard({ music, onClick }: MusicCardProps) {
   }
   const { metadata } = music;
   return (
-    <div onClick={onClick} className="w-[140px] max-h-[240px] cursor-pointer">
+    <div className="w-[140px] max-h-[240px]">
       <img src={metadata.title || metadata.cover} alt="cover" width={140} />
       {/* <img src={metadata.cover} alt="cover" width={140} /> */}
       <div
         className="p-2 shadow-md bg-slate-700 flex flex-col"
       >
-        <div className="break-keep overflow-hidden overflow-ellipsis w-[124px] hover:underline">
+        <div onClick={onClick} className="cursor-pointer break-keep overflow-hidden overflow-ellipsis w-[124px] hover:underline">
           <span className="whitespace-nowrap">{metadata.title || music.name}</span>
         </div>
         <div className="break-keep overflow-hidden w-[140px]">

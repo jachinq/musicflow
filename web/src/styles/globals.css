@@ -22,3 +22,12 @@
   -moz-border-radius: 16px;
   border-radius: 16px;
 }
+
+@keyframes album-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.album-spin {
+  animation: album-spin 30s linear infinite;
+}
