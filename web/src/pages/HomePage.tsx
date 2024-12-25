@@ -123,7 +123,7 @@ function HomePage() {
   return (
     <>
       <div className="mb-4 flex flex-col gap-2 items-start">
-        <div className="flex items-center gap-2 cursor-pointer hover:bg-blue-600 p-2 rounded-md bg-blue-900 transition-all duration-300" onClick={playAllSongs}>
+        <div className="flex items-center gap-2 cursor-pointer hover:bg-primary-hover p-2 rounded-md bg-primary text-primary-foreground transition-all duration-300" onClick={playAllSongs}>
           <Play />播放全部
         </div>
         <div className="text-sm text-gray-500">

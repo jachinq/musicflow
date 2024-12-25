@@ -196,7 +196,7 @@ function AudioPlayer({ fiexd = false }:
               <img src={metadata.cover} alt="" width={42} className={isPlaying ? "album-spin" : ""} />
             </div>
             <div className="flex">
-              <div className="flex flex-col gap-2 justify-center items-center">
+              <div className="flex flex-col gap-2 justify-center items-start">
                 <span>{metadata.title || "未知标题"}</span>
                 <span className="text-sm text-gray-400">{metadata.artist}</span>
               </div>
@@ -207,17 +207,17 @@ function AudioPlayer({ fiexd = false }:
           <div className="flex flex-row gap-2 justify-center items-center">
             <div className="flex justify-center items-center rounded-full"
             >
-              <div className="hover:text-blue-200 cursor-pointer" onClick={prevSong}>
+              <div className="hover:text-primary-hover cursor-pointer" onClick={prevSong}>
                 <ChevronFirst />
               </div>
-              <div className="hover:text-blue-200 cursor-pointer "
+              <div className="hover:text-primary-hover cursor-pointer "
                 onClick={() => {
                   const end = currentTime >= duration;
                   isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
                 }}>
                 {isPlaying ? <PauseCircle size={32} /> : <PlayCircle size={32} />}
               </div>
-              <div className="hover:text-blue-200 cursor-pointer" onClick={nextSong}>
+              <div className="hover:text-primary-hover cursor-pointer" onClick={nextSong}>
                 <ChevronLast />
               </div>
             </div>
@@ -228,7 +228,7 @@ function AudioPlayer({ fiexd = false }:
               value={currentTime}
               onChange={handleSeekChange}
             />
-            <span>
+            <span className="text-sm text-muted-foreground">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
 
