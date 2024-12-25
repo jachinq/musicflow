@@ -1,3 +1,5 @@
+import { IMeta } from "../lib/readmeta";
+
 export interface Music {
     id: string;
     url: string;
@@ -5,5 +7,5 @@ export interface Music {
     artist: string;
     name: string;
     path: string;
-    lyrics: { time: number; text: string }[];
+    metadata?: IMeta;
 }

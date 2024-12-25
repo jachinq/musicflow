@@ -1,19 +1,27 @@
 // components/MusicCard.tsx
-import React from 'react';
-import { Music } from '../def/CommDef';
+import { Music } from "../def/CommDef";
 
 interface MusicCardProps {
-    music: Music;
-    onClick: () => void;
+  music: Music;
+  onClick: () => void;
 }
 
 function MusicCard({ music, onClick }: MusicCardProps) {
-    return (
-        <div className="p-4 rounded-lg shadow-md cursor-pointer bg-slate-700" onClick={onClick}>
-            <h2 className="text-xl font-bold">{music.name}</h2>
-            <p className="">{music.artist}</p>
-        </div>
-    );
+  if (!music.metadata) {
+    return <div>Loading...</div>;
+  }
+  const { metadata } = music;
+  return (
+    <div onClick={onClick} className="w-[140px] h-[240px] cursor-pointer">
+        <img src={metadata.cover} alt="" width={140}/>
+      <div
+        className="p-2 shadow-md bg-slate-700 w-full"
+      >
+        <span className=" break-keep text-center overflow-hidden text-ellipsis whitespace-nowrap ">{metadata.title || music.name}</span>
+        <span className="">{metadata.artist || music.artist}</span>
+      </div>
+    </div>
+  );
 }
 
 export default MusicCard;

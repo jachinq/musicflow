@@ -1,13 +1,12 @@
 // pages/MusicPlayPage.tsx
-import React, { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import MusicPlayer from '../components/MusicPlayer';
 import Lyrics from '../components/Lyrics';
 import Playlist from '../components/Playlist';
-import { API_URL } from '../lib/api';
+import { API_URL, getMusicUrl } from '../lib/api';
 import { Music } from '../def/CommDef';
 import AudioPlayer from '../components/Player';
-import { IMeta, readMeta } from '../lib/readmeta';
+import { readMeta } from '../lib/readmeta';
 import { useCurrentPlay } from '../store/current-play';
 
 function MusicPlayPage() {
@@ -28,7 +27,7 @@ function MusicPlayPage() {
 
     useEffect(() => {
         // 根据音乐ID获取音乐元数据
-        if (music) readMeta(getFileUrl()).then(meta => setMetadata(meta));
+        if (music) readMeta(getMusicUrl(music)).then(meta => setMetadata(meta));
     }, [music]);
 
     function addToPlaylist() {
@@ -46,19 +45,12 @@ function MusicPlayPage() {
         }
     }
 
-    const getFileUrl = () => {
-        if (!music) {
-            return '';
-        }
-        return `${API_URL}/music/${music.path}`;
-    }
-
     return (
         <div className="p-4">
             {metadata ? (
                 <div>
                     {/* <MusicPlayer music={music} onTimeUpdate={handleTimeUpdate} currentTime={currentTime} /> */}
-                    <AudioPlayer audioFile={getFileUrl()}/>
+                    <AudioPlayer audioFile={getMusicUrl(music as Music)}/>
                     <Lyrics lyrics={metadata?.lyrics || []} />
                     <Playlist onSelect={setSelectedPlaylistId} />
                     <button onClick={addToPlaylist} className="p-2 bg-blue-500 text-white rounded-lg">
