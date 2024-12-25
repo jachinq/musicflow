@@ -1,12 +1,12 @@
+use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
 use std::path::Path;
-use walkdir::WalkDir;
-use actix_cors::Cors; // 引入 CORS 中间件
-// use music_metadata::get_format;
+use walkdir::WalkDir; // 引入 CORS 中间件
+                      // use music_metadata::get_format;
 mod metadata_reader;
 use metadata_reader::*;
 
@@ -28,12 +28,57 @@ struct TagMusic {
 #[derive(Serialize)]
 struct MusicList {
     musics: Vec<Music>,
+    total: u32,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+struct MusicListQuery {
+    page: Option<u32>,
+    page_size: Option<u32>,
+    tags: Option<Vec<String>>,
 }
 
 /// 获取服务器上所有音乐文件
-async fn list_musics(data: web::Data<AppState>) -> impl Responder {
+async fn list_musics(
+    data: web::Data<AppState>,
+    query: web::Query<MusicListQuery>,
+) -> impl Responder {
     let musics = data.music_map.values().cloned().collect::<Vec<Music>>();
-    HttpResponse::Ok().json(MusicList { musics })
+    let mut musics = musics.clone();
+
+    // 过滤标签
+    if let Some(tags) = &query.tags {
+        musics.retain(|m| m.tags.iter().any(|t| tags.contains(t)));
+    }
+
+    // 分页
+    let mut current_page = 1;
+    let mut page_size = 10;
+    if let Some(page) = query.page {
+        current_page = page;
+    }
+    if let Some(page_size1) = query.page_size {
+        page_size = page_size1;
+    }
+    println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
+    let total = musics.len() as u32;
+
+    // if let (Some(current_page), Some(page_size)) = (query.current_page, query.page_size) {
+    //     let start = (current_page - 1) * page_size;
+    //     let end = start + page_size;
+    //     musics = musics
+    //         .get(start as usize..end as usize)
+    //         .unwrap_or(&musics)
+    //         .to_vec();
+    // }
+    let start = (current_page - 1) * page_size;
+    let end = start + page_size;
+    musics = musics
+        .get(start as usize..end as usize)
+        .unwrap_or(&musics)
+        .to_vec();
+
+    HttpResponse::Ok().json(MusicList { musics, total })
 }
 
 /// 根据音乐 ID 返回音乐文件的链接
@@ -41,9 +86,10 @@ async fn get_music_link(path: web::Path<String>, data: web::Data<AppState>) -> i
     let path = path.into_inner();
     println!("get_music_link: {}", path);
 
-    data.music_map.get(&path).map(|m| {
-        HttpResponse::Ok().json(m)
-    }).unwrap_or(HttpResponse::NotFound().body("Music not found"))
+    data.music_map
+        .get(&path)
+        .map(|m| HttpResponse::Ok().json(m))
+        .unwrap_or(HttpResponse::NotFound().body("Music not found"))
 }
 
 /// 对音乐进行分组打标签
@@ -79,10 +125,7 @@ async fn main() -> io::Result<()> {
 
     let mut music_map = HashMap::new();
 
-    for entry in WalkDir::new(&music_dir)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
+    for entry in WalkDir::new(&music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let ext = entry.path().extension().unwrap_or_default();
             if ext != "mp3" && ext != "flac" {
@@ -102,15 +145,18 @@ async fn main() -> io::Result<()> {
             //     lyrics: None,
             //     cover: None,
             // });
-            let metadata= MusicMetadata::default();
+            let metadata = MusicMetadata::default();
 
-            music_map.insert(id.to_string(), Music {
-                id,
-                name: file_name,
-                path,
-                tags: vec![],
-                metadata,
-            });
+            music_map.insert(
+                id.to_string(),
+                Music {
+                    id,
+                    name: file_name,
+                    path,
+                    tags: vec![],
+                    metadata,
+                },
+            );
         }
     }
     println!("Music count: {}", music_map.len());
@@ -118,22 +164,23 @@ async fn main() -> io::Result<()> {
     // 启动 HTTP 服务
     HttpServer::new(move || {
         App::new()
-        .wrap(Cors::default() // 添加 CORS 中间件
-            .allow_any_origin() // 允许所有来源的跨域请求，你可以根据需要更改为特定的域名
-            .allow_any_method() // 允许所有方法，如 GET, POST, PUT, DELETE 等
-            .allow_any_header() // 允许所有请求头，你可以根据需要更改为特定的请求头
-        )
-        .wrap(Logger::default()) // 日志记录中间件
-        .app_data(web::Data::new(AppState {
-            music_path: music_dir.to_string(),
-            music_map: music_map.clone(),
-        }))
-        .route("/musics", web::get().to(list_musics))
-        .route("/music-detail/{path}", web::get().to(get_music_link))
-        .route("/tag", web::post().to(tag_music))
-        // 添加静态文件服务
-        .service(actix_files::Files::new("/music", &music_dir).show_files_listing()) 
-        .service(actix_files::Files::new("/", "./web/dist").show_files_listing())
+            .wrap(
+                Cors::default() // 添加 CORS 中间件
+                    .allow_any_origin() // 允许所有来源的跨域请求，你可以根据需要更改为特定的域名
+                    .allow_any_method() // 允许所有方法，如 GET, POST, PUT, DELETE 等
+                    .allow_any_header(), // 允许所有请求头，你可以根据需要更改为特定的请求头
+            )
+            .wrap(Logger::default()) // 日志记录中间件
+            .app_data(web::Data::new(AppState {
+                music_path: music_dir.to_string(),
+                music_map: music_map.clone(),
+            }))
+            .route("/musics", web::get().to(list_musics))
+            .route("/music-detail/{path}", web::get().to(get_music_link))
+            .route("/tag", web::post().to(tag_music))
+            // 添加静态文件服务
+            .service(actix_files::Files::new("/music", &music_dir).show_files_listing())
+            .service(actix_files::Files::new("/", "./web/dist").show_files_listing())
     })
     .bind(&format!("{}:{}", ip, port))?
     .run()
