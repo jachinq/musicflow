@@ -115,5 +115,16 @@ const getLyrics = (
       });
     }
   }
-  return lyrics;
+  const limit = 20;
+  const empty = { time: 0, text: "", time_str: "" };
+  let firstList = [];
+  for (let i = 0; i < limit; i++) {
+    firstList.push(empty);
+  }
+  const emptyLast = { time: 9999999999, text: "", time_str: "" };
+  let lastList = [];
+  for (let i = 0; i < limit; i++) {
+    lastList.push(emptyLast);
+  }
+  return [...firstList,...lyrics, ...lastList];
 };
