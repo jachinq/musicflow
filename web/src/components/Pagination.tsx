@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface PaginationProps {
@@ -59,7 +60,9 @@ export const Pagination = ({
           <span className="ml-2 ">{totalPages} pages</span>
         </div>
         {hasPrevious && (
-          <PaginationLink onClick={handlePrevClick}>Prev</PaginationLink>
+          <PaginationLink onClick={handlePrevClick}>
+            <ChevronLeft />
+          </PaginationLink>
         )}
         {hasFirst && (
           <PaginationLink
@@ -89,8 +92,10 @@ export const Pagination = ({
             {totalPages}
           </PaginationLink>
         )}
-        {hasLast && (
-          <PaginationLink onClick={handleNextClick}>Next</PaginationLink>
+        {hasNext && (
+          <PaginationLink onClick={handleNextClick}>
+            <ChevronRight />
+          </PaginationLink>
         )}
       </div>
     </div>

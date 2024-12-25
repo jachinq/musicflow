@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { readMeta } from "../lib/readmeta";
 import { useCurrentPlay } from "../store/current-play";
+import { PauseCircle, PlayCircle } from "lucide-react";
+import { Music } from "../def/CommDef";
+import { getMusicUrl } from "../lib/api";
+import { readMeta } from "../lib/readmeta";
 
-// const audioFile = 'http://172.17.33.158:9090/music/1.mp3';
-
-function AudioPlayer({ audioFile }: { audioFile: string }) {
+function AudioPlayer({ music, fiexd = false, onPlayEnd }:
+  {
+    music: Music,
+    fiexd?: boolean,
+    onPlayEnd?: () => void,
+  }) {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-  // const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [source, setSource] = useState<AudioBufferSourceNode | null>(null);
-  // const [duration, setDuration] = useState<number>(0);
-  // const [currentTime, setCurrentTime] = useState<number>(0);
-  // const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [progressIntevalId, setProgressIntevalId] = useState<number | null>(
     null
   );
@@ -25,6 +27,8 @@ function AudioPlayer({ audioFile }: { audioFile: string }) {
     isPlaying,
     setIsPlaying,
     metadata,
+    setMusic,
+    setMetadata,
   } = useCurrentPlay();
 
   const inputRef = useRef(null);
@@ -32,22 +36,45 @@ function AudioPlayer({ audioFile }: { audioFile: string }) {
   useEffect(() => {
     loadAudioFile();
   }, []);
+  useEffect(() => {
+    if (fiexd && audioBuffer && audioContext) {
+      pauseAudio();
+      playAudio(0);
+    }
+  }, [fiexd, audioBuffer]);
 
   useEffect(() => {
     if (currentTime >= duration && progressIntevalId) {
       setIsPlaying(false);
       clearInterval(progressIntevalId);
       setCurrentTime(duration);
+      onPlayEnd && onPlayEnd();
     }
   }, [currentTime]);
 
   const loadAudioFile = async () => {
-    const audioContext = new AudioContext();
-    audioContext.suspend(); // 先暂停，等点击播放按钮后再恢复
-    setAudioContext(audioContext);
-    const response = await fetch(audioFile);
+    let audioContextTmp = audioContext;
+    if (!audioContextTmp) {
+      audioContextTmp = new AudioContext();
+      setAudioContext(audioContextTmp);
+    }
+    audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复
+    let response = null;
+    if (music.fileResponse) {
+      response = music.fileResponse;
+    } else {
+      if (fiexd) {
+        music.url = getMusicUrl(music);
+        music.metadata = await readMeta(music.url);
+        setMetadata(music.metadata);
+      }
+      response = await fetch(music.url);
+      music.fileResponse = response;
+      // console.log(music);
+      setMusic(music);
+    }
     const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const audioBuffer = await audioContextTmp.decodeAudioData(arrayBuffer);
     setAudioBuffer(audioBuffer);
     setDuration(audioBuffer.duration);
   };
@@ -122,6 +149,47 @@ function AudioPlayer({ audioFile }: { audioFile: string }) {
       .padStart(2, "0")}`;
   };
 
+
+  if (fiexd) {
+    return (
+      <div className="flex flex-row gap-4 justify-center items-center">
+        {metadata && (
+          <div className="flex">
+            <div className="flex flex-col gap-2 justify-center items-center">
+              <span>{metadata.title || "未知标题"}</span>
+              <span className="text-sm text-gray-400">{metadata.artist}</span>
+            </div>
+          </div>
+        )}
+        {audioBuffer && (
+          <div className="flex flex-row gap-2 justify-center items-center">
+            <div className="flex justify-center items-center rounded-full"
+            >
+              <div className="hover:text-blue-200 cursor-pointer "
+                onClick={() => {
+                  const end = currentTime >= duration;
+                  isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
+                }}>
+                {isPlaying ? <PauseCircle size={32} /> : <PlayCircle size={32} />}
+              </div>
+            </div>
+            <input
+              ref={inputRef}
+              type="range"
+              min="0"
+              max={duration}
+              value={currentTime}
+              onChange={handleSeekChange}
+            />
+            <span>
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {metadata && (
@@ -146,14 +214,16 @@ function AudioPlayer({ audioFile }: { audioFile: string }) {
 
       {audioBuffer && (
         <>
-          <button
-            onClick={() => {
-              const end = currentTime >= duration;
-              isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
-            }}
+          <div className="flex justify-center items-center rounded-full"
           >
-            {isPlaying ? "暂停" : "播放"}
-          </button>
+            <div className="hover:text-blue-500 cursor-pointer "
+              onClick={() => {
+                const end = currentTime >= duration;
+                isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
+              }}>
+              {isPlaying ? <PauseCircle size={32} /> : <PlayCircle size={32} />}
+            </div>
+          </div>
           <input
             ref={inputRef}
             type="range"

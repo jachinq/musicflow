@@ -1,7 +1,6 @@
 // App.tsx
 import "./styles/globals.css";
 
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import MusicPlayPage from './pages/MusicPlayPage';
@@ -14,7 +13,7 @@ function App() {
                 <nav className="bg-white dark:bg-gray-900 p-4">
                     <div className="container mx-auto flex justify-between">
                         <Link to="/" className="font-bold text-lg">音乐播放器</Link>
-                        <div className="flex space-x-4">
+                        <div className="flex space-x-4 items-center">
                             <Link to="/" className="text-gray-900 dark:text-gray-100">首页</Link>
                             <Link to="/settings" className="text-gray-900 dark:text-gray-100">设置</Link>
                         </div>

@@ -8,6 +8,7 @@
     "preview": "rsbuild preview"
   },
   "dependencies": {
+    "lucide-react": "^0.469.0",
     "music-metadata": "^10.6.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

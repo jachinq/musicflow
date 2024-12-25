@@ -32,7 +32,7 @@ export const readMeta = async (url: string): Promise<IMeta> => {
     cover,
     url,
   };
-  console.log(metadata, imeta);
+  // console.log(metadata, imeta);
   return imeta;
 };
 
@@ -79,7 +79,7 @@ const getCover = async (
 const getLyrics = (
   metadata: IAudioMetadata
 ): { time: number; text: string }[] => {
-  console.log(metadata);
+  // console.log(metadata);
   const lyrics: { time: number; time_str: string; text: string }[] = [];
   if (metadata.common.lyrics && metadata.common.lyrics.length > 0) {
     const lyrics_data = metadata.common.lyrics[0];
@@ -103,7 +103,7 @@ const getLyrics = (
           const minute = parseInt(time_str.slice(1, 3));
           const second = parseInt(time_str.slice(4, 6));
           const millisecond = parseInt(time_str.slice(7, 10));
-          console.log(minute, second, millisecond);
+          // console.log(minute, second, millisecond);
           const timeSec = minute * 60 + second + millisecond / 1000;
           const text = line.replace(time_str, "").trim();
           lyrics.push({

@@ -1,4 +1,5 @@
 // components/MusicCard.tsx
+import { LoaderCircleIcon } from "lucide-react";
 import { Music } from "../def/CommDef";
 
 interface MusicCardProps {
@@ -8,17 +9,24 @@ interface MusicCardProps {
 
 function MusicCard({ music, onClick }: MusicCardProps) {
   if (!music.metadata) {
-    return <div>Loading...</div>;
+    return <div className="flex justify-center items-center w-[140px] h-[140px]">
+      <LoaderCircleIcon className="animate-spin" />
+    </div>;
   }
   const { metadata } = music;
   return (
-    <div onClick={onClick} className="w-[140px] h-[240px] cursor-pointer">
-        <img src={metadata.cover} alt="" width={140}/>
+    <div onClick={onClick} className="w-[140px] max-h-[240px] cursor-pointer">
+      <img src={metadata.title || metadata.cover} alt="cover" width={140} />
+      {/* <img src={metadata.cover} alt="cover" width={140} /> */}
       <div
-        className="p-2 shadow-md bg-slate-700 w-full"
+        className="p-2 shadow-md bg-slate-700 flex flex-col"
       >
-        <span className=" break-keep text-center overflow-hidden text-ellipsis whitespace-nowrap ">{metadata.title || music.name}</span>
-        <span className="">{metadata.artist || music.artist}</span>
+        <div className="break-keep overflow-hidden overflow-ellipsis w-[124px] hover:underline">
+          <span className="whitespace-nowrap">{metadata.title || music.name}</span>
+        </div>
+        <div className="break-keep overflow-hidden w-[140px]">
+          <span className="whitespace-nowrap text-sm">{metadata.artist || music.artist}</span>
+        </div>
       </div>
     </div>
   );

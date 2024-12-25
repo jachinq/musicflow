@@ -8,4 +8,5 @@ export interface Music {
     name: string;
     path: string;
     metadata?: IMeta;
+    fileResponse?: Response; // fetch url response for the file
 }

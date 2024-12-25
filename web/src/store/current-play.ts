@@ -1,5 +1,6 @@
 import {create} from 'zustand';
 import { IMeta } from '../lib/readmeta';
+import { Music } from '../def/CommDef';
 
 interface CurrentPlayState {
     audioContext: AudioContext | null;
@@ -10,6 +11,7 @@ interface CurrentPlayState {
     isLooping: boolean;
     isMuted: boolean; // 是否静音
     volume: number;
+    music: Music | null;
     metadata: IMeta | null;
     setAudioContext: (audioContent: AudioContext | null) => void;
     setCurrentTime: (currentTime: number) => void;
@@ -20,6 +22,7 @@ interface CurrentPlayState {
     setIsMuted: (isMuted: boolean) => void;
     setVolume: (volume: number) => void;
     setMetadata: (metadata: IMeta) => void;
+    setMusic: (music: Music) => void;
 }
 
 export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
@@ -31,6 +34,7 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     isLooping: false,
     isMuted: false,
     volume: 1,
+    music: null,
     metadata: null,
     setAudioContext: (audioContent) => set(() => ({audioContext: audioContent})),
     setCurrentTime: (currentTime) => set(() => {
@@ -65,4 +69,5 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     setIsMuted: (isMuted) => set(() => ({isMuted})),
     setVolume: (volume) => set(() => ({volume})),
     setMetadata: (metadata) => set(() => ({metadata})),
+    setMusic: (music) => set(() => ({music})),
 }));

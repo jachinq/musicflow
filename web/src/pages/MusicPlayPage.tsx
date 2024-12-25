@@ -4,30 +4,27 @@ import { useParams } from 'react-router-dom';
 import Lyrics from '../components/Lyrics';
 import Playlist from '../components/Playlist';
 import { API_URL, getMusicUrl } from '../lib/api';
-import { Music } from '../def/CommDef';
 import AudioPlayer from '../components/Player';
 import { readMeta } from '../lib/readmeta';
 import { useCurrentPlay } from '../store/current-play';
+import { Loader } from 'lucide-react';
 
 function MusicPlayPage() {
     const { id } = useParams<{ id: string }>();
-    const [music, setMusic] = useState<Music | null>(null);
-    // const [currentTime, setCurrentTime] = useState<number>(0);
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
-    // const [metadata, setMetadata] = useState<IMeta | null>(null);
-    const { metadata, setMetadata} = useCurrentPlay();
+    const { metadata, setMetadata, music, setMusic} = useCurrentPlay();
 
     useEffect(() => {
         // 根据音乐ID获取音乐详情
         fetch(`${API_URL}/music-detail/${id}`)
             .then(response => response.json())
-            .then(data => setMusic(data))
+            .then(data => setMusic({...data, url: getMusicUrl(data) }))
             .catch(error => console.error('获取音乐详情失败', error));
     }, [id]);
 
     useEffect(() => {
         // 根据音乐ID获取音乐元数据
-        if (music) readMeta(getMusicUrl(music)).then(meta => setMetadata(meta));
+        if (music) readMeta(music.url).then(meta => setMetadata(meta));
     }, [music]);
 
     function addToPlaylist() {
@@ -50,7 +47,7 @@ function MusicPlayPage() {
             {metadata ? (
                 <div>
                     {/* <MusicPlayer music={music} onTimeUpdate={handleTimeUpdate} currentTime={currentTime} /> */}
-                    <AudioPlayer audioFile={getMusicUrl(music as Music)}/>
+                    <AudioPlayer music={music as any} />
                     <Lyrics lyrics={metadata?.lyrics || []} />
                     <Playlist onSelect={setSelectedPlaylistId} />
                     <button onClick={addToPlaylist} className="p-2 bg-blue-500 text-white rounded-lg">
@@ -58,7 +55,9 @@ function MusicPlayPage() {
                     </button>
                 </div>
             ) : (
-                <p>正在加载音乐...</p>
+                <div className='flex justify-center items-center h-full w-full'>
+                    <Loader className='animate-spin' size={48} />
+                </div>
             )}
         </div>
     );
