@@ -7,6 +7,7 @@ import { usePlaylist } from "../store/playlist";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatTime } from "../lib/utils";
 import Playlist from "./Playlist";
+import useScreenStatus from "../hooks/use-screen-status";
 // import useClickOutside from "../hooks/use-click-outside";
 
 function AudioPlayer({ fiexd = false }:
@@ -21,6 +22,7 @@ function AudioPlayer({ fiexd = false }:
   // const clickOutsideRef = useClickOutside(()=>{
   //   setShowPlaylist(false);
   // })
+  const { isScreenHidden, setIsScreenHidden } = useScreenStatus();
 
   const {
     audioContext,
@@ -34,9 +36,30 @@ function AudioPlayer({ fiexd = false }:
     setIsPlaying,
     setMusic,
     setMetadata,
+    setCurrentLyric,
   } = useCurrentPlay();
 
   const { showPlaylist, allSongs, currentSong, setCurrentSong, setShowPlaylist, setAllSongs } = usePlaylist();
+  
+  const [internalIsPageVisible, setInternalIsPageVisible] = useState<number[]>([]);
+  useEffect(() => {
+    console.log('isScreenHidden', isScreenHidden);
+    if (isScreenHidden) {
+      if (!document.hidden) {
+        setIsScreenHidden(false);
+        return;
+      }
+      const intervalId = setInterval(() => {
+        console.log("internal isScreenHidden", isScreenHidden);
+      }, 1000);
+      setInternalIsPageVisible([intervalId, ...internalIsPageVisible]);
+    } else {
+      internalIsPageVisible.forEach((intervalId) => {
+        clearInterval(intervalId);
+      });
+      setInternalIsPageVisible([]);
+    }
+  }, [isScreenHidden])
 
   useEffect(() => {
     loadAudioFile();
@@ -50,6 +73,7 @@ function AudioPlayer({ fiexd = false }:
 
   useEffect(() => {
     if (currentTime >= duration && progressIntevalId) {
+      console.log("end of song");
       setIsPlaying(false);
       clearInterval(progressIntevalId);
       setCurrentTime(duration);
@@ -59,7 +83,7 @@ function AudioPlayer({ fiexd = false }:
 
 
   const nextSong = () => {
-    console.log("current song", currentSong);
+    // console.log("current song", currentSong);
     if (currentSong) {
       const index = allSongs.findIndex((music) => music.id === currentSong.id);
       const nextIndex = (index + 1) % allSongs.length;
@@ -84,6 +108,7 @@ function AudioPlayer({ fiexd = false }:
     if (!currentSong) {
       return;
     }
+    setCurrentLyric(null);
     let audioContextTmp = audioContext;
     if (!audioContextTmp) {
       audioContextTmp = new AudioContext();
@@ -188,23 +213,23 @@ function AudioPlayer({ fiexd = false }:
   if (fiexd) {
     return (
       <>
-      <div className="flex flex-row gap-4 justify-center items-center">
+      <div className="flex flex-row gap-4 justify-between items-center w-full">
         {metadata && (
-          <>
+          <div className="flex gap-4 justify-center items-center">
             <div className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
               onClick={coverClick}>
               <img src={metadata.cover} alt="" width={42} className={isPlaying ? "album-spin" : ""} />
             </div>
             <div className="flex">
-              <div className="flex flex-col gap-2 justify-center items-start">
+              <div className="flex flex-col gap-1 justify-center items-start">
                 <span>{metadata.title || "未知标题"}</span>
                 <span className="text-sm text-gray-400">{metadata.artist}</span>
               </div>
             </div>
-          </>
+          </div>
         )}
         {audioBuffer && (
-          <div className="flex flex-row gap-2 justify-center items-center">
+          <div className="flex flex-row gap-2 justify-center items-center flex-1">
             <div className="flex justify-center items-center rounded-full"
             >
               <div className="hover:text-primary-hover cursor-pointer" onClick={prevSong}>
@@ -222,6 +247,7 @@ function AudioPlayer({ fiexd = false }:
               </div>
             </div>
             <input
+            width={"80%"}
               type="range"
               min="0"
               max={duration}
