@@ -44,7 +44,7 @@
     --primary-hover: hsl(210 40% 90%);
     --background: hsl(224 71% 4%);
     --foreground: hsl(213 31% 91%);
-    --muted: hsl(223 47% 11%);
+    --muted: hsl(224, 46%, 19%);
     --muted-foreground: hsl(215.4 16.3% 56.9%);
     --accent: hsl(216 34% 17%);
     --accent-foreground: hsl(210 40% 98%);
@@ -52,7 +52,7 @@
     --popover-foreground: hsl(215 20.2% 65.1%);
     --border: hsl(216 34% 17%);
     --input: hsl(216 34% 17%);
-    --card: hsl(230, 51%, 6%);
+    --card: hsl(230, 11%, 22%);
     --card-foreground: hsl(213 31% 91%);
     --secondary: hsl(222.2 47.4% 11.2%);
     --secondary-foreground: hsl(210 40% 98%);
@@ -109,4 +109,74 @@
 }
 .album-spin {
   animation: album-spin 30s linear infinite;
+}
+
+.play-progress {
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  border: none;
+  background: transparent;
+  accent-color: rgb(139, 140, 231);
+}
+.play-progress:focus {
+  outline: none;
+}
+.play-progress:hover::-webkit-slider-runnable-track {
+  background: linear-gradient(to left, rgb(98, 99, 138), rgb(76, 79, 201));
+}
+.play-progress::-webkit-slider-runnable-track {
+  /* transform: translateY(8px); */
+  height: 0.4rem;
+  border-radius: 0.1rem;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  /* background: transparent; */
+  background: linear-gradient(to right, rgb(98, 99, 138), rgb(76, 79, 201));
+}
+.play-progress:hover.play-progress::-webkit-slider-thumb {
+  /* display: block; */
+}
+.play-progress::-webkit-slider-thumb {
+  /* display: none; */
+  margin-top: -5px;
+  position: relative;
+  appearance: "none";
+  -webkit-appearance: "none";
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.volume-slider {
+  /* top: -400px; */
+  /* left: 0; */
+  transform: translateX(-20%) translateY(-120%);
+  position: absolute;
+  height: 150px;
+  width: 40px;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  @apply bg-muted shadow-sm
+}
+.volume-value {
+  transform: translateX(-20%) translateY(-120%);
+}
+.volume-slider input[type="range"] {
+  writing-mode: bt-lr;
+  transform: rotate(-90deg);
+  overscroll-behavior: none;
+  outline: none;
+  border: none;
+}
+.volume-slider::-webkit-slider-thumb {
+  transform: rotate(90deg);
+  outline: none;
+  border: none;
 }

@@ -15,41 +15,44 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="dark">
-    <Router>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-        <nav className="bg-white dark:bg-gray-900 p-4">
-          <div className="flex justify-between">
-            <Link to="/" className="font-bold text-lg">音乐播放器</Link>
-            <div className="flex space-x-4 items-center">
-              {/* <Link to="/" className="text-gray-900 dark:text-gray-100">首页</Link> */}
-              <Link to="/settings" className="text-gray-900 dark:text-gray-100">
-              <Settings />
-              </Link>
-            </div>
-          </div>
-        </nav>
-        <div>
-          <div className={`${currentSong && "mb-24"}`}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/music/:id" element={<MusicPlayPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Routes>
-          </div>
-
-          {
-            currentSong && (
-              <div className="fixed bottom-0 left-0 w-full px-4 py-2 bg-playstatus text-playstatus-foreground">
-                <div className="flex justify-center items-center w-full">
-                  <AudioPlayer />
+      <Router>
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <nav className="bg-white dark:bg-gray-900 p-4">
+            <div className="flex justify-between">
+              <Link to="/" className="font-bold text-lg">
+                <div className="flex items-center justify-center gap-1">
+                  <div className="rounded-full overflow-hidden">
+                    <img src="/favicon.ico" alt="" width={28} />
+                  </div>
+                  <span className="hover:text-primary-hover">Musicflow</span>
                 </div>
+              </Link>
+              <div className="flex space-x-4 items-center">
+                {/* <Link to="/" className="text-gray-900 dark:text-gray-100">首页</Link> */}
+                <Link to="/settings" className="text-gray-900 dark:text-gray-100">
+                  <Settings />
+                </Link>
               </div>
-            )
-          }
+            </div>
+          </nav>
+          <div>
+            <div className={`${currentSong && "mb-[90px]"}`}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/music/:id" element={<MusicPlayPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Routes>
+            </div>
 
+            {
+              currentSong && (
+                <AudioPlayer />
+              )
+            }
+
+          </div>
         </div>
-      </div>
-    </Router>
+      </Router>
     </ThemeProvider>
   );
 }

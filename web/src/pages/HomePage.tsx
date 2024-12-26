@@ -10,16 +10,16 @@ import { readMeta } from "../lib/readmeta";
 import { FlameKindling, Loader, Play } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
-import { useMediaQuery } from "@uidotdev/usehooks";
+import { useDevice } from "../hooks/use-device";
 let pageSize = 30;
 
 function HomePage() {
-  const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
+  const { isSmallDevice } = useDevice();
   if (isSmallDevice) {
-    pageSize = 1;
+    pageSize = 3;
   }
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const { musicList, setMusicList, totalCount, setTotalCount } = useMusicList();
   const [currentPage, setCurrentPage] = useState(1);
   const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
@@ -89,9 +89,14 @@ function HomePage() {
 
   if (error) {
     return (
-      <div className="text-center">
-        <FlameKindling size={64} />
-        加载失败，请稍后再试
+      <div className="flex flex-col gap-2 justify-center items-center p-4">
+        <div className="flex flex-col gap-2 justify-center items-center text-destructive">
+          <FlameKindling size={64} />
+          加载失败，请稍后再试
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {JSON.stringify(error, null, 2)}
+        </div>
       </div>
     );
   }

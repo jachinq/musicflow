@@ -1,13 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
-import {
-  ChevronFirst,
-  ChevronLast,
-  List,
-  PauseCircle,
-  PlayCircle,
-  Star,
-} from "lucide-react";
 import { getMusicUrl } from "../lib/api";
 import { readMeta } from "../lib/readmeta";
 import { usePlaylist } from "../store/playlist";
@@ -15,9 +7,20 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { formatTime } from "../lib/utils";
 import Playlist from "./Playlist";
 import useScreenStatus from "../hooks/use-screen-status";
-// import useClickOutside from "../hooks/use-click-outside";
+import {
+  ChevronFirst,
+  ChevronLast,
+  List,
+  Loader2,
+  PauseCircle,
+  PlayCircle,
+  Star,
+  Volume1Icon,
+  Volume2Icon,
+  VolumeXIcon,
+} from "lucide-react";
 
-function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
+function AudioPlayer() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [source, setSource] = useState<AudioBufferSourceNode | null>(null);
   const [progressIntevalId, setProgressIntevalId] = useState<number | null>(
@@ -25,9 +28,6 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  // const clickOutsideRef = useClickOutside(()=>{
-  //   setShowPlaylist(false);
-  // })
   const { isScreenHidden, setIsScreenHidden } = useScreenStatus();
 
   const isDetailPage = location.pathname.startsWith("/music");
@@ -37,7 +37,8 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
     currentTime,
     duration,
     isPlaying,
-    metadata,
+    volume,
+    setVolume,
     setAudioContext,
     setCurrentTime,
     setDuration,
@@ -46,6 +47,7 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
     setMetadata,
     setCurrentLyric,
   } = useCurrentPlay();
+  const [gainNode, setGainNode] = useState<GainNode | null>(null);
 
   const {
     showPlaylist,
@@ -82,11 +84,11 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
     loadAudioFile();
   }, [currentSong]);
   useEffect(() => {
-    if (fiexd && audioBuffer && audioContext) {
+    if (audioBuffer && audioContext) {
       pauseAudio();
       playAudio(0);
     }
-  }, [fiexd, audioBuffer]);
+  }, [audioBuffer]);
 
   useEffect(() => {
     if (currentTime >= duration && progressIntevalId) {
@@ -106,7 +108,7 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
       const nextIndex = (index + 1) % allSongs.length;
       const nextSong = allSongs[nextIndex];
       setCurrentSong(nextSong);
-      console.log("next song", nextSong);
+      console.log("next song", nextSong.metadata?.title || nextSong.name);
       if (currentSong.id === nextSong.id) {
         loadAudioFile(); // 重新加载当前歌曲
       }
@@ -126,33 +128,43 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
     if (!currentSong) {
       return;
     }
+    console.log("start load audio file", currentSong.name);
     setCurrentLyric(null);
     let audioContextTmp = audioContext;
     if (!audioContextTmp) {
       audioContextTmp = new AudioContext();
       setAudioContext(audioContextTmp);
+      const gainNodeTmp = audioContextTmp.createGain();
+      gainNodeTmp.connect(audioContextTmp.destination);
+      setGainNode(gainNodeTmp);
     }
     audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复
     let fileArrayBuffer = null;
     if (currentSong.fileArrayBuffer) {
       fileArrayBuffer = currentSong.fileArrayBuffer;
     } else {
-      if (fiexd) {
-        currentSong.url = getMusicUrl(currentSong);
-        currentSong.metadata = await readMeta(currentSong.url);
-        setMetadata(currentSong.metadata);
-      }
+      console.log("start read meta data", currentSong.url);
+      currentSong.url = getMusicUrl(currentSong);
+      currentSong.metadata = await readMeta(currentSong.url);
+      setMetadata(currentSong.metadata);
+      console.log("meta data end");
+
+      console.log("start fetch file", currentSong.url);
       const response = await fetch(currentSong.url);
       const arrayBuffer = await response.arrayBuffer();
       fileArrayBuffer = arrayBuffer;
       currentSong.fileArrayBuffer = fileArrayBuffer;
       setMusic(currentSong);
+      console.log("fetch file end");
     }
     // 克隆一个新的ArrayBuffer，避免影响到原数组
+    console.log("start clone array buffer", currentSong.name);
     let copyBuffer = fileArrayBuffer.slice(0);
+    console.log("start decode audio data", currentSong.name);
     const audioBuffer = await audioContextTmp.decodeAudioData(copyBuffer);
     setAudioBuffer(audioBuffer);
     setDuration(audioBuffer.duration);
+    console.log("decode audio data end", currentSong.name);
   };
 
   const playAudio = (startTime: number = 0) => {
@@ -160,7 +172,7 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
       return;
     }
     console.log("play", audioContext.state, startTime);
-    if (!audioBuffer) {
+    if (!audioBuffer || !gainNode) {
       console.log("audio buffer is null");
       return;
     }
@@ -169,7 +181,8 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
 
     const sourceNode = audioContext.createBufferSource();
     sourceNode.buffer = audioBuffer;
-    sourceNode.connect(audioContext.destination);
+    sourceNode.connect(gainNode);
+    // sourceNode.connect(audioContext.destination);
     sourceNode.start(0, startTime);
     setSource(sourceNode);
 
@@ -235,91 +248,134 @@ function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
     // TODO: open group modal
   }
 
-  return (
-    <>
-      <div className="flex flex-row gap-4 justify-between items-center w-full">
-        {metadata && (
-          <div className="flex gap-4 justify-center items-center">
-            <div
-              className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
-              onClick={coverClick}
-            >
-              <img
-                src={metadata.cover}
-                alt=""
-                width={42}
-                className={isPlaying ? "album-spin" : ""}
-              />
-            </div>
-            <div className="flex">
-              <div className="flex flex-col gap-1 justify-center items-start">
-                <span>{metadata.title || "未知标题"}</span>
-                <span className="text-sm text-gray-400">{metadata.artist}</span>
-              </div>
-            </div>
-          </div>
-        )}
-        {audioBuffer && (
-          <div className="flex flex-row gap-2 justify-center items-center flex-1">
-            <div className="flex justify-center items-center rounded-full">
-              {isDetailPage && (
-                <div
-                  className="hover:text-primary-hover cursor-pointer"
-                  onClick={groupSong}
-                >
-                  <Star />
-                </div>
-              )}
-              <div
-                className="hover:text-primary-hover cursor-pointer"
-                onClick={prevSong}
-              >
-                <ChevronFirst />
-              </div>
-              <div
-                className="hover:text-primary-hover cursor-pointer "
-                onClick={() => {
-                  const end = currentTime >= duration;
-                  isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
-                }}
-              >
-                {isPlaying ? (
-                  <PauseCircle size={32} />
-                ) : (
-                  <PlayCircle size={32} />
-                )}
-              </div>
-              <div
-                className="hover:text-primary-hover cursor-pointer"
-                onClick={nextSong}
-              >
-                <ChevronLast />
-              </div>
-            </div>
-            <input
-              width={"80%"}
-              type="range"
-              min="0"
-              max={duration}
-              value={currentTime}
-              onChange={handleSeekChange}
+
+  const [showVolume, setShowVolume] = useState<{
+    show: boolean;
+    x: number;
+    y: number;
+  }>({
+    show: false,
+    x: 0,
+    y: 0,
+  });
+  const volumeSliderRef = useRef<HTMLDivElement | null>(null);
+  const changeVolume = (event: { target: { value: string } }) => {
+    if (!gainNode) {
+      return;
+    }
+    const volume = parseFloat(event.target.value);
+    gainNode.gain.value = volume;
+    setVolume(volume);
+    setGainNode(gainNode);
+  };
+  const showVolumeBox = (event: any) => {
+    setShowVolume({
+      show: !showVolume.show,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+  useEffect(() => {
+    if (showVolume.show) {
+
+    }
+  }, [showVolume]);
+
+
+  return (<div className="fixed bottom-0 left-0 w-full bg-playstatus text-playstatus-foreground min-h-[88px] max-h-[88px]">
+    <div className="flex gap-4 justify-between items-center w-full relative px-4 py-2">
+      {currentSong?.metadata && (
+        <div className="flex gap-4 justify-center items-center">
+          <div className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
+            onClick={coverClick}
+          >
+            <img
+              src={currentSong?.metadata.cover}
+              alt=""
+              width={42}
+              className={isPlaying ? "album-spin" : ""}
             />
+          </div>
+        </div>
+      )}
+      {audioBuffer && currentSong?.metadata && (
+        <div className="flex flex-col gap-2 justify-center items-center flex-1">
+          <input className="play-progress w-full absolute top-[-6px] left-0"
+            type="range" min="0" max={duration} value={currentTime}
+            onChange={handleSeekChange}
+          />
+
+          <div className="song-title flex flex-row gap-1 justify-start items-center">
+            <span>{currentSong?.metadata.title || "未知标题"}</span>
+            <span className="text-sm text-muted-foreground">{currentSong?.metadata.artist}</span>
+          </div>
+
+          <div className="play-controls flex gap-2 flex-row justify-center items-center">
+            {isDetailPage && (<div className="hover:text-primary-hover cursor-pointer" onClick={groupSong}><Star /></div>)}
+
+            <div className="prevsong hover:text-primary-hover cursor-pointer" onClick={prevSong}
+            >
+              <ChevronFirst />
+            </div>
+
+            <div className="play-pause hover:text-primary-hover cursor-pointer "
+              onClick={() => {
+                const end = currentTime >= duration;
+                isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
+              }}>
+              {isPlaying ? (<PauseCircle size={32} />) : (<PlayCircle size={32} />)}
+            </div>
+
+            <div className="nextsong hover:text-primary-hover cursor-pointer" onClick={nextSong}>
+              <ChevronLast />
+            </div>
+
             <span className="text-sm text-muted-foreground">
-              {formatTime(currentTime)} / {formatTime(duration)}
+              {formatTime(currentTime)}/{formatTime(duration)}
             </span>
 
-            <div onClick={() => setShowPlaylist(!showPlaylist)}>
+            <div className="cursor-pointer hover:text-primary-hover" onClick={() => setShowPlaylist(!showPlaylist)}>
               <List />
             </div>
+
+            <div className="volume-control relative">
+              <div className="flex justify-center items-center gap-2">
+                <div className="hover:text-primary-hover volume-icon z-10" onClick={(e) => showVolumeBox(e)}>
+                  {volume > 0.5 && <Volume2Icon />}
+                  {volume <= 0.5 && volume > 0 && <Volume1Icon />}
+                  {volume <= 0 && <VolumeXIcon />}
+                </div>
+              </div>
+              {
+                showVolume.show && (
+                  <>
+                    <div ref={volumeSliderRef}>
+                      <div className="volume-slider z-10">
+                        <input type="range" dir="btt" min="0" max="1" step="0.001" value={volume} onChange={changeVolume} />
+                        {/* {showVolume.show && (<span className="volume-value">{gainNode?.gain.value.toFixed(2)}</span>)} */}
+                      </div>
+                    </div>
+                    <div className="volume-slider-mask fixed top-0 left-0 w-full h-full bg-black-translucent" onClick={() => setShowVolume({ ...showVolume, show: false })}></div>
+                  </>
+                )
+              }
+            </div>
+
           </div>
-        )}
-      </div>
-      <Playlist
-        // ref={clickOutsideRef}
-        clearPlaylist={clearPlaylist}
-      />
-    </>
+        </div>
+      )}
+      {(!currentSong || !currentSong.metadata || !audioBuffer) && (
+        <div className="flex gap-2 justify-center items-center w-full h-full">
+          <Loader2 className="animate-spin" size={48}/>
+          <span className="text-sm text-muted-foreground">加载中...</span>
+        </div>
+      )}
+    </div>
+
+    <Playlist clearPlaylist={clearPlaylist} />
+  </div>
   );
+
 }
 
 export default AudioPlayer;

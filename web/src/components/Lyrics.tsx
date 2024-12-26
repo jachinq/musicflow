@@ -31,10 +31,10 @@ function Lyrics({ lyrics }: LyricsProps) {
     if (currentSong) {
       height = "max-h-[calc(100vh-220px)]";
     }
-    return `${height} text-center overflow-scroll my-4`;
+    return `${height} text-center overflow-y-scroll overflw-x-hidden my-4 px-8`;
   }
 
-  const lyricNameFocus = () => (" text-[28px] font-bold text-blue-500 dark:text-blue-400");
+  const lyricNameFocus = () => (" text-[24px] font-bold text-blue-500 dark:text-blue-400");
   const lyricNameFocusHover = () => {
     // console.log("hover", lyricNameFocus().split(" ").join(" hover:"))
     return lyricNameFocus().split(" ").join(" hover:")

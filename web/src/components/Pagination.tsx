@@ -118,7 +118,7 @@ const PaginationLink = ({
   ...props
 }: PaginationLinkProps) => (
   <a
-    className={`px-2 py-1 cursor-pointer select-none hover:bg-blue-600 ${isActive ? "bg-blue-400" : ""
+    className={`px-2 py-1 rounded-md cursor-pointer  select-none hover:bg-blue-600 ${isActive ? "bg-blue-400" : ""
       } ${className}`}
     {...props}
   />
