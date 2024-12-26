@@ -35,7 +35,7 @@ struct MusicList {
 struct MusicListQuery {
     page: Option<u32>,
     page_size: Option<u32>,
-    tags: Option<Vec<String>>,
+    filter: Option<String>,
 }
 
 /// 获取服务器上所有音乐文件
@@ -47,8 +47,12 @@ async fn list_musics(
     let mut musics = musics.clone();
 
     // 过滤标签
-    if let Some(tags) = &query.tags {
-        musics.retain(|m| m.tags.iter().any(|t| tags.contains(t)));
+    if let Some(filter) = &query.filter {
+        let filter = filter.to_lowercase();
+        musics.retain(|m| 
+            m.tags.iter().any(|t| t.to_lowercase().contains(&filter)) ||
+            m.name.to_lowercase().contains(&filter)
+        );
     }
 
     // 分页
@@ -158,7 +162,7 @@ async fn main() -> io::Result<()> {
             //     lyrics: None,
             //     cover: None,
             // });
-            let metadata = MusicMetadata::default();
+            let _metadata = MusicMetadata::default();
 
             music_map.insert(
                 id.to_string(),
@@ -188,8 +192,8 @@ async fn main() -> io::Result<()> {
                 music_path: music_dir.to_string(),
                 music_map: music_map.clone(),
             }))
-            .route("/musics", web::get().to(list_musics))
-            .route("/music-detail/{path}", web::get().to(get_music_link))
+            .route("/api/list", web::get().to(list_musics))
+            .route("/api/detail/{path}", web::get().to(get_music_link))
             .route("/tag", web::post().to(tag_music))
             .route("/api/log", web::post().to(frontend_log))
             // 添加静态文件服务

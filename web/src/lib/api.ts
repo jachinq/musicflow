@@ -1,7 +1,7 @@
 import { Music } from "../def/CommDef";
 
 export const API_URL = "http://127.0.0.1:9090";
-export const LOG_API = "http://127.0.0.1:9090/api/log";
+export const LOG_API = `${API_URL}/api/log`;
 
 export const getMusicUrl = (music: Music) => {
   return `${API_URL}/music/${music.path}`;
@@ -41,7 +41,7 @@ export const getMusicList = (
   currentPage: number,
   pageSize?: number
 ) => {
-  let url = API_URL + "/musics";
+  let url = API_URL + "/api/list";
   currentPage && (url += `?page=${currentPage}`);
   pageSize && (url += `&page_size=${pageSize}`);
   console.log("fetching music list from", url);
@@ -53,6 +53,6 @@ export const getMusicDetail = (
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/music-detail/${id}`;
+  const url = `${API_URL}/api/detail/${id}`;
   fetchUtils(url, onSuccess, onError);
 };
