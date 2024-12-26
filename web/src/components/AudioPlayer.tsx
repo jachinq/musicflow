@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
-import { ChevronFirst, ChevronLast, List, PauseCircle, PlayCircle } from "lucide-react";
+import {
+  ChevronFirst,
+  ChevronLast,
+  List,
+  PauseCircle,
+  PlayCircle,
+  Star,
+} from "lucide-react";
 import { getMusicUrl } from "../lib/api";
 import { readMeta } from "../lib/readmeta";
 import { usePlaylist } from "../store/playlist";
@@ -10,19 +17,20 @@ import Playlist from "./Playlist";
 import useScreenStatus from "../hooks/use-screen-status";
 // import useClickOutside from "../hooks/use-click-outside";
 
-function AudioPlayer({ fiexd = false }:
-  {
-    fiexd?: boolean,
-  }) {
+function AudioPlayer({ fiexd = true }: { fiexd?: boolean }) {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [source, setSource] = useState<AudioBufferSourceNode | null>(null);
-  const [progressIntevalId, setProgressIntevalId] = useState<number | null>(null);
+  const [progressIntevalId, setProgressIntevalId] = useState<number | null>(
+    null
+  );
   const navigate = useNavigate();
   const location = useLocation();
   // const clickOutsideRef = useClickOutside(()=>{
   //   setShowPlaylist(false);
   // })
   const { isScreenHidden, setIsScreenHidden } = useScreenStatus();
+
+  const isDetailPage = location.pathname.startsWith("/music");
 
   const {
     audioContext,
@@ -39,27 +47,36 @@ function AudioPlayer({ fiexd = false }:
     setCurrentLyric,
   } = useCurrentPlay();
 
-  const { showPlaylist, allSongs, currentSong, setCurrentSong, setShowPlaylist, setAllSongs } = usePlaylist();
-  
-  const [internalIsPageVisible, setInternalIsPageVisible] = useState<number[]>([]);
+  const {
+    showPlaylist,
+    allSongs,
+    currentSong,
+    setCurrentSong,
+    setShowPlaylist,
+    setAllSongs,
+  } = usePlaylist();
+
+  const [internalIsPageVisible, setInternalIsPageVisible] = useState<number[]>(
+    []
+  );
   useEffect(() => {
-    console.log('isScreenHidden', isScreenHidden);
+    console.log("isScreenHidden", isScreenHidden);
     if (isScreenHidden) {
       if (!document.hidden) {
         setIsScreenHidden(false);
         return;
       }
-      const intervalId = setInterval(() => {
-        console.log("internal isScreenHidden", isScreenHidden);
-      }, 1000);
-      setInternalIsPageVisible([intervalId, ...internalIsPageVisible]);
+      // const intervalId = setInterval(() => {
+      //   console.log("internal isScreenHidden", isScreenHidden);
+      // }, 1000);
+      // setInternalIsPageVisible([intervalId, ...internalIsPageVisible]);
     } else {
       internalIsPageVisible.forEach((intervalId) => {
         clearInterval(intervalId);
       });
       setInternalIsPageVisible([]);
     }
-  }, [isScreenHidden])
+  }, [isScreenHidden]);
 
   useEffect(() => {
     loadAudioFile();
@@ -81,8 +98,8 @@ function AudioPlayer({ fiexd = false }:
     }
   }, [currentTime]);
 
-
   const nextSong = () => {
+    setCurrentTime(0);
     // console.log("current song", currentSong);
     if (currentSong) {
       const index = allSongs.findIndex((music) => music.id === currentSong.id);
@@ -94,15 +111,16 @@ function AudioPlayer({ fiexd = false }:
         loadAudioFile(); // 重新加载当前歌曲
       }
     }
-  }
+  };
   const prevSong = () => {
+    setCurrentTime(0);
     if (currentSong) {
       const index = allSongs.findIndex((music) => music.id === currentSong.id);
       const prevIndex = (index - 1 + allSongs.length) % allSongs.length;
       const prevSong = allSongs[prevIndex];
       setCurrentSong(prevSong);
     }
-  }
+  };
 
   const loadAudioFile = async () => {
     if (!currentSong) {
@@ -197,28 +215,41 @@ function AudioPlayer({ fiexd = false }:
       return;
     }
     console.log(location.pathname);
-    if (location.pathname.startsWith("/music")) {
+    if (isDetailPage) {
       navigate(-1);
       return;
     }
     navigate("/music/" + currentSong.id);
-  }
+  };
 
   const clearPlaylist = () => {
     setAllSongs([]);
     setShowPlaylist(false);
     pauseAudio();
+  };
+
+  const groupSong = () => {
+    if (!currentSong) {
+      return;
+    }
+    // TODO: open group modal
   }
 
-  if (fiexd) {
-    return (
-      <>
+  return (
+    <>
       <div className="flex flex-row gap-4 justify-between items-center w-full">
         {metadata && (
           <div className="flex gap-4 justify-center items-center">
-            <div className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
-              onClick={coverClick}>
-              <img src={metadata.cover} alt="" width={42} className={isPlaying ? "album-spin" : ""} />
+            <div
+              className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
+              onClick={coverClick}
+            >
+              <img
+                src={metadata.cover}
+                alt=""
+                width={42}
+                className={isPlaying ? "album-spin" : ""}
+              />
             </div>
             <div className="flex">
               <div className="flex flex-col gap-1 justify-center items-start">
@@ -230,24 +261,43 @@ function AudioPlayer({ fiexd = false }:
         )}
         {audioBuffer && (
           <div className="flex flex-row gap-2 justify-center items-center flex-1">
-            <div className="flex justify-center items-center rounded-full"
-            >
-              <div className="hover:text-primary-hover cursor-pointer" onClick={prevSong}>
+            <div className="flex justify-center items-center rounded-full">
+              {isDetailPage && (
+                <div
+                  className="hover:text-primary-hover cursor-pointer"
+                  onClick={groupSong}
+                >
+                  <Star />
+                </div>
+              )}
+              <div
+                className="hover:text-primary-hover cursor-pointer"
+                onClick={prevSong}
+              >
                 <ChevronFirst />
               </div>
-              <div className="hover:text-primary-hover cursor-pointer "
+              <div
+                className="hover:text-primary-hover cursor-pointer "
                 onClick={() => {
                   const end = currentTime >= duration;
                   isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
-                }}>
-                {isPlaying ? <PauseCircle size={32} /> : <PlayCircle size={32} />}
+                }}
+              >
+                {isPlaying ? (
+                  <PauseCircle size={32} />
+                ) : (
+                  <PlayCircle size={32} />
+                )}
               </div>
-              <div className="hover:text-primary-hover cursor-pointer" onClick={nextSong}>
+              <div
+                className="hover:text-primary-hover cursor-pointer"
+                onClick={nextSong}
+              >
                 <ChevronLast />
               </div>
             </div>
             <input
-            width={"80%"}
+              width={"80%"}
               type="range"
               min="0"
               max={duration}
@@ -264,60 +314,11 @@ function AudioPlayer({ fiexd = false }:
           </div>
         )}
       </div>
-      <Playlist 
-      // ref={clickOutsideRef} 
-      clearPlaylist={clearPlaylist} />
-      </>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      {metadata && (
-        <div className="grid grid-cols-2 gap-4 p-4">
-          <div className=" rounded-md overflow-hidden">
-            <img src={metadata.cover} alt="" width={320} />
-          </div>
-          <div className="flex flex-col gap-2 justify-center items-center">
-            <h2>{metadata.title || "未知标题"}</h2>
-            <p>artist: {metadata.artist}</p>
-            <p>album: {metadata.album}</p>
-            <p>year: {metadata.year}</p>
-            <p>bitrate: {metadata.bitrate}</p>
-          </div>
-        </div>
-      )}
-      {!metadata && <p>loading...</p>}
-
-      {/* <button onClick={loadAudioFile} disabled={audioBuffer !== null}>
-        加载音频
-      </button> */}
-
-      {audioBuffer && (
-        <>
-          <div className="flex justify-center items-center rounded-full"
-          >
-            <div className="hover:text-blue-500 cursor-pointer "
-              onClick={() => {
-                const end = currentTime >= duration;
-                isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
-              }}>
-              {isPlaying ? <PauseCircle size={32} /> : <PlayCircle size={32} />}
-            </div>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max={duration}
-            value={currentTime}
-            onChange={handleSeekChange}
-          />
-          <span>
-            当前时间: {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
-        </>
-      )}
-    </div>
+      <Playlist
+        // ref={clickOutsideRef}
+        clearPlaylist={clearPlaylist}
+      />
+    </>
   );
 }
 

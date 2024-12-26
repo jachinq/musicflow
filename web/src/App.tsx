@@ -41,7 +41,7 @@ function App() {
             currentSong && (
               <div className="fixed bottom-0 left-0 w-full px-4 py-2 bg-playstatus text-playstatus-foreground">
                 <div className="flex justify-center items-center w-full">
-                  <AudioPlayer fiexd={true} />
+                  <AudioPlayer />
                 </div>
               </div>
             )

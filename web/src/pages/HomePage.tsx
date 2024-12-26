@@ -3,7 +3,7 @@ import "../styles/HomePage.css";
 import { useEffect, useState } from "react";
 import MusicCard from "../components/MusicCard";
 
-import { API_URL, getMusicUrl } from "../lib/api";
+import { getMusicList, getMusicUrl } from "../lib/api";
 import { Pagination } from "../components/Pagination";
 import { Music } from "../def/CommDef";
 import { readMeta } from "../lib/readmeta";
@@ -24,35 +24,13 @@ function HomePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
 
-  const fetchList = async (
-    onSuccess: (data: any) => void,
-    onError: (error: any) => void,
-    currentPage: number,
-    pageSize?: number
-  ) => {
-    let url = API_URL + "/musics";
-    currentPage && (url += `?page=${currentPage}`);
-    pageSize && (url += `&page_size=${pageSize}`);
-    console.log("fetching music list from", url);
-
-    // 调用后端接口获取音乐列表
-    fetch(url)
-      .then((response) => response.json())
-      .then(async (data) => {
+  const fetchMusicList = async (currentPage: number) => {
+    setLoading(true);
+    getMusicList(
+      (data) => {
         if (!data || !data.musics || data.musics.length === 0) {
           return;
         }
-        onSuccess(data);
-      })
-      .catch((error) => {
-        onError(error);
-      });
-  };
-
-  const fetchMusicList = async (currentPage: number) => {
-    setLoading(true);
-    fetchList(
-      (data) => {
         // 更新音乐列表和分页信息
         setMusicList(data.musics);
         setTotalCount(data.total);
@@ -90,7 +68,7 @@ function HomePage() {
     const index = allSongs.findIndex((song) => song.id === music.id);
     if (index === -1) {
       setAllSongs([...allSongs, music]);
-      console.log("add music to playlist", music);
+      console.log("add music to playlist", music.title);
     }
     setCurrentSong(music);
   }
@@ -119,8 +97,11 @@ function HomePage() {
   }
 
   const playAllSongs = () => {
-    fetchList(
+    getMusicList(
       (data) => {
+        if (!data || !data.musics || data.musics.length === 0) {
+          return;
+        }
         // 随机播放全部歌曲
         const randomList = data.musics.sort(() => 0.5 - Math.random());
         setAllSongs(randomList);
@@ -135,7 +116,7 @@ function HomePage() {
   };
 
   return (
-    <>
+    <div className="p-4">
       <div className="flex justify-center items-center">
         <div className="mb-4 flex flex-col gap-2 justify-start items-start w-full max-w-[1560px]">
           <div
@@ -171,7 +152,7 @@ function HomePage() {
           className="mt-4"
         />
       )}
-    </>
+    </div>
   );
 }
 

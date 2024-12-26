@@ -1,6 +1,6 @@
 // components/MusicPlayer.tsx
 import React, { useRef, useState, useEffect } from "react";
-import { API_URL } from "../lib/api";
+import { getMusicUrl } from "../lib/api";
 import { Music } from "../def/CommDef";
 
 interface MusicPlayerProps {
@@ -42,10 +42,6 @@ function MusicPlayer({ music, currentTime, onTimeUpdate }: MusicPlayerProps) {
     }
   }
 
-  function getUrl() {
-    return `${API_URL}/music/${music.path}`;
-  }
-
   function formatTime(time: number) {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -62,7 +58,7 @@ function MusicPlayer({ music, currentTime, onTimeUpdate }: MusicPlayerProps) {
       </div>
       <div className="flex items-center justify-between">
       <button onClick={togglePlay}>{isPlaying ? "暂停" : "播放"}</button>
-        <audio ref={audioRef} src={getUrl()} onTimeUpdate={handleTimeUpdate} />
+        <audio ref={audioRef} src={getMusicUrl(music)} onTimeUpdate={handleTimeUpdate} />
         <span>{formatTime(currentTime)}</span>
         <input
         type="range"
