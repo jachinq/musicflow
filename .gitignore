@@ -1,5 +1,6 @@
 /server/target
 /server/music
+/server/web
 
 /web/dist
 /web/node_modules
