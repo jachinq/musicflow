@@ -56,3 +56,18 @@ export const getMusicDetail = (
   const url = `${API_URL}/api/detail/${id}`;
   fetchUtils(url, onSuccess, onError);
 };
+
+
+// 自定义日志记录器
+export const sendLogToServer = (level: string, timestamp: string, message: string) => {
+  // 使用 fetch 发送日志信息
+  fetch(LOG_API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ level, timestamp, message }),
+  }).catch((error) => {
+    console.log(`Failed to send log to server: ${error}`);
+  });
+}

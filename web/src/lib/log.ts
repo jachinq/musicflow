@@ -1,18 +1,4 @@
-import { LOG_API } from "./api";
 
-// 自定义日志记录器
-function sendLogToServer(level: string, timestamp: string, message: string) {
-  // 使用 fetch 发送日志信息
-  fetch(LOG_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ level, timestamp, message }),
-  }).catch((error) => {
-    originalConsoleError(`Failed to send log to server: ${error}`);
-  });
-}
 
 // function getContextInfo() {
 //   const stack = new Error().stack.split('\n');
@@ -23,6 +9,9 @@ function sendLogToServer(level: string, timestamp: string, message: string) {
 //   const filePath = clean.substring(clean.indexOf('(')+1, clean.indexOf(':'));
 //   const lineNumber = clean.substring(clean.indexOf(':')+1, clean.lastIndexOf(':'));
 //   const columnNumber = clean.substring(clean.lastIndexOf(':')+1, clean.lastIndexOf(')'));
+
+import { sendLogToServer } from "./api";
+
   
 //   return {
 //       functionName,
@@ -54,11 +43,18 @@ const fmt_args = (args: any[]) => {
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
+const originalConsoleInfo = console.info;
 
 console.log = function (...args) {
   const timestamp = new Date().toLocaleString();
   originalConsoleLog(timestamp, ...args);
   sendLogToServer("log", timestamp, fmt_args(args));
+};
+
+console.info = function (...args) {
+  const timestamp = new Date().toLocaleString();
+  originalConsoleInfo(timestamp, ...args);
+  sendLogToServer("info", timestamp, fmt_args(args));
 };
 
 console.error = function (...args) {
