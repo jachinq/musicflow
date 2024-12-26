@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
 import { getMusicUrl } from "../lib/api";
-import { readMeta } from "../lib/readmeta";
+import { readMetaByBuffer } from "../lib/readmeta";
 import { usePlaylist } from "../store/playlist";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatTime } from "../lib/utils";
 import Playlist from "./Playlist";
-import useScreenStatus from "../hooks/use-screen-status";
 import {
   ChevronFirst,
   ChevronLast,
@@ -19,6 +18,7 @@ import {
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
+import { Music } from "../def/CommDef";
 
 function AudioPlayer() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -28,7 +28,7 @@ function AudioPlayer() {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const { isScreenHidden, setIsScreenHidden } = useScreenStatus();
+  const [loadStatus, setLoadStatus] = useState<string>("加载中...");
 
   const isDetailPage = location.pathname.startsWith("/music");
 
@@ -43,8 +43,6 @@ function AudioPlayer() {
     setCurrentTime,
     setDuration,
     setIsPlaying,
-    setMusic,
-    setMetadata,
     setCurrentLyric,
   } = useCurrentPlay();
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
@@ -53,35 +51,54 @@ function AudioPlayer() {
     showPlaylist,
     allSongs,
     currentSong,
+    pageSongs,
     setCurrentSong,
     setShowPlaylist,
     setAllSongs,
   } = usePlaylist();
 
-  const [internalIsPageVisible, setInternalIsPageVisible] = useState<number[]>(
-    []
-  );
-  useEffect(() => {
-    console.log("isScreenHidden", isScreenHidden);
-    if (isScreenHidden) {
-      if (!document.hidden) {
-        setIsScreenHidden(false);
-        return;
+  const handleKeyDown = (event: KeyboardEvent) => {
+    console.log("keydown", event.code, isPlaying);
+    if (event.code === "Space") {
+      if (isPlaying) {
+        pauseAudio();
+      } else {
+        playAudio();
       }
-      // const intervalId = setInterval(() => {
-      //   console.log("internal isScreenHidden", isScreenHidden);
-      // }, 1000);
-      // setInternalIsPageVisible([intervalId, ...internalIsPageVisible]);
-    } else {
-      internalIsPageVisible.forEach((intervalId) => {
-        clearInterval(intervalId);
-      });
-      setInternalIsPageVisible([]);
     }
-  }, [isScreenHidden]);
+    // if (event.code === "ArrowRight") {
+    //   nextSong();
+    // }
+    // if (event.code === "ArrowLeft") {
+    //   prevSong();
+    // }
+    // if (event.code === "KeyP") {
+    //   if (showPlaylist) {
+    //     setShowPlaylist(false);
+    //   } else {
+    //     setShowPlaylist(true);
+    //   }
+    // }
+    // if (event.code === "KeyC") {
+    //   clearPlaylist();
+    // }
+    // if (event.code === "KeyG") {
+    //   groupSong();
+    // }
+  };
 
   useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    initStatus();
     loadAudioFile();
+
+    preDecodeAudioBuffer();
   }, [currentSong]);
   useEffect(() => {
     if (audioBuffer && audioContext) {
@@ -91,21 +108,35 @@ function AudioPlayer() {
   }, [audioBuffer]);
 
   useEffect(() => {
-    if (currentTime >= duration && progressIntevalId) {
+    if (currentTime >= duration) {
       console.log("end of song");
-      setIsPlaying(false);
-      clearInterval(progressIntevalId);
-      setCurrentTime(duration);
-      nextSong();
+      nextSong(1);
     }
   }, [currentTime]);
 
-  const nextSong = () => {
+  // 处理播放列表的meta数据
+  useEffect(()=> {
+    if (!pageSongs || pageSongs.length === 0) return;
+
+    pageSongs.forEach((song) => {
+      if (song.metadata && song.fileArrayBuffer) return;
+      getMetatData(song);
+    });
+  }, [pageSongs]);
+
+  const initStatus = () => {
+    setIsPlaying(false);
     setCurrentTime(0);
-    // console.log("current song", currentSong);
+    setAudioBuffer(null);
+    setCurrentLyric(null);
+    progressIntevalId && clearInterval(progressIntevalId);
+  }
+
+  const nextSong = (next: number) => {
+    console.log("current song", currentSong?.name);
     if (currentSong) {
       const index = allSongs.findIndex((music) => music.id === currentSong.id);
-      const nextIndex = (index + 1) % allSongs.length;
+      const nextIndex = (index + next + allSongs.length) % allSongs.length;
       const nextSong = allSongs[nextIndex];
       setCurrentSong(nextSong);
       console.log("next song", nextSong.metadata?.title || nextSong.name);
@@ -114,65 +145,11 @@ function AudioPlayer() {
       }
     }
   };
-  const prevSong = () => {
-    setCurrentTime(0);
-    if (currentSong) {
-      const index = allSongs.findIndex((music) => music.id === currentSong.id);
-      const prevIndex = (index - 1 + allSongs.length) % allSongs.length;
-      const prevSong = allSongs[prevIndex];
-      setCurrentSong(prevSong);
-    }
-  };
-
-  const loadAudioFile = async () => {
-    if (!currentSong) {
-      return;
-    }
-    console.log("start load audio file", currentSong.name);
-    setCurrentLyric(null);
-    let audioContextTmp = audioContext;
-    if (!audioContextTmp) {
-      audioContextTmp = new AudioContext();
-      setAudioContext(audioContextTmp);
-      const gainNodeTmp = audioContextTmp.createGain();
-      gainNodeTmp.connect(audioContextTmp.destination);
-      gainNodeTmp.gain.value = volume;
-      setGainNode(gainNodeTmp);
-    }
-    audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复
-    let fileArrayBuffer = null;
-    if (currentSong.fileArrayBuffer) {
-      fileArrayBuffer = currentSong.fileArrayBuffer;
-    } else {
-      console.log("start read meta data", currentSong.url);
-      currentSong.url = getMusicUrl(currentSong);
-      currentSong.metadata = await readMeta(currentSong.url);
-      setMetadata(currentSong.metadata);
-      console.log("meta data end");
-
-      console.log("start fetch file", currentSong.url);
-      const response = await fetch(currentSong.url);
-      const arrayBuffer = await response.arrayBuffer();
-      fileArrayBuffer = arrayBuffer;
-      currentSong.fileArrayBuffer = fileArrayBuffer;
-      setMusic(currentSong);
-      console.log("fetch file end");
-    }
-    // 克隆一个新的ArrayBuffer，避免影响到原数组
-    console.log("start clone array buffer", currentSong.name);
-    let copyBuffer = fileArrayBuffer.slice(0);
-    console.log("start decode audio data", currentSong.name);
-    const audioBuffer = await audioContextTmp.decodeAudioData(copyBuffer);
-    setAudioBuffer(audioBuffer);
-    setDuration(audioBuffer.duration);
-    console.log("decode audio data end", currentSong.name);
-  };
-
   const playAudio = (startTime: number = 0) => {
     if (!audioContext) {
       return;
     }
-    console.log("play", audioContext.state, startTime);
+    // console.log("play", audioContext.state, startTime);
     if (!audioBuffer || !gainNode) {
       console.log("audio buffer is null");
       return;
@@ -204,7 +181,7 @@ function AudioPlayer() {
     if (!audioContext) {
       return;
     }
-    console.log("pause", audioContext.state);
+    // console.log("pause", audioContext.state);
     if (progressIntevalId) {
       clearInterval(progressIntevalId);
     }
@@ -223,6 +200,82 @@ function AudioPlayer() {
     isPlaying && pauseAudio();
     playAudio(seekTime);
   };
+
+  const loadAudioFile = async () => {
+    if (!currentSong) {
+      return;
+    }
+    setLoadStatus("加载中...");
+    let audioContextTmp = audioContext;
+    if (!audioContextTmp) {
+      setLoadStatus("设置音频上下文...");
+      audioContextTmp = new AudioContext();
+      setAudioContext(audioContextTmp);
+      setLoadStatus("创建音量节点...");
+      const gainNodeTmp = audioContextTmp.createGain();
+      gainNodeTmp.connect(audioContextTmp.destination);
+      gainNodeTmp.gain.value = volume;
+      setGainNode(gainNodeTmp);
+    }
+    audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复
+
+    decodeAudioBuffer(currentSong, true);
+  };
+
+  const decodeAudioBuffer = async (song: Music, actuallyDecode: boolean) => {
+    await getMetatData(song);
+    let fileArrayBuffer = song.fileArrayBuffer;
+    if (!fileArrayBuffer) return;
+
+    if (song.decodedAudioBuffer) {
+      actuallyDecode && setLoadStatus("解码音频数据...");
+      actuallyDecode && setAudioBuffer(song.decodedAudioBuffer);
+      actuallyDecode && setDuration(song.decodedAudioBuffer.duration);
+    } else {
+      // 克隆一个新的ArrayBuffer，避免影响到原数组
+      let copyBuffer = fileArrayBuffer.slice(0);
+      // console.log("start decode audio data", song.name);
+      actuallyDecode && setLoadStatus("解码音频数据...");
+      new AudioContext().decodeAudioData(copyBuffer).then((audioBuffer) => {
+        actuallyDecode && setAudioBuffer(audioBuffer);
+        actuallyDecode && setDuration(audioBuffer.duration);
+        song.decodedAudioBuffer = audioBuffer;
+        // const currentIndex = allSongs.findIndex((music) => music.id === song.id);
+        // allSongs[currentIndex] = song;
+        // setAllSongs([...allSongs]);
+        // console.log("decode audio data end", song.name);
+      }).catch((error) => {
+        console.log("decode audio data error", error);
+      });
+      console.log("audio buffer", audioBuffer?.length);
+    }
+  }
+
+  const preDecodeAudioBuffer = () => {
+    if (!currentSong) {
+      return;
+    }
+    console.log("pre decode next song");
+    const currentIndex = allSongs.findIndex((music) => music.id === currentSong.id);
+    const nextIndex = (currentIndex + 1) % allSongs.length;
+    const nextSong = allSongs[nextIndex];
+    if (nextSong.id === currentSong.id) {
+      return;
+    }
+    decodeAudioBuffer(nextSong, false);
+  }
+
+  const getMetatData = async (song: Music) => {
+    if (song.metadata && song.fileArrayBuffer) {
+      return;
+    }
+    song.url = getMusicUrl(song);
+    const response = await fetch(song.url);
+    const arrayBuffer = await response.arrayBuffer();
+    let copyBuffer = arrayBuffer.slice(0);
+    song.fileArrayBuffer = arrayBuffer;
+    song.metadata = await readMetaByBuffer(copyBuffer);
+  }
 
   const coverClick = () => {
     if (!currentSong) {
@@ -283,8 +336,8 @@ function AudioPlayer() {
   }, [showVolume]);
 
 
-  return (<div className="fixed bottom-0 left-0 w-full bg-playstatus text-playstatus-foreground min-h-[88px] max-h-[88px]">
-    <div className="flex gap-4 justify-between items-center w-full relative px-4 py-2">
+  return (<div className="fixed bottom-0 left-0 w-full bg-playstatus text-playstatus-foreground min-h-[88px] max-h-[88px] flex justify-center items-center">
+    <div className="flex gap-4 justify-between items-center w-full h-full relative px-4 py-2">
       {currentSong?.metadata && (
         <div className="flex gap-4 justify-center items-center">
           <div className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
@@ -300,22 +353,23 @@ function AudioPlayer() {
         </div>
       )}
       {audioBuffer && currentSong?.metadata && (
-        <div className="flex flex-col gap-2 justify-center items-center flex-1">
+        <div className="flex flex-col gap-2 justify-center items-center flex-1 w-full">
           <input className="play-progress w-full absolute top-[-6px] left-0"
             type="range" min="0" max={duration} value={currentTime}
             onChange={handleSeekChange}
           />
 
-          <div className="song-title flex flex-row gap-1 justify-start items-center">
-            <span>{currentSong?.metadata.title || "未知标题"}</span>
-            <span className="text-sm text-muted-foreground">{currentSong?.metadata.artist}</span>
+          <div className="song-title flex flex-row gap-1 justify-center items-center w-full">
+            <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
+              <span>{currentSong?.metadata.title || "未知标题"}</span>
+              <span className="ml-2 text-sm text-muted-foreground">{currentSong?.metadata.artist}</span>
+            </span>
           </div>
 
           <div className="play-controls flex gap-2 flex-row justify-center items-center">
             {isDetailPage && (<div className="hover:text-primary-hover cursor-pointer" onClick={groupSong}><Star /></div>)}
 
-            <div className="prevsong hover:text-primary-hover cursor-pointer" onClick={prevSong}
-            >
+            <div className="prevsong hover:text-primary-hover cursor-pointer" onClick={() => nextSong(-1)}>
               <ChevronFirst />
             </div>
 
@@ -327,7 +381,7 @@ function AudioPlayer() {
               {isPlaying ? (<PauseCircle size={32} />) : (<PlayCircle size={32} />)}
             </div>
 
-            <div className="nextsong hover:text-primary-hover cursor-pointer" onClick={nextSong}>
+            <div className="nextsong hover:text-primary-hover cursor-pointer" onClick={() => nextSong(1)}>
               <ChevronLast />
             </div>
 
@@ -367,8 +421,8 @@ function AudioPlayer() {
       )}
       {(!currentSong || !currentSong.metadata || !audioBuffer) && (
         <div className="flex gap-2 justify-center items-center w-full h-full">
-          <Loader2 className="animate-spin" size={48}/>
-          <span className="text-sm text-muted-foreground">加载中...</span>
+          <Loader2 className="animate-spin" size={48} />
+          <span className="text-sm text-muted-foreground">{loadStatus}</span>
         </div>
       )}
     </div>

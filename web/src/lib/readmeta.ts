@@ -10,7 +10,6 @@ export interface IMeta {
   bitrate: number | undefined;
   lyrics: { time: number; text: string }[];
   cover: string | undefined; // base64 encoded image data
-  url: string; // original file url
 }
 
 export const readMeta = async (url: string): Promise<IMeta> => {
@@ -31,6 +30,27 @@ export const readMeta = async (url: string): Promise<IMeta> => {
     lyrics: getLyrics(metadata),
     cover,
     url,
+  };
+  // console.log(metadata, imeta);
+  return imeta;
+};
+
+
+export const readMetaByBuffer = async (buffer: ArrayBuffer): Promise<IMeta> => {
+  const array = new Uint8Array(buffer);
+  const metadata = await parseBuffer(array);
+
+  let cover = await getCover(metadata);
+  const imeta = {
+    title: metadata.common.title,
+    artist: metadata.common.artist,
+    album: metadata.common.album,
+    year: metadata.common.year,
+    track: metadata.common.track.no,
+    duration: metadata.format.duration,
+    bitrate: metadata.format.bitrate,
+    lyrics: getLyrics(metadata),
+    cover,
   };
   // console.log(metadata, imeta);
   return imeta;
