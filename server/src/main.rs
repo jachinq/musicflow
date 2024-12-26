@@ -198,7 +198,7 @@ async fn main() -> io::Result<()> {
             .route("/api/log", web::post().to(frontend_log))
             // 添加静态文件服务
             .service(actix_files::Files::new("/music", &music_dir).show_files_listing())
-            .service(actix_files::Files::new("/", "./web/dist").show_files_listing())
+            .service(actix_files::Files::new("/", "./web/dist").index_file("index.html"))
     })
     .bind(&format!("{}:{}", ip, port))?
     .run()
