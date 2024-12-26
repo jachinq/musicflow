@@ -89,6 +89,9 @@ const getLyrics = (
     if (lyrics_data.syncText) {
       for (const lyric of lyrics_data.syncText) {
         const timeSec = (lyric.timestamp || 0) / 1000;
+        if (!lyric.text || lyric.text.trim() === "") {
+          continue;
+        }
         lyrics.push({
           time: timeSec,
           text: lyric.text,
@@ -106,6 +109,9 @@ const getLyrics = (
           // console.log(minute, second, millisecond);
           const timeSec = minute * 60 + second + millisecond / 1000;
           const text = line.replace(time_str, "").trim();
+          if (text === "") {
+            return;
+          }
           lyrics.push({
             time: timeSec,
             text,
