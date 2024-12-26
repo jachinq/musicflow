@@ -136,6 +136,7 @@ function AudioPlayer() {
       setAudioContext(audioContextTmp);
       const gainNodeTmp = audioContextTmp.createGain();
       gainNodeTmp.connect(audioContextTmp.destination);
+      gainNodeTmp.gain.value = volume;
       setGainNode(gainNodeTmp);
     }
     audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复

@@ -81,8 +81,8 @@ function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center">
-        <Loader className="animate-spin" size={64} />
+      <div className="flex justify-center items-center h-[calc(100vh-68px)]">
+        <Loader className="animate-spin" size={36} />
       </div>
     );
   }

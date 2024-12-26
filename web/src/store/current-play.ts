@@ -2,6 +2,9 @@ import {create} from 'zustand';
 import { IMeta } from '../lib/readmeta';
 import { Music } from '../def/CommDef';
 
+const volumestr = localStorage.getItem("volume") || "0.5";
+const volume = parseFloat(volumestr);
+
 interface CurrentPlayState {
     audioContext: AudioContext | null;
     currentTime: number;
@@ -33,7 +36,7 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     isPlaying: false,
     isLooping: false,
     isMuted: false,
-    volume: 1,
+    volume,
     music: null,
     metadata: null,
     setAudioContext: (audioContent) => set(() => ({audioContext: audioContent})),
@@ -67,7 +70,10 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     setIsPlaying: (isPlaying) => set(() => ({isPlaying})),
     setIsLooping: (isLooping) => set(() => ({isLooping})),
     setIsMuted: (isMuted) => set(() => ({isMuted})),
-    setVolume: (volume) => set(() => ({volume})),
+    setVolume: (volume) => set(() => {
+        localStorage.setItem("volume", volume.toString());
+        return {volume}
+    }),
     setMetadata: (metadata) => set(() => ({metadata})),
     setMusic: (music) => set(() => ({music})),
 }));
