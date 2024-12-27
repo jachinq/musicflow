@@ -141,7 +141,7 @@ const getLyrics = (
       });
     }
   }
-  const limit = 20;
+  const limit = 10;
   const empty = { time: 0, text: "", time_str: "" };
   let firstList = [];
   for (let i = 0; i < limit; i++) {

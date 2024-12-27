@@ -22,10 +22,10 @@ function MusicCard({ music, onClick }: MusicCardProps) {
         style={{borderRadius: "0 0 8px 8px"}}
       >
         <div onClick={onClick} className="cursor-pointer break-keep overflow-hidden overflow-ellipsis w-[124px] hover:underline">
-          <span className="whitespace-nowrap">{metadata.title || music.name}</span>
+          <span className="whitespace-nowrap" title={metadata.title || music.name}>{metadata.title || music.name}</span>
         </div>
-        <div className="break-keep overflow-hidden w-[140px]">
-          <span className="whitespace-nowrap text-sm">{metadata.artist || music.artist}</span>
+        <div className="w-[124px] overflow-hidden overflow-ellipsis">
+          <span className="whitespace-nowrap text-sm" title={metadata.artist || music.artist}>{metadata.artist || music.artist}</span>
         </div>
       </div>
     </div>
