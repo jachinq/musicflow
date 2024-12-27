@@ -1,6 +1,9 @@
 /server/target
 /server/music
 /server/web
+/server/data
 
 /web/dist
 /web/node_modules
+
+/metadata/*.db

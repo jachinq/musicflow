@@ -6,9 +6,8 @@ use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 use walkdir::WalkDir; // 引入 CORS 中间件
-                      // use music_metadata::get_format;
-mod metadata_reader;
-use metadata_reader::*;
+mod dbservice;
+use dbservice::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Music {
@@ -26,8 +25,8 @@ struct TagMusic {
 }
 
 #[derive(Serialize)]
-struct MusicList {
-    musics: Vec<Music>,
+struct ListMusic {
+    musics: Vec<Metadata>,
     total: u32,
 }
 
@@ -43,16 +42,18 @@ async fn list_musics(
     data: web::Data<AppState>,
     query: web::Query<MusicListQuery>,
 ) -> impl Responder {
-    let musics = data.music_map.values().cloned().collect::<Vec<Music>>();
+    let musics = data.music_map.values().cloned().collect::<Vec<Metadata>>();
     let mut musics = musics.clone();
 
-    // 过滤标签
+    // 过滤
     if let Some(filter) = &query.filter {
         let filter = filter.to_lowercase();
-        musics.retain(|m| 
-            m.tags.iter().any(|t| t.to_lowercase().contains(&filter)) ||
-            m.name.to_lowercase().contains(&filter)
-        );
+        musics.retain(|m| {
+            // m.tags.iter().any(|t| t.to_lowercase().contains(&filter)) ||
+            m.title.to_lowercase().contains(&filter)
+                || m.artist.to_lowercase().contains(&filter)
+                || m.album.to_lowercase().contains(&filter)
+        });
     }
 
     // 分页
@@ -67,14 +68,6 @@ async fn list_musics(
     // println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
     let total = musics.len() as u32;
 
-    // if let (Some(current_page), Some(page_size)) = (query.current_page, query.page_size) {
-    //     let start = (current_page - 1) * page_size;
-    //     let end = start + page_size;
-    //     musics = musics
-    //         .get(start as usize..end as usize)
-    //         .unwrap_or(&musics)
-    //         .to_vec();
-    // }
     let start = (current_page - 1) * page_size;
     let end = start + page_size;
     let end = end.min(total); // 防止超过总数
@@ -83,7 +76,7 @@ async fn list_musics(
         .unwrap_or(&[])
         .to_vec();
 
-    HttpResponse::Ok().json(MusicList { musics, total })
+    HttpResponse::Ok().json(ListMusic { musics, total })
 }
 
 /// 根据音乐 ID 返回音乐文件的链接
@@ -116,17 +109,29 @@ struct FrontendLog {
 }
 
 async fn frontend_log(log: web::Json<FrontendLog>) -> impl Responder {
-    println!("[frontend_log]: {} {} {}", log.level, log.timestamp, log.message);
+    println!(
+        "[frontend_log]: {} {} {}",
+        log.level, log.timestamp, log.message
+    );
     HttpResponse::Ok().json(log)
 }
 
 struct AppState {
     music_path: String,
-    music_map: HashMap<String, Music>,
+    music_map: HashMap<String, Metadata>,
 }
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
+    // 初始化数据库
+    let res = get_metadata_list().await;
+    // print!("db result: {:?}", res);
+    let metadata_list = res.unwrap_or_default();
+    let mut path_metadata_map = HashMap::new();
+    for metadata in metadata_list {
+        path_metadata_map.insert(metadata.file_path.to_string(), metadata);
+    }
+
     // 从 conf/config.json 中读取配置信息，获取启动端口和音乐文件存放路径
     let config_path = "./conf/config.json";
     let config = std::fs::read_to_string(config_path).unwrap();
@@ -137,49 +142,26 @@ async fn main() -> io::Result<()> {
 
     // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
     let music_dir = config["music_dir"].as_str().unwrap().to_string();
-    let music_dir = music_dir.replace("\\", "/");
+    // let music_dir = music_dir.replace("\\", "/");
     println!("Music dir: {}", music_dir);
 
     let mut music_map = HashMap::new();
-
     for entry in WalkDir::new(&music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let ext = entry.path().extension().unwrap_or_default();
             if ext != "mp3" && ext != "flac" {
                 continue;
             }
-            let file_name = entry.file_name().to_string_lossy().to_string();
             let path = entry.path().display().to_string();
-            // Windows 下的路径 \\ 转为 /
-            let path = path.replace("\\", "/");
-            let path = path.replace(&music_dir, ""); // 去掉音乐路径前缀
-            let path = if path.starts_with("/") {
-                path.trim_start_matches('/') // 去掉开头的 /
-            } else {
-                &path
-            };
-            let path = format!("{}{}", "/music/", path);
-            let id = format!("{}{}", file_name, path.len());
-
-            // 读取元数据
-            // let metadata = read_metadata(&entry.path().display().to_string()).unwrap_or_else(|_| MusicMetadata {
-            //     title: None,
-            //     artist: None,
-            //     lyrics: None,
-            //     cover: None,
-            // });
-            let _metadata = MusicMetadata::default();
-
-            music_map.insert(
-                id.to_string(),
-                Music {
-                    id,
-                    name: file_name,
-                    path,
-                    tags: vec![],
-                    // metadata,
-                },
-            );
+            let metadata = path_metadata_map.get(&path);
+            if metadata.is_none() {
+                println!("Metadata not found for {}", path);
+                continue;
+            }
+            let mut metadata = metadata.unwrap().clone();
+            let url = metadata.file_url.replace("\\", "/");
+            metadata.file_url = format!("/music{}", url);
+            music_map.insert(metadata.id.to_string(), metadata.clone());
         }
     }
     println!("Music count: {}", music_map.len());
@@ -202,6 +184,8 @@ async fn main() -> io::Result<()> {
             .route("/api/detail/{path}", web::get().to(get_music_link))
             .route("/tag", web::post().to(tag_music))
             .route("/api/log", web::post().to(frontend_log))
+            .route("/api/cover/small/{path}", web::get().to(get_cover_small))
+            .route("/api/lyrics/{path}", web::get().to(get_lyrics))
             // 添加静态文件服务
             .service(actix_files::Files::new("/music", &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", "./web/dist").index_file("index.html"))
@@ -209,4 +193,35 @@ async fn main() -> io::Result<()> {
     .bind(&format!("{}:{}", ip, port))?
     .run()
     .await
+}
+
+async fn get_cover_small(song_id: web::Path<String>) -> impl Responder {
+    
+    let cover = get_cover(&song_id).await;
+    let default_cover = "UklGRggDAABXRUJQVlA4IPwCAAAwGgCdASqAAIAAP3GqyFy0rLsmKxRsw2AuCU20SyTUF69PjGpQdYlQVA3J+SRShYBVUl8iHKN5gCO2/owbthxIT7L/ldjtjIglUOlLb0VKvHdhfgQIRJNhdK2WeV//0G9Lf8fgkaJKIOsop3YT7i4A/FO974g72iagMyv98SdaQeQO3xLViJxqs/xXLXffVURZnUiqmwwbNpg9RZ4Hhc550zDfSgphm93VNw0JEz9FjYlFem3Q3wpYwnYP9Mnl45fClrHHMxw2XTgffylmB7vC4mDoghKMxPjYgAD+wu/b1l2vEtOCjp5W0JQ4NPrFm6WzlipzMgSbBAb5ILVwkL4zlm+3qcZPInlx/bQ1xeG/d3Wdu44ZOXIm06NTzjgjY8oX6IWqNTthXAZmxs0Sr10AVpltpQb2XGy1brDwS1PzKPSJri2854/HQFJJiWOZiTkpng38VmFdimDQQF3TUhpeXEtxb9UIbJhkn9Y0DHffAWe/SQLiUIktNrdw/Hl5iSmSrMRPmfMd6ko81qf9uYgETwoC8j4GOYrZg0VEtlHUqfOJYkmN6xRAJl+0uEJPBX67pe0dd4I2pSiEXbotVOTi24J1tb9JA3uAPCwNPL/141vC/hpMw8j/H2aKTuyow54G+oMcsoCC2sE7kX33/V2d01OzdgLaUCWWYHeRtXpb51aYt4qhF52ojRWAZL2sNOSu73qB8TFtFxbgZuX/9Zwc+cls/b7iEaDtMsfas+iCoPlNGPH9mLb1c+U+mGhSHww0p9h053PezDAvhOd08ty3cifhmhJGQuzgH7kN7Sonq9zQ/uCunXmTYhnbL8vF07zlIpXP8ZS73MRlgfWuA0AiYWSt3Obi1hp+naWD4it/lkxw16BXS8TgX+Ub7zmVIPCHBYpbuiYgheZ+beYlVhqZzikZbUJ1+7kM0dO8gXFTNp98jpAYQyHqMaNrnl6vddU58X3VLSQIw2uLbcT2iyD9fjXXlJhGA/qMYraKYzPHNOx2du+4Wuf0UIAAAA==";
+
+    let base64str = if let Ok(Some(cover)) = cover {
+        cover.base64
+    } else {
+        println!("Cover not found for {}, cover: {:?}", song_id, cover);
+        default_cover.to_string()
+    };
+
+    // 将base64编码的图片数据转换为二进制数据
+    let data = base64::decode(base64str).unwrap_or_default();
+    // 返回图片数据
+    HttpResponse::Ok().content_type("image/webp").body(data)
+}
+
+async fn get_lyrics(song_id: web::Path<String>) -> impl Responder {
+    let lyrics = get_lyric(&song_id).await;
+
+    let lyrics = if let Ok(lyrics) = lyrics {
+        lyrics
+    } else {
+        println!("Lyrics not found for {}", song_id);
+        vec![]  
+    };
+
+    HttpResponse::Ok().json(lyrics)
 }
