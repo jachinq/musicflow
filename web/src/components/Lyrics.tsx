@@ -2,16 +2,28 @@
 import { useEffect, useRef } from "react";
 import { useCurrentPlay } from "../store/current-play";
 import { usePlaylist } from "../store/playlist";
+import { getLyrics } from "../lib/api";
+import { lyric } from "../def/CommDef";
 
-interface LyricsProps {
-  lyrics: { time: number; text: string }[];
-}
-
-function Lyrics({ lyrics }: LyricsProps) {
-  const { currentLyric } = useCurrentPlay();
+function Lyrics() {
+  const { currentLyric, lyrics, setLyrics } = useCurrentPlay();
   const { currentSong } = usePlaylist();
   const lyricsRef = useRef<HTMLDivElement | null>(null);
-  
+
+  useEffect(() => {
+    if (!currentSong) return;
+    getLyrics(
+      currentSong.id,
+      (lyrics: lyric[]) => {
+        if (!lyrics) return;
+        setLyrics(lyrics);
+      },
+      (error) => {
+        console.error(error);
+      }
+    );
+  }, [currentSong]);
+
   useEffect(() => {
     if (!lyricsRef.current) return;
     const currentLyricIndex = lyrics.findIndex(line => line.time === currentLyric?.time);
@@ -39,13 +51,13 @@ function Lyrics({ lyrics }: LyricsProps) {
     // console.log("hover", lyricNameFocus().split(" ").join(" hover:"))
     return lyricNameFocus().split(" ").join(" hover:")
   };
-  const lyricName = (line: {time: number, text: string}) => {
+  const lyricName = (line: { time: number, text: string }) => {
     const focus = currentLyric?.time === line.time ? lyricNameFocus() : "";
     return `${focus} min-h-10 flex items-center transition-all duration-300 justify-center`
   }
 
   return (
-    <div ref={lyricsRef} className={getContainerHeight()} style={{overscrollBehavior: "contain"}}>
+    <div ref={lyricsRef} className={getContainerHeight()} style={{ overscrollBehavior: "contain" }}>
       {lyrics &&
         lyrics.map((line, index) => (
           <div

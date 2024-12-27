@@ -5,6 +5,7 @@ import { formatTime } from "../lib/utils";
 import { usePlaylist } from "../store/playlist";
 import { Pagination } from "./Pagination";
 import { forwardRef, useRef } from "react";
+import { getCoverSmallUrl } from "../lib/api";
 
 interface Props {
   clearPlaylist: () => void;
@@ -75,7 +76,7 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
               className="flex items-center justify-center cursor-pointer hover:bg-muted gap-2 p-2"
             >
               <div className="rounded-lg overflow-hidden relative">
-                <img src={song.metadata?.cover} alt="" width={40} />
+                <img src={getCoverSmallUrl(song.id)} alt="" width={40} />
                 {currentSong?.id === song.id && (
                   <>
                     <div className="mask w-[40px] h-[40px] absolute top-0 left-0 bg-black opacity-70"></div>
@@ -92,19 +93,18 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
                 )}
               </div>
               <div
-                className={`flex justify-between items-center w-full ${
-                  currentSong?.id === song.id ? "text-sidebar-ring" : ""
-                }`}
+                className={`flex justify-between items-center w-full ${currentSong?.id === song.id ? "text-sidebar-ring" : ""
+                  }`}
               >
                 <div className="flex flex-col gap-1">
-                  <span>{song.metadata?.title || song.name}</span>
+                  <span>{song.title || "unknown"}</span>
                   <span className="text-xs text-muted-foreground">
-                    {song.metadata?.artist || song.artist}
+                    {song.artist || song.artist}
                   </span>
                 </div>
-                {song.metadata?.duration && (
+                {song.duration && (
                   <div className="text-xs text-muted-foreground">
-                    {formatTime(song.metadata?.duration)}
+                    {formatTime(song.duration)}
                   </div>
                 )}
               </div>

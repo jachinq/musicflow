@@ -3,11 +3,14 @@ import { Music } from "../def/CommDef";
 export const API_URL = "http://127.0.0.1:9090";
 export const LOG_API = `${API_URL}/api/log`;
 
+export const getCoverSmallUrl = (id: string) => {
+  return `${API_URL}/api/cover/small/${id}`;
+}
+
 export const getMusicUrl = (music: Music) => {
-  if (!music || !music.path) return "";
-  if (music.path.startsWith("http")) return music.path;
-  if (music.path.startsWith("/")) return `${API_URL}${music.path}`;
-  return `${API_URL}/${music.path}`;
+  if (music.file_url.startsWith("http")) return music.file_url;
+  
+  return `${API_URL}${music.file_url}`;
 };
 
 /**
@@ -60,6 +63,10 @@ export const getMusicDetail = (
   fetchUtils(url, onSuccess, onError);
 };
 
+export const getLyrics = (song_id: string, onSuccess: (data: any) => void, onError: (error: any) => void) => {
+  const url = `${API_URL}/api/lyrics/${song_id}`;
+  fetchUtils(url, onSuccess, onError);
+}
 
 // 自定义日志记录器
 export const sendLogToServer = (level: string, timestamp: string, message: string) => {

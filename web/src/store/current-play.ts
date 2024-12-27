@@ -1,6 +1,6 @@
-import {create} from 'zustand';
+import { create } from 'zustand';
 import { IMeta } from '../lib/readmeta';
-import { Music } from '../def/CommDef';
+import { lyric, Music } from '../def/CommDef';
 
 const volumestr = localStorage.getItem("volume") || "0.5";
 const volume = parseFloat(volumestr);
@@ -8,7 +8,7 @@ const volume = parseFloat(volumestr);
 interface CurrentPlayState {
     audioContext: AudioContext | null;
     currentTime: number;
-    currentLyric: {time: number, text: string} | null;
+    currentLyric: { time: number, text: string } | null;
     duration: number;
     isPlaying: boolean;
     isLooping: boolean;
@@ -16,9 +16,10 @@ interface CurrentPlayState {
     volume: number;
     music: Music | null;
     metadata: IMeta | null;
+    lyrics: lyric[];
     setAudioContext: (audioContent: AudioContext | null) => void;
     setCurrentTime: (currentTime: number) => void;
-    setCurrentLyric: (currentLyric: {time: number, text: string} | null) => void;
+    setCurrentLyric: (currentLyric: { time: number, text: string } | null) => void;
     setDuration: (duration: number) => void;
     setIsPlaying: (isPlaying: boolean) => void;
     setIsLooping: (isLooping: boolean) => void;
@@ -26,6 +27,7 @@ interface CurrentPlayState {
     setVolume: (volume: number) => void;
     setMetadata: (metadata: IMeta) => void;
     setMusic: (music: Music) => void;
+    setLyrics: (lyrics: lyric[]) => void;
 }
 
 export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
@@ -39,11 +41,11 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     volume,
     music: null,
     metadata: null,
-    setAudioContext: (audioContent) => set(() => ({audioContext: audioContent})),
+    lyrics: [],
+    setAudioContext: (audioContent) => set(() => ({ audioContext: audioContent })),
     setCurrentTime: (currentTime) => set(() => {
-        const metadata = get().metadata;
-        if (metadata && metadata.lyrics) { 
-            const lyrics = metadata.lyrics;
+        const lyrics = get().lyrics;
+        if (lyrics) {
             // 定位下一行歌词，如果没有下一行歌词，则返回当前歌词
             // 这里的算法是 遍历歌词数组，找到第一个 time 小于等于当前时间的歌词 并且 下一个 time 大于当前时间的歌词
             let currentLyric = null;
@@ -60,20 +62,21 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
                     currentLyric = lyrics[nextLyricIndex - 1];
                 }
             }
-        
-            return {currentTime, currentLyric}
+
+            return { currentTime, currentLyric }
         }
-        return {currentTime}
+        return { currentTime }
     }),
-    setCurrentLyric: (currentLyric) => set(() => ({currentLyric})),
-    setDuration: (duration) => set(() => ({duration})),
-    setIsPlaying: (isPlaying) => set(() => ({isPlaying})),
-    setIsLooping: (isLooping) => set(() => ({isLooping})),
-    setIsMuted: (isMuted) => set(() => ({isMuted})),
+    setCurrentLyric: (currentLyric) => set(() => ({ currentLyric })),
+    setDuration: (duration) => set(() => ({ duration })),
+    setIsPlaying: (isPlaying) => set(() => ({ isPlaying })),
+    setIsLooping: (isLooping) => set(() => ({ isLooping })),
+    setIsMuted: (isMuted) => set(() => ({ isMuted })),
     setVolume: (volume) => set(() => {
         localStorage.setItem("volume", volume.toString());
-        return {volume}
+        return { volume }
     }),
-    setMetadata: (metadata) => set(() => ({metadata})),
-    setMusic: (music) => set(() => ({music})),
+    setMetadata: (metadata) => set(() => ({ metadata })),
+    setMusic: (music) => set(() => ({ music })),
+    setLyrics: (lyrics) => set(() => ({ lyrics })),
 }));

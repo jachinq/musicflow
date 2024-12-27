@@ -1,15 +1,15 @@
 import { IAudioMetadata, parseBuffer } from "music-metadata";
 
 export interface IMeta {
-  title: string | undefined;
-  artist: string | undefined;
-  album: string | undefined;
-  year: number | undefined;
-  track: number | null;
-  duration: number | undefined;
-  bitrate: number | undefined;
-  lyrics: { time: number; text: string }[];
-  cover: string | undefined; // base64 encoded image data
+title: string | undefined;
+artist: string | undefined;
+album: string | undefined;
+year: number | undefined;
+track: number | null;
+duration: number | undefined;
+bitrate: number | undefined;
+lyrics: { time: number; text: string }[];
+cover: string | undefined; // base64 encoded image data
 }
 
 export const readMeta = async (url: string): Promise<IMeta> => {

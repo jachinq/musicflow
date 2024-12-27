@@ -53,7 +53,7 @@ function MusicPlayer({ music, currentTime, onTimeUpdate }: MusicPlayerProps) {
   return (
     <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">{music.name}</h2>
+        <h2 className="text-xl font-bold">{music.title || "未知歌曲"}</h2>
         <p className="text-gray-500">{music.artist}</p>
       </div>
       <div className="flex items-center justify-between">

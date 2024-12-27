@@ -6,7 +6,6 @@ import MusicCard from "../components/MusicCard";
 import { getMusicList, getMusicUrl } from "../lib/api";
 import { Pagination } from "../components/Pagination";
 import { Music } from "../def/CommDef";
-import { readMeta } from "../lib/readmeta";
 import { FlameKindling, Loader, Play } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
@@ -36,13 +35,7 @@ function HomePage() {
         setTotalCount(data.total);
         setLoading(false);
         data.musics.forEach((music: Music) => {
-          music.url = getMusicUrl(music);
-        });
-        data.musics.forEach((music: Music) => {
-          readMeta(music.url).then((metadata) => {
-            music.metadata = metadata;
-            setMusicList([...data.musics]);
-          });
+          music.file_url = getMusicUrl(music);
         });
       },
       (error) => {

@@ -53,7 +53,6 @@ function AudioPlayer() {
     showPlaylist,
     allSongs,
     currentSong,
-    pageSongs,
     setCurrentSong,
     setShowPlaylist,
     setAllSongs,
@@ -118,16 +117,6 @@ function AudioPlayer() {
     }
   }, [currentTime]);
 
-  // 处理播放列表的meta数据
-  useEffect(() => {
-    if (!pageSongs || pageSongs.length === 0) return;
-
-    pageSongs.forEach((song) => {
-      if (song.metadata && song.fileArrayBuffer) return;
-      getMetatData(song);
-    });
-  }, [pageSongs]);
-
   const initStatus = () => {
     setIsPlaying(false);
     setCurrentTime(0);
@@ -137,13 +126,13 @@ function AudioPlayer() {
   };
 
   const nextSong = (next: number) => {
-    console.log("current song", currentSong?.name);
+    console.log("current song", currentSong?.title || "unknown");
     if (currentSong) {
       const index = allSongs.findIndex((music) => music.id === currentSong.id);
       const nextIndex = (index + next + allSongs.length) % allSongs.length;
       const nextSong = allSongs[nextIndex];
       setCurrentSong(nextSong);
-      console.log("next song", nextSong.metadata?.title || nextSong.name);
+      console.log("next song", nextSong.metadata?.title || 'unknown');
       if (currentSong.id === nextSong.id) {
         initStatus();
         loadAudioFile(); // 重新加载当前歌曲
@@ -282,8 +271,8 @@ function AudioPlayer() {
     if (song.metadata && song.fileArrayBuffer) {
       return;
     }
-    song.url = getMusicUrl(song);
-    const response = await fetch(song.url);
+    song.file_url = getMusicUrl(song);
+    const response = await fetch(song.file_url);
     const arrayBuffer = await response.arrayBuffer();
     let copyBuffer = arrayBuffer.slice(0);
     song.fileArrayBuffer = arrayBuffer;
