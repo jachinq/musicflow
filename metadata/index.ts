@@ -1,0 +1,274 @@
+import fs from 'fs';
+import path from 'path';
+import { IMeta, readMetaByBuffer, readTitle } from './readmeta';
+import { addArtist, addArtistSong, addCover, addLyric, addMetadata, addSongTag, addTag, Artist, ArtistSong, Cover, getMetadata, getMetadataById, getTag, Lyric, Metadata, SongTag } from './sql';
+import { generateUUID, readFilesRecursively } from './utils';
+
+const DIR = "./music";
+
+const convetIMetaToDbMeta = (iMeta: IMeta, file_name: string): Metadata => {
+  // ad2548rv
+  return {
+    id: "",
+    file_name: "",
+    file_path: "",
+    file_url: "",
+    title: iMeta.title || file_name,
+    artist: iMeta.artist || "未知歌手",
+    artists: JSON.stringify(iMeta.artists) || '["未知歌手"]',
+    album: iMeta.album || "未知专辑",
+    year: iMeta.year || 0,
+    duration: iMeta.duration || 0,
+    bitrate: iMeta.bitrate || 0,
+    sample_rate: iMeta.sampleRate || 0,
+  }
+}
+
+const singleTask = async (file_path: string, arrayBuffer: Buffer): Promise<{ msg: string, file_path: string }> => {
+  const file_name = path.basename(file_path);
+  const metadata = await readMetaByBuffer(arrayBuffer);
+  let title = metadata.title || file_name;
+  const exist = getMetadata(title);
+  if (exist) return { msg: "exist", file_path };
+
+  // 最多尝试生成10次9位的uuid，冲突则重新生成
+  let uuid = "";
+  for (let i = 0; i < 10; i++) {
+    uuid = generateUUID();
+    const exist = getMetadataById(uuid);
+    if (!exist) break;
+  }
+  if (!uuid) {
+    console.error(new Date().toLocaleString(), "generate uuid failed", metadata);
+    return { msg: "generate uuid failed", file_path };
+  }
+
+  const dbMeta = convetIMetaToDbMeta(metadata, file_name);
+  dbMeta.id = uuid;
+  dbMeta.file_name = file_name;
+  dbMeta.file_path = file_path;
+  dbMeta.file_url = file_path.replace(DIR, "");
+
+  // console.log(dbMeta);
+
+  const song_tags = buildSongTags(dbMeta.id, file_path);
+  // console.log(song_tags);
+
+  const lyrics = buildLyrics(metadata, dbMeta.id);
+  // console.log(lyrics);
+
+  const covers = buildCover(metadata, dbMeta.id);
+  // console.log(covers);
+
+  const artists = buildArtists(metadata);
+  // console.log(artists, artist_song);
+
+  let result = addMetadata(dbMeta);
+  if (!result) return { msg: "failed to add metadata", file_path };
+  song_tags.forEach(song_tag => {
+    let result = addSongTag(song_tag);
+    if (!result) console.error(new Date().toLocaleString(), "failed to add song tag", song_tag);
+  });
+  lyrics.forEach(lyric => {
+    let result = addLyric(lyric);
+    if (!result) console.error(new Date().toLocaleString(), "failed to add lyric", lyric);
+  });
+  covers.forEach(cover => {
+    let result = addCover(cover);
+    if (!result) console.error(new Date().toLocaleString(), "failed to add cover", cover);
+  });
+  let artist_ids: number[] = [];
+  artists.forEach(artist => {
+    let result = addArtist(artist);
+    // console.log('artist', artist, result);
+    if (!result) console.error(new Date().toLocaleString(), "failed to add artist", artist);
+    if (result) artist_ids.push(result.id);
+  });
+  artist_ids.forEach(artist_id => {
+    const artist_song = { song_id: dbMeta.id, artist_id };
+    // console.log(artist_song);
+    let result = addArtistSong(artist_song);
+    if (!result) console.error(new Date().toLocaleString(), "failed to add artist_song", artist_song);
+  });
+
+  return { msg: "success", file_path };
+}
+
+
+const buildSongTags = (metadataId: string, file_path: string) => {
+  let dir_paths: string[] = [];
+  const dir_path = path.dirname(file_path);
+  const relative_dir_path = dir_path.replace(DIR, "");
+  relative_dir_path.split(path.sep).forEach(dir_name => {
+    dir_paths.push(dir_name);
+  });
+
+  let song_tag_list: SongTag[] = [];
+  dir_paths.forEach(tag_name => {
+    if (tag_name === "") return;
+    if (tag_name === "music") return;
+    if (tag_name === "mp3") return;
+    if (tag_name === "flac") return;
+    if (tag_name === ".") return;
+    if (tag_name === "..") return;
+    if (tag_name === "node_modules") return;
+    let tag = getTag(tag_name);
+    if (!tag) tag = addTag({ id: 0, name: tag_name, color: "#000000", text_color: "#FFFFFF" });
+    if (!tag) return;
+    song_tag_list.push({ song_id: metadataId, tag_id: tag.id });
+  });
+  return song_tag_list;
+}
+
+const buildLyrics = (metadata: IMeta, metadataId: string): Lyric[] => {
+  const lyrics: Lyric[] = [];
+  metadata.lyrics.forEach(lyric => {
+    lyrics.push({ id: 0, song_id: metadataId, time: lyric.time, text: lyric.text });
+  });
+  return lyrics;
+}
+
+const buildCover = (metadata: IMeta, metadataId: string): Cover[] => {
+  if (!metadata.cover) return [];
+  // const original_cover: Cover = {
+  //   format: metadata.cover.format || "",
+  //   width: metadata.cover.width || 0,
+  //   height: metadata.cover.height || 0,
+  //   base64: metadata.cover.original || "",
+  //   type: "original",
+  //   extra: "{}",
+  //   song_id: metadataId,
+  // }
+
+  const small_cover: Cover = {
+    format: "webp",
+    width: 128,
+    height: 128,
+    base64: metadata.cover.small || "",
+    type: "small",
+    extra: "{}",
+    song_id: metadataId,
+  }
+  const large_cover: Cover = {
+    format: "webp",
+    width: 600,
+    height: 600,
+    base64: metadata.cover.large || "",
+    type: "medium",
+    extra: "{}",
+    song_id: metadataId,
+  }
+
+  return [
+    // original_cover, 
+    small_cover,
+    large_cover];
+}
+
+const buildArtists = (metadata: IMeta): Artist[] => {
+  const artists: Artist[] = [];
+  metadata.artists?.forEach(artist => {
+    artists.push({ id: 0, name: artist, cover: "", description: "" });
+  });
+  return artists
+}
+
+const logProgress = (count: number, success: number, failed: any[]) => {
+  console.log("count", count, "success:", success, "failed:", failed.length, "progress:", (success / count * 100).toFixed(2) + "%");
+}
+
+const job = async () => {
+  const job_start_time = new Date().getTime();
+  console.log(new Date().toLocaleString(), "job start...");
+  // 读取文件夹包括子文件夹下所有文件
+  const files = readFilesRecursively(DIR);
+  const all_files_count = files.length;
+
+  // 过滤出以 mp3、flac 结尾的文件
+  const music_files = files.filter(file_path => {
+    const ext = path.extname(file_path).toLowerCase();
+    const hit = ext === '.mp3' || ext === '.flac'
+    if (!hit) {
+      console.log("ignore file:", file_path);
+    }
+    return hit;
+  });
+  const music_count = music_files.length;
+  console.log("all files count:", all_files_count, "music files count:", music_count, "ignore files count:", all_files_count - music_count);
+
+  let exists: any[] = [];
+  let faile: any[] = [];
+  let success = 0;
+
+  // 并发处理，每次拿出 n 个文件进行处理
+  // const concurrency = 3;
+  // const tasks: Promise<{msg: string, file_path: string}>[] = [];
+  // for (let i = 0; i < music_count; i += concurrency) {
+  //   const task_files = music_files.slice(i, i + concurrency);
+  //   task_files.forEach(async file_path => {
+  //     const file_name = path.basename(file_path);
+  //     const arrayBuffer = fs.readFileSync(file_path);
+  //     const title = await readTitle(arrayBuffer) || file_name;
+  //     const exist = getMetadata(title);
+  //     if (exist) {
+  //       exists.push({ file_path, title, exist });
+  //       success++;
+  //       logProgress(music_count, success, faile);
+  //       return;
+  //     }
+  //     tasks.push(singleTask(file_path, arrayBuffer));
+  //   });
+  //   await Promise.all(tasks).then(results => {
+  //     results.forEach(result => {
+  //       if (result.msg === "success") {
+  //         success++;
+  //         logProgress(music_count, success, faile);
+  //       } else {
+  //         faile.push({ file_path: result.file_path, result });
+  //       }
+  //     });
+  //   });
+  //   tasks.length = 0;
+  // }
+
+  for (let i = 0; i < music_count; i++) {
+    const file_path = music_files[i];
+    const file_name = path.basename(file_path);
+    const arrayBuffer = fs.readFileSync(file_path);
+    const title = await readTitle(arrayBuffer) || file_name;
+    const exist = getMetadata(title);
+    if (exist) {
+      exists.push({ file_path, title, exist });
+      success++;
+      logProgress(music_count, success, faile);
+      continue;
+    }
+
+    let result = await singleTask(file_path, arrayBuffer);
+    if (result.msg !== "success") {
+      faile.push({ file_path, result });
+      return;
+    }
+    success++;
+    logProgress(music_count, success, faile);
+  }
+
+  const internal_id = setInterval(() => {
+    if (success + faile.length === music_count) {
+      clearInterval(internal_id);
+
+      exists.forEach(data => {
+        if (data.exist.file_path === data.file_path) return;
+        console.log("exist:", data.file_path, data.title, data.exist.file_name, data.exist.file_path);
+      });
+
+      console.log(new Date().toLocaleString(), "success:", success, "failed:", faile.length, "exists:", exists.length);
+      console.log(new Date().toLocaleString(), "job end...");
+      const job_end_time = new Date().getTime();
+      console.log(new Date().toLocaleString(), "cost time:", (job_end_time - job_start_time) / 1000, "s");
+      // console.log(new Date().toLocaleString(), "failed list:", faile);
+    }
+  }, 1000);
+}
+
+job();
