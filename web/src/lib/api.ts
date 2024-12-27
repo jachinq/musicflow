@@ -4,7 +4,10 @@ export const API_URL = "http://127.0.0.1:9090";
 export const LOG_API = `${API_URL}/api/log`;
 
 export const getMusicUrl = (music: Music) => {
-  return `${API_URL}/music/${music.path}`;
+  if (!music || !music.path) return "";
+  if (music.path.startsWith("http")) return music.path;
+  if (music.path.startsWith("/")) return `${API_URL}${music.path}`;
+  return `${API_URL}/${music.path}`;
 };
 
 /**

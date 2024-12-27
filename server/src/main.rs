@@ -153,6 +153,12 @@ async fn main() -> io::Result<()> {
             // Windows 下的路径 \\ 转为 /
             let path = path.replace("\\", "/");
             let path = path.replace(&music_dir, ""); // 去掉音乐路径前缀
+            let path = if path.starts_with("/") {
+                path.trim_start_matches('/') // 去掉开头的 /
+            } else {
+                &path
+            };
+            let path = format!("{}{}", "/music/", path);
             let id = format!("{}{}", file_name, path.len());
 
             // 读取元数据
