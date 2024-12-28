@@ -4,25 +4,29 @@ import { useTheme } from "./theme-provider"
 
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
 
   return (
     <div className="flex items-center space-x-2">
-      <Theme isActived={theme === "dark"}>
-        <Moon className=" h-[1.2rem] w-[1.2rem] rotate-90 transition-all dark:rotate-0" onClick={() => setTheme("dark")} />
+      <Theme type="dark" >
+        <Moon className=" h-[1.2rem] w-[1.2rem] rotate-90 transition-all dark:rotate-0"/>
+        <div className="text-xs font-bold">Dark</div>
       </Theme>
-      <Theme isActived={theme === "light"}>
-        <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 transition-all dark:-rotate-90" onClick={() => setTheme("light")} />
+      <Theme type="light" >
+        <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 transition-all dark:-rotate-90"/>
+        <div className="text-xs font-bold">Light</div>
       </Theme>
-      <Theme isActived={theme === "system"}>
-        <Settings className="h-[1.2rem] w-[1.2rem] rotate-0 transition-all dark:-rotate-90" onClick={() => setTheme("system")} />
+      <Theme type="system">
+        <Settings className="h-[1.2rem] w-[1.2rem] rotate-0 transition-all dark:-rotate-90" />
+        <div className="text-xs font-bold">System</div>
       </Theme>
     </div>
   )
 }
 
-const Theme = ({ isActived, ...props }: { isActived: boolean } & React.HTMLAttributes<HTMLDivElement>) => {
+const Theme = ({ type, ...props }: { type: "dark" | "light" | "system" } & React.HTMLAttributes<HTMLDivElement>) => {
+  const { theme, setTheme } = useTheme()
+
   return (
-    <div className={`${isActived && "text-blue-500"} cursor-pointer`} {...props}></div>
+    <div className={`${theme===type && "text-blue-500"} cursor-pointer hover:text-primary-hover  `} {...props}  onClick={() => setTheme(type)} ></div>
   )
 }
