@@ -15,7 +15,10 @@ function Lyrics() {
     getLyrics(
       currentSong.id,
       (lyrics: lyric[]) => {
-        if (!lyrics) return;
+        if (!lyrics || lyrics.length === 0) {
+          setLyrics([]);
+          return
+        };
         const limit = 10;
         const empty: lyric = { time: 0, text: "", id: 0, song_id: "" };
         let firstList = [];
@@ -90,6 +93,9 @@ function Lyrics() {
             <span>{line.text}</span>
           </div>
         ))}
+        {lyrics.length === 0 && (
+          <div>暂无歌词</div>
+        )}
     </div>
   );
 }

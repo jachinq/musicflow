@@ -9,7 +9,7 @@ import Playlist from "./Playlist";
 import {
   ChevronFirst,
   ChevronLast,
-  List,
+  ListMusic,
   Loader2,
   PauseCircle,
   PlayCircle,
@@ -422,7 +422,7 @@ function AudioPlayer() {
                 className="cursor-pointer hover:text-primary-hover"
                 onClick={() => setShowPlaylist(!showPlaylist)}
               >
-                <List />
+                <ListMusic />
               </div>
 
               <div className="volume-control relative">

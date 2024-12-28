@@ -15,7 +15,7 @@ let pageSize = 30;
 function HomePage() {
   const { isSmallDevice } = useDevice();
   if (isSmallDevice) {
-    pageSize = 3;
+    pageSize = 6;
   }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +140,7 @@ function HomePage() {
   return (
     <div className="p-4">
       <div className="flex justify-center items-center">
-        <div className="control mb-4 flex flex-row gap-4 justify-start items-center w-full max-w-[1560px]">
+        <div className="control mb-4 flex flex-row gap-4 justify-start items-center w-full max-w-[1560px] select-none">
           <div
             className="flex items-center gap-2 cursor-pointer hover:bg-primary-hover p-2 rounded-md bg-primary text-primary-foreground transition-all duration-300"
             onClick={playAllSongs}

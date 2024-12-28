@@ -23,7 +23,7 @@ pub async fn list_musics(
     data: web::Data<AppState>,
     query: web::Json<MusicListQuery>,
 ) -> impl Responder {
-    let music_path = data.music_path.clone();
+    // let music_path = data.music_path.clone();
     let musics = data.music_map.values().cloned().collect::<Vec<Metadata>>();
     let mut musics = musics.clone();
 
@@ -78,13 +78,18 @@ pub async fn list_musics(
 
 pub async fn get_cover_small(song_id: web::Path<String>) -> impl Responder {
     let cover = get_cover(&song_id).await;
-    let default_cover = "UklGRggDAABXRUJQVlA4IPwCAAAwGgCdASqAAIAAP3GqyFy0rLsmKxRsw2AuCU20SyTUF69PjGpQdYlQVA3J+SRShYBVUl8iHKN5gCO2/owbthxIT7L/ldjtjIglUOlLb0VKvHdhfgQIRJNhdK2WeV//0G9Lf8fgkaJKIOsop3YT7i4A/FO974g72iagMyv98SdaQeQO3xLViJxqs/xXLXffVURZnUiqmwwbNpg9RZ4Hhc550zDfSgphm93VNw0JEz9FjYlFem3Q3wpYwnYP9Mnl45fClrHHMxw2XTgffylmB7vC4mDoghKMxPjYgAD+wu/b1l2vEtOCjp5W0JQ4NPrFm6WzlipzMgSbBAb5ILVwkL4zlm+3qcZPInlx/bQ1xeG/d3Wdu44ZOXIm06NTzjgjY8oX6IWqNTthXAZmxs0Sr10AVpltpQb2XGy1brDwS1PzKPSJri2854/HQFJJiWOZiTkpng38VmFdimDQQF3TUhpeXEtxb9UIbJhkn9Y0DHffAWe/SQLiUIktNrdw/Hl5iSmSrMRPmfMd6ko81qf9uYgETwoC8j4GOYrZg0VEtlHUqfOJYkmN6xRAJl+0uEJPBX67pe0dd4I2pSiEXbotVOTi24J1tb9JA3uAPCwNPL/141vC/hpMw8j/H2aKTuyow54G+oMcsoCC2sE7kX33/V2d01OzdgLaUCWWYHeRtXpb51aYt4qhF52ojRWAZL2sNOSu73qB8TFtFxbgZuX/9Zwc+cls/b7iEaDtMsfas+iCoPlNGPH9mLb1c+U+mGhSHww0p9h053PezDAvhOd08ty3cifhmhJGQuzgH7kN7Sonq9zQ/uCunXmTYhnbL8vF07zlIpXP8ZS73MRlgfWuA0AiYWSt3Obi1hp+naWD4it/lkxw16BXS8TgX+Ub7zmVIPCHBYpbuiYgheZ+beYlVhqZzikZbUJ1+7kM0dO8gXFTNp98jpAYQyHqMaNrnl6vddU58X3VLSQIw2uLbcT2iyD9fjXXlJhGA/qMYraKYzPHNOx2du+4Wuf0UIAAAA==";
+    let default_cover = "UklGRpYBAABXRUJQVlA4IIoBAACQEgCdASrAAMAAP3G42GK0sayopLkoEpAuCWVu4QXUMQU4nn/pWmF9o0DPifE+JlGhgZqOyVZgoy7NXUtGklgA0aiSG2RF2Kbm5jQ3eoKwLpyF9R8oVd509SVeXb/tHglG1W4wL8vovtTUJhW/Jxy+Dz2kkbDPiXZ2AE9bwGmE/rM3PifIKeoZRVuuc6yX3BGpY5qSDk0eFGcLFyoAAP1V/+KHvw994S1rsgmSb8eM4Ys0mSvZP+IPrAhBml27fCTgPcHy1S6f9iSr6o2btNKixxetBHWT70dP+hIZITsA3mwH6GT6Jph31q2YsJASsCnDSmiO9ctjViN5bcVXcoIwwUZTu+9jQATMseG7OR/yl1R++egpeBnLRwGRtbdMgxlpe/+cJM8j1XCD0gwSVPZDBJ2Ke/IK/iCzWPuDO2Nw6aGgfb5Rbhor4l+4FDZjWdPVG9qP3AimXDGjWyUPw1fYuf4rBYVj4XiNln/QypsIcatiR5DVPn/YR0CBfMXURwr5Dg+721oAAAAA";
 
     let base64str = if let Ok(Some(cover)) = cover {
         cover.base64
     } else {
         println!("Cover not found for {}, cover: {:?}", song_id, cover);
         default_cover.to_string()
+    };
+    let base64str = if base64str.is_empty() {
+        default_cover
+    } else {
+        &base64str
     };
 
     // 将base64编码的图片数据转换为二进制数据

@@ -31,7 +31,7 @@ export const Input = ({ type = 'text', placeholder, value, onChange, name, class
       value={inputValue}
       onChange={handleInputChange}
       name={name}
-      className={`${className} outline-none bg-muted px-4 py-2 rounded-sm`}
+      className={`${className} outline-none bg-muted px-4 py-2 rounded-sm w-full`}
     />
   );
 };
