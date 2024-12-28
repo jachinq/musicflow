@@ -1,6 +1,9 @@
 import { Music, MusicFilter } from "./defined";
 
-export const API_URL = "http://127.0.0.1:9090";
+const defaultSettingStr = localStorage.getItem("musicflow_setting") || "{}"
+const defaultSetting = JSON.parse(defaultSettingStr);
+
+export const API_URL = defaultSetting.server_url || "";
 export const LOG_API = `${API_URL}/api/log`;
 
 export const getCoverSmallUrl = (id: string) => {
