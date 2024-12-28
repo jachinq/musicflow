@@ -9,6 +9,9 @@ export const LOG_API = `${API_URL}/api/log`;
 export const getCoverSmallUrl = (id: string) => {
   return `${API_URL}/api/cover/small/${id}`;
 };
+export const getCoverMediumUrl = (id: string) => {
+  return `${API_URL}/api/cover/medium/${id}`;
+};
 
 export const getMusicUrl = (music: Music) => {
   if (music.file_url.startsWith("http")) return music.file_url;
@@ -63,6 +66,15 @@ export const getMusicList = (
     method: "POST",
     body: JSON.stringify(params),
   });
+};
+
+export const getMusicDetail = (
+  id: string,
+  onSuccess: (data: any) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/single/${id}`;
+  fetchUtils(url, onSuccess, onError);
 };
 
 export const getLyrics = (

@@ -5,15 +5,16 @@ import { usePlaylist } from "../store/playlist";
 import { getLyrics } from "../lib/api";
 import { lyric } from "../lib/defined";
 
-function Lyrics() {
+function Lyrics({song_id}: {song_id?: string}) {
   const { currentLyric, lyrics, setLyrics } = useCurrentPlay();
   const { currentSong } = usePlaylist();
   const lyricsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!currentSong) return;
+    const id = currentSong?.id || song_id;
+    if (!id) return;
     getLyrics(
-      currentSong.id,
+      id,
       (lyrics: lyric[]) => {
         if (!lyrics || lyrics.length === 0) {
           setLyrics([]);
@@ -36,7 +37,7 @@ function Lyrics() {
         console.error(error);
       }
     );
-  }, [currentSong]);
+  }, [currentSong, song_id]);
 
   useEffect(() => {
     if (!lyricsRef.current) return;
@@ -64,7 +65,7 @@ function Lyrics() {
     if (currentSong) {
       height = "max-h-[calc(100vh-220px)]";
     }
-    return `${height} text-center overflow-y-scroll overflw-x-hidden my-4 px-8`;
+    return `${height} text-center overflow-y-scroll overflw-x-hidden my-4 px-8 w-full hide-scrollbar`;
   };
 
   const lyricNameFocus = () =>
@@ -81,8 +82,8 @@ function Lyrics() {
   return (
     <div
       ref={lyricsRef}
-      className={getContainerHeight()}
-      style={{ overscrollBehavior: "contain" }}
+      className={`${getContainerHeight()}`}
+      // style={{ overscrollBehavior: "contain" }}
     >
       {lyrics &&
         lyrics.map((line, index) => (

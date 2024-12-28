@@ -5,31 +5,34 @@ const volumestr = localStorage.getItem("volume") || "0.5";
 const volume = parseFloat(volumestr);
 
 interface CurrentPlayState {
-    audioContext: AudioContext | null;
+    audioContext: AudioContext;
     currentTime: number;
     currentLyric: { time: number, text: string } | null;
     duration: number;
     isPlaying: boolean;
     volume: number;
+    mutedVolume: number;
     lyrics: lyric[];
-    setAudioContext: (audioContent: AudioContext | null) => void;
+    setAudioContext: (audioContent: AudioContext) => void;
     setCurrentTime: (currentTime: number) => void;
     setCurrentLyric: (currentLyric: { time: number, text: string } | null) => void;
     setDuration: (duration: number) => void;
     setIsPlaying: (isPlaying: boolean) => void;
     setVolume: (volume: number) => void;
+    setMutedVolume: (mutedVolume: number) => void;
     setLyrics: (lyrics: lyric[]) => void;
 }
 
 export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
-    audioContext: null,
+    audioContext: new AudioContext(),
     currentTime: 0,
     currentLyric: null,
     duration: 0,
     isPlaying: false,
     volume,
+    mutedVolume: 0,
     lyrics: [],
-    setAudioContext: (audioContent) => set(() => ({ audioContext: audioContent })),
+    setAudioContext: (audioContext) => set(() => ({ audioContext })),
     setCurrentTime: (currentTime) => set(() => {
         const lyrics = get().lyrics;
         if (lyrics) {
@@ -61,5 +64,6 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
         localStorage.setItem("volume", volume.toString());
         return { volume }
     }),
+    setMutedVolume: (mutedVolume) => set(() => ({ mutedVolume })),
     setLyrics: (lyrics) => set(() => ({ lyrics })),
 }));

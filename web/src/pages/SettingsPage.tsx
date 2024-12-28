@@ -20,7 +20,7 @@ function SettingsPage() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="p-4 overflow-scroll flex justify-center items-center">
+    <div className="p-4 overflow-y-scroll flex justify-center items-center">
       <div className="max-w-[860px] w-full gap-4 flex flex-col">
         <FormLayout label="主题">
           <OptionGroup defaultValue={theme} setValue={setTheme}>

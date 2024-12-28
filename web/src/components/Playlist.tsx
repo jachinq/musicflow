@@ -6,6 +6,7 @@ import { usePlaylist } from "../store/playlist";
 import { Pagination } from "./Pagination";
 import { forwardRef, useRef } from "react";
 import { getCoverSmallUrl } from "../lib/api";
+import { useKeyPress } from "../hooks/use-keypress";
 
 interface Props {
   clearPlaylist: () => void;
@@ -20,6 +21,7 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
     } else if (ref) {
       ref.current = node;
     }
+    // internalRef.current?.style["--playlist-width"] = node?.offsetWidth + "px";
   };
 
   const {
@@ -37,6 +39,19 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
     setCurrentSong(song);
   };
 
+  // 左右箭头控制翻页
+  useKeyPress("ArrowRight", () => {
+    const totalPages = Math.ceil(getTotal() / 10);
+    if (getTotal() > 0 && currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  });
+  useKeyPress("ArrowLeft", () => {
+    if (getTotal() > 0 && currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  });
+
   if (!showPlaylist) {
     return null;
   }
@@ -45,7 +60,7 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
     <>
       <div
         ref={setRef}
-        className="fixed top-[72px] right-2 w-[calc(100vw/3)] min-w-[320px] h-[calc(100vh-180px)] bg-background text-foreground rounded-md overflow-y-scroll overflow-x-hidden z-10"
+        className="fixed top-[72px] right-2 w-[calc(100vw/3)] min-w-[320px] h-[calc(100vh-180px)] bg-secondary text-secondary-foreground rounded-md overflow-y-scroll overflow-x-hidden z-10 animate-playlist-fadein"
         style={{ overscrollBehavior: "contain" }}
       >
         {" "}
@@ -93,8 +108,9 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
                 )}
               </div>
               <div
-                className={`flex justify-between items-center w-full ${currentSong?.id === song.id ? "text-sidebar-ring" : ""
-                  }`}
+                className={`flex justify-between items-center w-full ${
+                  currentSong?.id === song.id ? "text-sidebar-ring" : ""
+                }`}
               >
                 <div className="flex flex-col gap-1">
                   <span>{song.title || "unknown"}</span>

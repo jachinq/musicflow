@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
@@ -18,9 +20,11 @@ use controller_tag::*;
 use controller_user::*;
 use dbservice::*;
 
+// 应用状态
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 struct AppState {
     music_path: String,
-    music_map: HashMap<String, Metadata>,
+    music_map: HashMap<String, Metadata>, // 音乐 ID 到 Music 实例的映射表
 }
 
 #[actix_web::main]
@@ -56,14 +60,16 @@ async fn main() -> io::Result<()> {
                 music_path: music_path.to_string(),
                 music_map: music_map.clone(),
             }))
+            .route("/api/log", web::post().to(frontend_log))
             .route("/api/list", web::post().to(list_musics))
+            .route("/api/single/{song_id}", web::get().to(single_music))
             .route("/api/tags", web::get().to(tags))
             .route("/api/song_tags/{song_id}", web::get().to(song_tags))
             .route("/api/tag_songs/{tag_id}", web::get().to(tag_songs))
             .route("/api/add_tag_to_song", web::post().to(add_tag_to_song))
-            .route("/api/log", web::post().to(frontend_log))
-            .route("/api/cover/small/{path}", web::get().to(get_cover_small))
-            .route("/api/lyrics/{path}", web::get().to(get_lyrics))
+            .route("/api/cover/small/{song_id}", web::get().to(get_cover_small))
+            .route("/api/cover/medium/{song_id}", web::get().to(get_cover_medium))
+            .route("/api/lyrics/{song_id}", web::get().to(get_lyrics))
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", "./web/dist").index_file("index.html"))

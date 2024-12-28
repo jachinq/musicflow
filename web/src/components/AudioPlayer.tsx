@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
 import { getCoverSmallUrl, getMusicUrl } from "../lib/api";
 import { usePlaylist } from "../store/playlist";
@@ -18,8 +18,9 @@ import {
   VolumeXIcon,
 } from "lucide-react";
 import { Music } from "../lib/defined";
+import { useKeyPress } from "../hooks/use-keypress";
 
-function AudioPlayer() {
+export const AudioPlayer = () => {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [source, setSource] = useState<AudioBufferSourceNode | null>(null);
   const [progressIntevalId, setProgressIntevalId] = useState<number | null>(
@@ -29,7 +30,7 @@ function AudioPlayer() {
   const location = useLocation();
   const [loadStatus, setLoadStatus] = useState<string>("加载中...");
 
-  const isDetailPage = location.pathname.startsWith("/music");
+  const isDetailPage = location.pathname.startsWith("/detail");
 
   const {
     audioContext,
@@ -37,7 +38,9 @@ function AudioPlayer() {
     duration,
     isPlaying,
     volume,
+    mutedVolume,
     setVolume,
+    setMutedVolume,
     setAudioContext,
     setCurrentTime,
     setDuration,
@@ -55,42 +58,50 @@ function AudioPlayer() {
     setAllSongs,
   } = usePlaylist();
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    console.log("keydown", event.code, isPlaying);
-    if (event.code === "Space") {
-      if (isPlaying) {
-        pauseAudio();
-      } else {
-        playAudio();
-      }
+  // 空格键控制播放暂停
+  useKeyPress(" ", () => {
+    if (isPlaying) {
+      pauseAudio();
+    } else {
+      playAudio(currentTime >= duration ? 0 : currentTime);
     }
-    // if (event.code === "ArrowRight") {
-    //   nextSong();
-    // }
-    // if (event.code === "ArrowLeft") {
-    //   prevSong();
-    // }
-    // if (event.code === "KeyP") {
-    //   if (showPlaylist) {
-    //     setShowPlaylist(false);
-    //   } else {
-    //     setShowPlaylist(true);
-    //   }
-    // }
-    // if (event.code === "KeyC") {
-    //   clearPlaylist();
-    // }
-    // if (event.code === "KeyG") {
-    //   groupSong();
-    // }
-  };
+  });
 
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
+  // p 显示/隐藏播放列表
+  useKeyPress("p", () => {
+    setShowPlaylist(!showPlaylist);
+  });
+
+  // j 跳到上一首歌曲
+  useKeyPress("j", () => {
+    nextSong(-1);
+  });
+
+  // k 跳到下一首歌曲
+  useKeyPress("k", () => {
+    nextSong(1);
+  });
+
+  // b 静音/取消静音
+  useKeyPress("b", () => {
+    if (volume > 0) setMutedVolume(volume);
+    changeVolume(volume > 0 ? 0 : mutedVolume || 0.5);
+  });
+
+  // v 显示/隐藏音量
+  useKeyPress("v", () => {
+    setShowVolume(!showVolume);
+  });
+
+  // 音量键调节音量 / 切歌
+  useKeyPress("ArrowUp", () => {
+    if (showVolume && volume < 1) changeVolume(Math.min(volume + 0.005, 1));
+    if (showPlaylist) nextSong(-1);
+  });
+  useKeyPress("ArrowDown", () => {
+    if (showVolume && volume > 0) changeVolume(Math.max(volume - 0.005, 0));
+    if (showPlaylist) nextSong(1);
+  });
 
   useEffect(() => {
     initStatus();
@@ -101,11 +112,19 @@ function AudioPlayer() {
     }, 10 * 1000);
   }, [currentSong]);
   useEffect(() => {
-    if (audioBuffer && audioContext) {
+    console.log("audio buffer change", audioBuffer?.length);
+    if (audioBuffer) {
+      if (gainNode === null) {
+        // 创建音量节点
+        const gainNodeTmp = audioContext.createGain();
+        gainNodeTmp.connect(audioContext.destination);
+        gainNodeTmp.gain.value = volume;
+        setGainNode(gainNodeTmp);
+      }
       pauseAudio();
       playAudio(0);
     }
-  }, [audioBuffer]);
+  }, [audioBuffer, gainNode]);
 
   useEffect(() => {
     if (currentTime >= duration && isPlaying) {
@@ -129,7 +148,7 @@ function AudioPlayer() {
       const nextIndex = (index + next + allSongs.length) % allSongs.length;
       const nextSong = allSongs[nextIndex];
       setCurrentSong(nextSong);
-      console.log("next song", nextSong.title || 'unknown');
+      console.log("next song", nextSong.title || "unknown");
       if (currentSong.id === nextSong.id) {
         initStatus();
         loadAudioFile(); // 重新加载当前歌曲
@@ -137,12 +156,13 @@ function AudioPlayer() {
     }
   };
   const playAudio = (startTime: number = 0) => {
-    if (!audioContext) {
+    // console.log("play", audioContext.state, startTime);
+    if (!audioBuffer) {
+      console.log("audio buffer is null");
       return;
     }
-    // console.log("play", audioContext.state, startTime);
-    if (!audioBuffer || !gainNode) {
-      console.log("audio buffer is null");
+    if (!gainNode) {
+      console.log("gain node is null");
       return;
     }
     const sourceStartTime = audioContext.currentTime;
@@ -169,10 +189,7 @@ function AudioPlayer() {
   };
 
   const pauseAudio = () => {
-    if (!audioContext) {
-      return;
-    }
-    // console.log("pause", audioContext.state);
+    console.log("pause", audioContext.state);
     if (progressIntevalId) {
       clearInterval(progressIntevalId);
     }
@@ -196,21 +213,27 @@ function AudioPlayer() {
     if (!currentSong) {
       return;
     }
-    setLoadStatus("加载中...");
-    let audioContextTmp = audioContext;
-    if (!audioContextTmp) {
-      setLoadStatus("设置音频上下文...");
-      audioContextTmp = new AudioContext();
-      setAudioContext(audioContextTmp);
-      setLoadStatus("创建音量节点...");
-      const gainNodeTmp = audioContextTmp.createGain();
-      gainNodeTmp.connect(audioContextTmp.destination);
-      gainNodeTmp.gain.value = volume;
-      setGainNode(gainNodeTmp);
-    }
-    audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复
+    try {
+      setLoadStatus("加载中...");
+      let audioContextTmp = audioContext;
+      if (!audioContextTmp) {
+        // 理论上这里不会触发, 保险起见再加个判断
+        setLoadStatus("设置音频上下文...");
+        audioContextTmp = new AudioContext();
+        setAudioContext(audioContextTmp);
+        setLoadStatus("创建音量节点...");
+        const gainNodeTmp = audioContextTmp.createGain();
+        gainNodeTmp.connect(audioContextTmp.destination);
+        gainNodeTmp.gain.value = volume;
+        setGainNode(gainNodeTmp);
+      }
+      audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复
 
-    decodeAudioBuffer(currentSong, true);
+      decodeAudioBuffer(currentSong, true);
+    } catch (error) {
+      console.log("load audio file error", error);
+      setLoadStatus("加载失败...");
+    }
   };
 
   const decodeAudioBuffer = async (song: Music, actuallyDecode: boolean) => {
@@ -275,12 +298,11 @@ function AudioPlayer() {
     if (!currentSong) {
       return;
     }
-    console.log(location.pathname);
     if (isDetailPage) {
       navigate(-1);
       return;
     }
-    navigate("/music/" + currentSong.id);
+    navigate("/detail/" + currentSong.id);
   };
 
   const clearPlaylist = () => {
@@ -296,36 +318,15 @@ function AudioPlayer() {
     // TODO: open group modal
   };
 
-  const [showVolume, setShowVolume] = useState<{
-    show: boolean;
-    x: number;
-    y: number;
-  }>({
-    show: false,
-    x: 0,
-    y: 0,
-  });
-  const volumeSliderRef = useRef<HTMLDivElement | null>(null);
-  const changeVolume = (event: { target: { value: string } }) => {
+  const [showVolume, setShowVolume] = useState<boolean>(false);
+  const changeVolume = (value: number) => {
     if (!gainNode) {
       return;
     }
-    const volume = parseFloat(event.target.value);
-    gainNode.gain.value = volume;
-    setVolume(volume);
+    gainNode.gain.value = value;
+    setVolume(value);
     setGainNode(gainNode);
   };
-  const showVolumeBox = (event: any) => {
-    setShowVolume({
-      show: !showVolume.show,
-      x: event.clientX,
-      y: event.clientY,
-    });
-  };
-  useEffect(() => {
-    if (showVolume.show) {
-    }
-  }, [showVolume]);
 
   return (
     <div className="fixed bottom-0 left-0 w-full bg-playstatus text-playstatus-foreground min-h-[88px] max-h-[88px] flex justify-center items-center">
@@ -343,7 +344,7 @@ function AudioPlayer() {
         {currentSong && (
           <div className="flex gap-4 justify-center items-center min-w-[64px]">
             <div
-              className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
+              className="cursor-pointer album-spin-wrapper border-[10px] "
               onClick={coverClick}
             >
               <img
@@ -357,7 +358,9 @@ function AudioPlayer() {
         )}
         {audioBuffer && currentSong && (
           <div className="gap-2 w-full grid grid-rows-2">
-            <div className={`song-title flex flex-row gap-1 justify-center items-center overflow-hidden`}>
+            <div
+              className={`song-title flex flex-row gap-1 justify-center items-center overflow-hidden`}
+            >
               <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
                 <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
                   {currentSong.title || "未知标题"}
@@ -368,7 +371,9 @@ function AudioPlayer() {
               </span>
             </div>
 
-            <div className={`play-controls flex gap-2 flex-row justify-center items-center`}>
+            <div
+              className={`play-controls flex gap-2 flex-row justify-center items-center`}
+            >
               {isDetailPage && (
                 <div
                   className="hover:text-primary-hover cursor-pointer"
@@ -388,8 +393,9 @@ function AudioPlayer() {
               <div
                 className="play-pause hover:text-primary-hover cursor-pointer "
                 onClick={() => {
-                  const end = currentTime >= duration;
-                  isPlaying ? pauseAudio() : playAudio(end ? 0 : currentTime);
+                  isPlaying
+                    ? pauseAudio()
+                    : playAudio(currentTime >= duration ? 0 : currentTime);
                 }}
               >
                 {isPlaying ? (
@@ -421,16 +427,16 @@ function AudioPlayer() {
                 <div className="flex justify-center items-center gap-2">
                   <div
                     className="hover:text-primary-hover volume-icon"
-                    onClick={(e) => showVolumeBox(e)}
+                    onClick={() => setShowVolume(!showVolume)}
                   >
                     {volume > 0.5 && <Volume2Icon />}
                     {volume <= 0.5 && volume > 0 && <Volume1Icon />}
                     {volume <= 0 && <VolumeXIcon />}
                   </div>
                 </div>
-                {showVolume.show && (
+                {showVolume && (
                   <>
-                    <div ref={volumeSliderRef}>
+                    <div title={volume.toFixed(2)}>
                       <div className="volume-slider z-10">
                         <input
                           type="range"
@@ -439,16 +445,15 @@ function AudioPlayer() {
                           max="1"
                           step="0.001"
                           value={volume}
-                          onChange={changeVolume}
+                          onChange={(e) =>
+                            changeVolume(parseFloat(e.target.value))
+                          }
                         />
-                        {/* {showVolume.show && (<span className="volume-value">{gainNode?.gain.value.toFixed(2)}</span>)} */}
                       </div>
                     </div>
                     <div
                       className="volume-slider-mask fixed top-0 left-0 w-full h-full bg-black-translucent"
-                      onClick={() =>
-                        setShowVolume({ ...showVolume, show: false })
-                      }
+                      onClick={() => setShowVolume(false)}
                     ></div>
                   </>
                 )}
@@ -458,11 +463,13 @@ function AudioPlayer() {
         )}
         {(!currentSong || !audioBuffer) && (
           <>
-          {!currentSong && <div></div>}
-          <div className="flex gap-2 justify-center items-center w-full h-full">
-            <Loader2 className="animate-spin" size={48} />
-            <span className="text-sm text-muted-foreground">{loadStatus}</span>
-          </div>
+            {!currentSong && <div></div>}
+            <div className="flex gap-2 justify-center items-center w-full h-full">
+              <Loader2 className="animate-spin" size={48} />
+              <span className="text-sm text-muted-foreground">
+                {loadStatus}
+              </span>
+            </div>
           </>
         )}
       </div>
@@ -470,6 +477,4 @@ function AudioPlayer() {
       <Playlist clearPlaylist={clearPlaylist} />
     </div>
   );
-}
-
-export default AudioPlayer;
+};

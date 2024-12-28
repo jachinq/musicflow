@@ -24,7 +24,6 @@ export interface lyric {
 
 export interface Tag {
     id: number;
-    song_id: string;
     name: string;
     color: string;
     text_color: string;

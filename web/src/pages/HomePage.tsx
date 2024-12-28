@@ -1,7 +1,7 @@
 // pages/HomePage.tsx
 import "../styles/HomePage.css";
 import { useEffect, useState } from "react";
-import MusicCard from "../components/MusicCard";
+import { MusicCard } from "../components/MusicCard";
 
 import { getMusicList, getMusicUrl } from "../lib/api";
 import { Pagination } from "../components/Pagination";
@@ -10,6 +10,7 @@ import { FlameKindling, Loader, Play, Rabbit, X } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
 import { useDevice } from "../hooks/use-device";
+import { useKeyPress } from "../hooks/use-keypress";
 let pageSize = 30;
 
 function HomePage() {
@@ -28,7 +29,7 @@ function HomePage() {
     setTotalCount,
   } = useMusicList();
   const [currentPage, setCurrentPage] = useState(1);
-  const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
+  const { allSongs, setAllSongs, setCurrentSong, showPlaylist } = usePlaylist();
 
   const fetchMusicList = async (currentPage: number) => {
     setLoading(true);
@@ -88,6 +89,48 @@ function HomePage() {
     fetchMusicList(page);
   };
 
+  const playAllSongs = () => {
+    getMusicList(
+      (data) => {
+        if (!data || !data.musics || data.musics.length === 0) {
+          return;
+        }
+        // 随机播放全部歌曲
+        const randomList = data.musics.sort(() => 0.5 - Math.random());
+        setAllSongs(randomList);
+        setCurrentSong(randomList[0]);
+      },
+      (error) => {
+        console.error("获取音乐列表失败", error);
+        setError(error);
+      },
+      currentPage,
+      totalCount,
+      {
+        tags: filterTags.map((tag) => tag.id),
+      }
+    );
+  };
+
+  const removeSelectedTag = (tag: Tag) => {
+    const newFilterTags = filterTags.filter((t) => t.id !== tag.id);
+    setFilterTags(newFilterTags);
+  };
+
+  useKeyPress("o", playAllSongs); // o键播放全部歌曲
+
+  // 左右箭头控制翻页
+  useKeyPress("ArrowRight", () => {
+    if (!showPlaylist && totalCount > 0 && currentPage < Math.ceil(totalCount / pageSize)) {
+      onPageChange(currentPage + 1);
+    }
+  });
+  useKeyPress("ArrowLeft", () => {
+    if (!showPlaylist && totalCount > 0 && currentPage > 1) {
+      onPageChange(currentPage - 1);
+    }
+  });
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-68px)]">
@@ -110,37 +153,10 @@ function HomePage() {
     );
   }
 
-  const playAllSongs = () => {
-    getMusicList(
-      (data) => {
-        if (!data || !data.musics || data.musics.length === 0) {
-          return;
-        }
-        // 随机播放全部歌曲
-        const randomList = data.musics.sort(() => 0.5 - Math.random());
-        setAllSongs(randomList);
-      },
-      (error) => {
-        console.error("获取音乐列表失败", error);
-        setError(error);
-      },
-      currentPage,
-      totalCount,
-      {
-        tags: filterTags.map((tag) => tag.id),
-      }
-    );
-  };
-
-  const removeSelectedTag = (tag: Tag) => {
-    const newFilterTags = filterTags.filter((t) => t.id !== tag.id);
-    setFilterTags(newFilterTags);
-  };
-
   return (
     <div className="p-4">
       <div className="flex justify-center items-center">
-        <div className="control mb-4 flex flex-row gap-4 justify-start items-center w-full max-w-[1560px] select-none">
+        <div className="control mb-4 flex flex-row gap-4 justify-start items-center w-full select-none">
           <div
             className="flex items-center gap-2 cursor-pointer hover:bg-primary-hover p-2 rounded-md bg-primary text-primary-foreground transition-all duration-300"
             onClick={playAllSongs}
@@ -153,16 +169,19 @@ function HomePage() {
           <div>
             {filterTags.length > 0 && (
               <div>
-                <div className="flex flex-row gap-2 justify-center items-center w-full max-w-[1560px]">
+                <div className="flex flex-row gap-2 justify-center items-center w-full">
                   <div className="text-sm ">标签</div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     {filterTags.map((tag) => (
                       <div
                         key={tag.id}
                         className="flex items-center gap-1 p-1 rounded-md bg-muted text-muted-foreground transition-all duration-300"
                       >
                         {tag.name}
-                        <div onClick={() => removeSelectedTag(tag)} className="hover:text-primary-hover cursor-pointer">
+                        <div
+                          onClick={() => removeSelectedTag(tag)}
+                          className="hover:text-primary-hover cursor-pointer"
+                        >
                           <X />
                         </div>
                         {/* <span className="text-xs text-gray-500">({tag.count})</span> */}
@@ -176,7 +195,7 @@ function HomePage() {
         </div>
       </div>
       <div className="flex justify-center items-center">
-        <div className="card-container grid gap-4 w-full max-w-[1560px]">
+        <div className="card-container grid gap-4 w-full">
           {musicList.map((music: any) => (
             <MusicCard
               key={music.id}

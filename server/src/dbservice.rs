@@ -160,13 +160,13 @@ pub async fn get_metadata_list() -> Result<Vec<Metadata>> {
     Ok(list)
 }
 
-pub async fn get_cover(song_id: &str) -> Result<Option<Cover>> {
+pub async fn get_cover(song_id: &str, cover_type: &str) -> Result<Option<Cover>> {
     // 打开数据库连接（如果数据库文件不存在，会自动创建）
     let conn = connect_db()?;
 
     // 查询数据
-    let mut stmt = conn.prepare("SELECT * FROM cover WHERE song_id = ?")?;
-    let mut rows = stmt.query([song_id])?;
+    let mut stmt = conn.prepare("SELECT * FROM cover WHERE song_id = ? and type = ?")?;
+    let mut rows = stmt.query([song_id, cover_type])?;
 
     let cover = rows
         .next()

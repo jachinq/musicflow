@@ -8,7 +8,7 @@
     --primary: hsl(222, 38%, 43%);
     --primary-foreground: hsl(210 40% 98%);
     --primary-hover: hsl(221, 54%, 69%);
-    --background: hsl(0 0% 100%);
+    --background: hsl(0, 0%, 86%);
     --foreground: hsl(222.2 47.4% 11.2%);
     --muted: hsl(210 40% 96.1%);
     --muted-foreground: hsl(215.4 16.3% 46.9%);
@@ -41,8 +41,8 @@
   .dark {
     --primary: hsl(210 40% 98%);
     --primary-foreground: hsl(222.2 47.4% 1.2%);
-    --primary-hover: hsl(210 40% 90%);
-    --background: hsl(224 71% 4%);
+    --primary-hover: hsl(209, 60%, 61%);
+    --background: hsl(222, 29%, 16%);
     --foreground: hsl(213 31% 91%);
     --muted: hsl(224, 46%, 19%);
     --muted-foreground: hsl(215.4 16.3% 56.9%);
@@ -102,6 +102,10 @@
   border-radius: 16px;
 }
 
+.hide-scrollbar::-webkit-scrollbar{
+  display: none;
+}
+
 @keyframes album-spin {
   to {
     transform: rotate(360deg);
@@ -109,6 +113,9 @@
 }
 .album-spin {
   animation: album-spin 30s linear infinite;
+}
+.album-spin-wrapper {
+  @apply rounded-full overflow-hidden box-border border-gray-950 shadow-2xl;
 }
 
 .play-progress {
@@ -179,4 +186,20 @@
   transform: rotate(90deg);
   outline: none;
   border: none;
+}
+.tag {
+  @apply bg-muted text-muted-foreground hover:text-primary-hover rounded-full px-4 py-2 cursor-pointer;
+}
+
+.mask {
+  @apply bg-background opacity-50 fixed top-0 left-0 w-full h-full z-10;
+}
+.dialog {
+  @apply bg-card rounded-lg shadow-md w-full max-w-xl mx-auto fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20;
+}
+.button {
+  @apply bg-primary text-primary-foreground hover:bg-primary-hover rounded-full px-4 py-2 cursor-pointer;
+}
+.button-info {
+  @apply hover:text-primary-hover rounded-full px-4 py-2 cursor-pointer;
 }

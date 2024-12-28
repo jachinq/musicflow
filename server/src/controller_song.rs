@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
-use crate::{get_cover, get_lyric, get_tag_songs, AppState, Metadata};
+use crate::{get_cover, get_lyric, get_tag_songs, AppState, JsonResult, Metadata};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListMusic {
@@ -76,8 +76,25 @@ pub async fn list_musics(
     HttpResponse::Ok().json(ListMusic { musics, total })
 }
 
+pub async fn single_music(song_id: web::Path<String>, data: web::Data<AppState>) -> impl Responder {
+    let metadata = data
+        .music_map
+        .get(&song_id.to_string())
+        .cloned()
+        .unwrap_or_default();
+    HttpResponse::Ok().json(JsonResult::success(metadata))
+}
+
 pub async fn get_cover_small(song_id: web::Path<String>) -> impl Responder {
-    let cover = get_cover(&song_id).await;
+    let data = get_cover_by_type(&song_id, "small").await;
+    HttpResponse::Ok().content_type("image/webp").body(data)
+}
+pub async fn get_cover_medium(song_id: web::Path<String>) -> impl Responder {
+    let data = get_cover_by_type(&song_id, "medium").await;
+    HttpResponse::Ok().content_type("image/webp").body(data)
+}
+pub async fn get_cover_by_type(song_id: &str, cover_type: &str) -> Vec<u8> {
+    let cover = get_cover(song_id, cover_type).await;
     let default_cover = "UklGRpYBAABXRUJQVlA4IIoBAACQEgCdASrAAMAAP3G42GK0sayopLkoEpAuCWVu4QXUMQU4nn/pWmF9o0DPifE+JlGhgZqOyVZgoy7NXUtGklgA0aiSG2RF2Kbm5jQ3eoKwLpyF9R8oVd509SVeXb/tHglG1W4wL8vovtTUJhW/Jxy+Dz2kkbDPiXZ2AE9bwGmE/rM3PifIKeoZRVuuc6yX3BGpY5qSDk0eFGcLFyoAAP1V/+KHvw994S1rsgmSb8eM4Ys0mSvZP+IPrAhBml27fCTgPcHy1S6f9iSr6o2btNKixxetBHWT70dP+hIZITsA3mwH6GT6Jph31q2YsJASsCnDSmiO9ctjViN5bcVXcoIwwUZTu+9jQATMseG7OR/yl1R++egpeBnLRwGRtbdMgxlpe/+cJM8j1XCD0gwSVPZDBJ2Ke/IK/iCzWPuDO2Nw6aGgfb5Rbhor4l+4FDZjWdPVG9qP3AimXDGjWyUPw1fYuf4rBYVj4XiNln/QypsIcatiR5DVPn/YR0CBfMXURwr5Dg+721oAAAAA";
 
     let base64str = if let Ok(Some(cover)) = cover {
@@ -96,9 +113,7 @@ pub async fn get_cover_small(song_id: web::Path<String>) -> impl Responder {
     let engine = base64::engine::general_purpose::STANDARD;
 
     let data = engine.decode(base64str).unwrap_or_default();
-    // let data = base64::decode(base64str).unwrap_or_default();
-    // 返回图片数据
-    HttpResponse::Ok().content_type("image/webp").body(data)
+    data
 }
 
 pub async fn get_lyrics(song_id: web::Path<String>) -> impl Responder {
