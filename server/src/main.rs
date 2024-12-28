@@ -31,7 +31,6 @@ async fn main() -> io::Result<()> {
     let config: serde_json::Value = serde_json::from_str(&config).unwrap();
     let ip = config["ip"].as_str().unwrap() as &str;
     let port = config["port"].as_u64().unwrap() as u16;
-    println!("Server listening on port: {}", port);
 
     // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
     let music_dir = config["music_dir"].as_str().unwrap().to_string();
@@ -39,7 +38,10 @@ async fn main() -> io::Result<()> {
     println!("Music dir: {}", music_dir);
 
     let music_map = init_music_map(&music_dir).await;
-
+    // 映射音乐文件的静态路径
+    let music_path = "/music";
+    
+    println!("Server started on {}:{}", ip, port);
     // 启动 HTTP 服务
     HttpServer::new(move || {
         App::new()
@@ -51,17 +53,19 @@ async fn main() -> io::Result<()> {
             )
             .wrap(Logger::default()) // 日志记录中间件
             .app_data(web::Data::new(AppState {
-                music_path: music_dir.to_string(),
+                music_path: music_path.to_string(),
                 music_map: music_map.clone(),
             }))
-            .route("/api/list", web::get().to(list_musics))
-            .route("/api/detail/{path}", web::get().to(get_music_link))
-            .route("/tag", web::post().to(tag_music))
+            .route("/api/list", web::post().to(list_musics))
+            .route("/api/tags", web::get().to(tags))
+            .route("/api/song_tags/{song_id}", web::get().to(song_tags))
+            .route("/api/tag_songs/{tag_id}", web::get().to(tag_songs))
+            .route("/api/add_tag_to_song", web::post().to(add_tag_to_song))
             .route("/api/log", web::post().to(frontend_log))
             .route("/api/cover/small/{path}", web::get().to(get_cover_small))
             .route("/api/lyrics/{path}", web::get().to(get_lyrics))
             // 添加静态文件服务
-            .service(actix_files::Files::new("/music", &music_dir).show_files_listing())
+            .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", "./web/dist").index_file("index.html"))
     })
     .bind(&format!("{}:{}", ip, port))?
@@ -84,7 +88,7 @@ async fn init_music_map(music_dir: &str) -> HashMap<String, Metadata> {
     for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let ext = entry.path().extension().unwrap_or_default();
-            if ext != "mp3" && ext != "flac" {
+            if ext == "ape" { // 前端 audioContent 解码器不支持 ape 格式，所以过滤掉
                 continue;
             }
             let path = entry.path().display().to_string();
@@ -117,4 +121,35 @@ async fn frontend_log(log: web::Json<FrontendLog>) -> impl Responder {
         log.level, log.timestamp, log.message
     );
     HttpResponse::Ok().json(log)
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct JsonResult<T: Serialize> {
+    code: i32,
+    success: bool,
+    message: String,
+    data: Option<T>,
+}
+
+impl <T: Serialize> JsonResult<T> {
+    pub fn new(code: i32, success: bool, message: &str, data: Option<T>) -> Self {
+        Self {
+            code,
+            success,
+            message: message.to_string(),
+            data,
+        }
+    }
+    pub fn success(data: T) -> Self {
+        Self::new(0, true, "success", Some(data))
+    }
+    
+    pub fn error(message: &str) -> Self {
+        Self::new(-1, false, message, None)
+    }
+    #[allow(dead_code)]
+    pub fn default() -> Self {
+        Self::new(0, true, "success",
+         None)
+    }
 }

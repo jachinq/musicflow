@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Music } from "../def/CommDef";
+import { Music } from "../lib/defined";
 
 interface PlaylistState {
   showPlaylist: boolean;

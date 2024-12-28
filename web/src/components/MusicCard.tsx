@@ -1,5 +1,5 @@
 // components/MusicCard.tsx
-import { Music } from "../def/CommDef";
+import { Music } from "../lib/defined";
 import { getCoverSmallUrl } from "../lib/api";
 
 interface MusicCardProps {

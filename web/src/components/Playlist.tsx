@@ -1,6 +1,6 @@
 // components/Playlist.tsx
 import { AudioLines, Trash } from "lucide-react";
-import { Music } from "../def/CommDef";
+import { Music } from "../lib/defined";
 import { formatTime } from "../lib/utils";
 import { usePlaylist } from "../store/playlist";
 import { Pagination } from "./Pagination";

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { IMeta } from '../lib/readmeta';
-import { lyric, Music } from '../def/CommDef';
+import { lyric, Music } from '../lib/defined';
 
 const volumestr = localStorage.getItem("volume") || "0.5";
 const volume = parseFloat(volumestr);

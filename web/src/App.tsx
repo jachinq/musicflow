@@ -8,7 +8,8 @@ import SettingsPage from './pages/SettingsPage';
 import { usePlaylist } from "./store/playlist";
 import AudioPlayer from "./components/AudioPlayer";
 import { ThemeProvider } from "./components/theme-provider";
-import { Settings } from "lucide-react";
+import { Settings, Tag } from "lucide-react";
+import { TagsPage } from "./pages/TagPage";
 
 function App() {
   const { currentSong } = usePlaylist();
@@ -16,7 +17,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark">
       <Router>
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        <div className="min-w-[420px] min-h-screen bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           <nav className="bg-white dark:bg-gray-900 p-4">
             <div className="flex justify-between">
               <Link to="/" className="font-bold text-lg">
@@ -28,8 +29,10 @@ function App() {
                 </div>
               </Link>
               <div className="flex space-x-4 items-center">
-                {/* <Link to="/" className="text-gray-900 dark:text-gray-100">首页</Link> */}
-                <Link to="/settings" className="text-gray-900 dark:text-gray-100">
+                <Link to="/tags" className="text-muted-foreground hover:text-primary-hover">
+                  <Tag />
+                </Link>
+                <Link to="/settings" className="text-muted-foreground hover:text-primary-hover">
                   <Settings />
                 </Link>
               </div>
@@ -39,6 +42,7 @@ function App() {
             <div className={`${currentSong && "mb-[90px]"}`}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/tags" element={<TagsPage />} />
                 <Route path="/music/:id" element={<MusicPlayPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>

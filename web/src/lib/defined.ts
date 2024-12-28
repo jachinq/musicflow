@@ -1,4 +1,4 @@
-import { IMeta } from "../lib/readmeta";
+import { IMeta } from "./readmeta";
 
 export interface Music {
     id: string;
@@ -23,4 +23,20 @@ export interface lyric {
     song_id: string;
     time: number;
     text: string;
+}
+
+export interface Tag {
+    id: number;
+    song_id: string;
+    name: string;
+    color: string;
+    text_color: string;
+}
+
+export interface MusicFilter {
+    title?: string;
+    artist?: string;
+    album?: string;
+    year?: number;
+    tags?: number[];
 }

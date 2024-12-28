@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
-use crate::{get_cover, get_lyric, AppState, Metadata};
+use crate::{get_cover, get_lyric, get_tag_songs, AppState, Metadata};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListMusic {
@@ -15,14 +15,15 @@ pub struct MusicListQuery {
     page: Option<u32>,
     page_size: Option<u32>,
     filter: Option<String>,
+    tag_ids: Option<Vec<i32>>,
 }
-
 
 /// 获取服务器上所有音乐文件
 pub async fn list_musics(
     data: web::Data<AppState>,
-    query: web::Query<MusicListQuery>,
+    query: web::Json<MusicListQuery>,
 ) -> impl Responder {
+    let music_path = data.music_path.clone();
     let musics = data.music_map.values().cloned().collect::<Vec<Metadata>>();
     let mut musics = musics.clone();
 
@@ -35,6 +36,21 @@ pub async fn list_musics(
                 || m.artist.to_lowercase().contains(&filter)
                 || m.album.to_lowercase().contains(&filter)
         });
+    }
+
+    if let Some(tag_ids) = &query.tag_ids {
+        // 根据标签查询
+        let mut tag_song_ids = vec![];
+        for tag_id in tag_ids {
+            if let Ok(metadatas) = get_tag_songs(*tag_id).await {
+                metadatas.iter().for_each(|m| {
+                    tag_song_ids.push(m.id.to_string());
+                });
+            }
+        }
+        if tag_ids.len() > 0 {
+            musics.retain(|m| tag_song_ids.contains(&m.id));
+        }
     }
 
     // 分页
@@ -59,19 +75,6 @@ pub async fn list_musics(
 
     HttpResponse::Ok().json(ListMusic { musics, total })
 }
-
-/// 根据音乐 ID 返回音乐文件的链接
-pub async fn get_music_link(path: web::Path<String>, data: web::Data<AppState>) -> impl Responder {
-    let path = path.into_inner();
-    println!("get_music_link: {}", path);
-
-    data.music_map
-        .get(&path)
-        .map(|m| HttpResponse::Ok().json(m))
-        .unwrap_or(HttpResponse::NotFound().body("Music not found"))
-}
-
-
 
 pub async fn get_cover_small(song_id: web::Path<String>) -> impl Responder {
     let cover = get_cover(&song_id).await;

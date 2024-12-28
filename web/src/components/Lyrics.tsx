@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { useCurrentPlay } from "../store/current-play";
 import { usePlaylist } from "../store/playlist";
 import { getLyrics } from "../lib/api";
-import { lyric } from "../def/CommDef";
+import { lyric } from "../lib/defined";
 
 function Lyrics() {
   const { currentLyric, lyrics, setLyrics } = useCurrentPlay();

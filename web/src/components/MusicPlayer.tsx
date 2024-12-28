@@ -1,7 +1,7 @@
 // components/MusicPlayer.tsx
 import React, { useRef, useState, useEffect } from "react";
 import { getMusicUrl } from "../lib/api";
-import { Music } from "../def/CommDef";
+import { Music } from "../lib/defined";
 
 interface MusicPlayerProps {
   music: Music;

@@ -5,8 +5,8 @@ import MusicCard from "../components/MusicCard";
 
 import { getMusicList, getMusicUrl } from "../lib/api";
 import { Pagination } from "../components/Pagination";
-import { Music } from "../def/CommDef";
-import { FlameKindling, Loader, Play } from "lucide-react";
+import { Music, Tag } from "../lib/defined";
+import { FlameKindling, Loader, Play, Rabbit, X } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
 import { useDevice } from "../hooks/use-device";
@@ -19,7 +19,14 @@ function HomePage() {
   }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { musicList, setMusicList, totalCount, setTotalCount } = useMusicList();
+  const {
+    filterTags,
+    setFilterTags,
+    musicList,
+    setMusicList,
+    totalCount,
+    setTotalCount,
+  } = useMusicList();
   const [currentPage, setCurrentPage] = useState(1);
   const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
 
@@ -27,7 +34,7 @@ function HomePage() {
     setLoading(true);
     getMusicList(
       (data) => {
-        if (!data || !data.musics || data.musics.length === 0) {
+        if (!data || !data.musics) {
           return;
         }
         // 更新音乐列表和分页信息
@@ -43,18 +50,27 @@ function HomePage() {
         setError(error);
       },
       currentPage,
-      pageSize
+      pageSize,
+      {
+        tags: filterTags.map((tag) => tag.id),
+      }
     );
     setLoading(false);
   };
 
   useEffect(() => {
+    if (filterTags.length === 0) return; // 初始加载全部歌曲
     if (musicList.length > 0) {
       setLoading(false);
       return;
     }
     fetchMusicList(currentPage);
   }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchMusicList(currentPage); // 标签切换时重新获取音乐列表
+  }, [filterTags]);
 
   function handleMusicClick(music: Music) {
     // navigate(`/music/${musicId}`);
@@ -109,24 +125,53 @@ function HomePage() {
         setError(error);
       },
       currentPage,
-      totalCount
+      totalCount,
+      {
+        tags: filterTags.map((tag) => tag.id),
+      }
     );
+  };
+
+  const removeSelectedTag = (tag: Tag) => {
+    const newFilterTags = filterTags.filter((t) => t.id !== tag.id);
+    setFilterTags(newFilterTags);
   };
 
   return (
     <div className="p-4">
       <div className="flex justify-center items-center">
-        <div className="mb-4 flex flex-col gap-2 justify-start items-start w-full max-w-[1560px]">
+        <div className="control mb-4 flex flex-row gap-4 justify-start items-center w-full max-w-[1560px]">
           <div
             className="flex items-center gap-2 cursor-pointer hover:bg-primary-hover p-2 rounded-md bg-primary text-primary-foreground transition-all duration-300"
             onClick={playAllSongs}
+            title="随机播放全部歌曲"
           >
             <Play />
             播放全部
           </div>
-          <div className="text-sm text-gray-500">
-            {/* <input type="checkbox" /> */}
-            随机播放全部歌曲
+
+          <div>
+            {filterTags.length > 0 && (
+              <div>
+                <div className="flex flex-row gap-2 justify-center items-center w-full max-w-[1560px]">
+                  <div className="text-sm ">标签</div>
+                  <div className="flex gap-2">
+                    {filterTags.map((tag) => (
+                      <div
+                        key={tag.id}
+                        className="flex items-center gap-1 p-1 rounded-md bg-muted text-muted-foreground transition-all duration-300"
+                      >
+                        {tag.name}
+                        <div onClick={() => removeSelectedTag(tag)} className="hover:text-primary-hover cursor-pointer">
+                          <X />
+                        </div>
+                        {/* <span className="text-xs text-gray-500">({tag.count})</span> */}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -149,6 +194,12 @@ function HomePage() {
           onPageChange={onPageChange}
           className="mt-4"
         />
+      )}
+      {!loading && musicList.length === 0 && (
+        <div className="flex flex-col gap-2 justify-center items-center w-full">
+          <Rabbit size={64} />
+          没有找到相关歌曲
+        </div>
       )}
     </div>
   );

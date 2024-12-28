@@ -18,7 +18,7 @@ import {
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
-import { Music } from "../def/CommDef";
+import { Music } from "../lib/defined";
 
 function AudioPlayer() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
