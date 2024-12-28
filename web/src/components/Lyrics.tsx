@@ -16,7 +16,18 @@ function Lyrics() {
       currentSong.id,
       (lyrics: lyric[]) => {
         if (!lyrics) return;
-        setLyrics(lyrics);
+        const limit = 10;
+        const empty: lyric = { time: 0, text: "", id: 0, song_id: "" };
+        let firstList = [];
+        for (let i = 0; i < limit; i++) {
+          firstList.push(empty);
+        }
+        const emptyLast: lyric = { time: 9999999999, text: "", id: 0, song_id: "" };
+        let lastList = [];
+        for (let i = 0; i < limit; i++) {
+          lastList.push(emptyLast);
+        }
+        setLyrics([...firstList, ...lyrics, ...lastList]);
       },
       (error) => {
         console.error(error);
@@ -26,11 +37,18 @@ function Lyrics() {
 
   useEffect(() => {
     if (!lyricsRef.current) return;
-    const currentLyricIndex = lyrics.findIndex(line => line.time === currentLyric?.time);
+    const currentLyricIndex = lyrics.findIndex(
+      (line) => line.time === currentLyric?.time
+    );
     if (currentLyricIndex !== -1) {
-      const currentLyricElement = lyricsRef.current.children[currentLyricIndex] as HTMLElement;
+      const currentLyricElement = lyricsRef.current.children[
+        currentLyricIndex
+      ] as HTMLElement;
       if (currentLyricElement) {
-        currentLyricElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        currentLyricElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       }
     }
     if (currentLyric === null) {
@@ -39,25 +57,30 @@ function Lyrics() {
   }, [currentLyric]);
 
   const getContainerHeight = () => {
-    let height = "max-h-[calc(100vh-60px)]"
+    let height = "max-h-[calc(100vh-60px)]";
     if (currentSong) {
       height = "max-h-[calc(100vh-220px)]";
     }
     return `${height} text-center overflow-y-scroll overflw-x-hidden my-4 px-8`;
-  }
+  };
 
-  const lyricNameFocus = () => (" text-[24px] font-bold text-blue-500 dark:text-blue-400");
+  const lyricNameFocus = () =>
+    " text-[24px] font-bold text-blue-500 dark:text-blue-400";
   const lyricNameFocusHover = () => {
     // console.log("hover", lyricNameFocus().split(" ").join(" hover:"))
-    return lyricNameFocus().split(" ").join(" hover:")
+    return lyricNameFocus().split(" ").join(" hover:");
   };
-  const lyricName = (line: { time: number, text: string }) => {
+  const lyricName = (line: { time: number; text: string }) => {
     const focus = currentLyric?.time === line.time ? lyricNameFocus() : "";
-    return `${focus} min-h-10 flex items-center transition-all duration-300 justify-center`
-  }
+    return `${focus} min-h-10 flex items-center transition-all duration-300 justify-center`;
+  };
 
   return (
-    <div ref={lyricsRef} className={getContainerHeight()} style={{ overscrollBehavior: "contain" }}>
+    <div
+      ref={lyricsRef}
+      className={getContainerHeight()}
+      style={{ overscrollBehavior: "contain" }}
+    >
       {lyrics &&
         lyrics.map((line, index) => (
           <div

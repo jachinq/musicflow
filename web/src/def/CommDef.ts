@@ -19,7 +19,7 @@ export interface Music {
 }
 
 export interface lyric {
-    id: string;
+    id: number;
     song_id: string;
     time: number;
     text: string;
