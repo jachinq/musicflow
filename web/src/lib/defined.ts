@@ -1,5 +1,3 @@
-import { IMeta } from "./readmeta";
-
 export interface Music {
     id: string;
     file_name: string;
@@ -13,7 +11,6 @@ export interface Music {
     duration: number;
     bitrate: number;
     samplerate: number;
-    metadata?: IMeta;
     fileArrayBuffer?: ArrayBuffer; // array buffer of the file
     decodedAudioBuffer?: AudioBuffer; // decoded audio buffer of the file
 }

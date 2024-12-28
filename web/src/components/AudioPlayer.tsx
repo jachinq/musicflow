@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
-import { getMusicUrl } from "../lib/api";
-import { readMetaByBuffer } from "../lib/readmeta";
+import { getCoverSmallUrl, getMusicUrl } from "../lib/api";
 import { usePlaylist } from "../store/playlist";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatTime } from "../lib/utils";
@@ -38,8 +37,6 @@ function AudioPlayer() {
     duration,
     isPlaying,
     volume,
-    setMusic,
-    setMetadata,
     setVolume,
     setAudioContext,
     setCurrentTime,
@@ -132,7 +129,7 @@ function AudioPlayer() {
       const nextIndex = (index + next + allSongs.length) % allSongs.length;
       const nextSong = allSongs[nextIndex];
       setCurrentSong(nextSong);
-      console.log("next song", nextSong.metadata?.title || 'unknown');
+      console.log("next song", nextSong.title || 'unknown');
       if (currentSong.id === nextSong.id) {
         initStatus();
         loadAudioFile(); // 重新加载当前歌曲
@@ -217,12 +214,9 @@ function AudioPlayer() {
   };
 
   const decodeAudioBuffer = async (song: Music, actuallyDecode: boolean) => {
-    await getMetatData(song);
+    await loadFileArrayBuffer(song);
     let fileArrayBuffer = song.fileArrayBuffer;
     if (!fileArrayBuffer) return;
-
-    actuallyDecode && setMusic(song);
-    actuallyDecode && song.metadata && setMetadata(song.metadata);
 
     if (song.decodedAudioBuffer) {
       actuallyDecode && setLoadStatus("解码音频数据...");
@@ -267,16 +261,14 @@ function AudioPlayer() {
     decodeAudioBuffer(nextSong, false);
   };
 
-  const getMetatData = async (song: Music) => {
-    if (song.metadata && song.fileArrayBuffer) {
+  const loadFileArrayBuffer = async (song: Music) => {
+    if (song.fileArrayBuffer) {
       return;
     }
     song.file_url = getMusicUrl(song);
     const response = await fetch(song.file_url);
     const arrayBuffer = await response.arrayBuffer();
-    let copyBuffer = arrayBuffer.slice(0);
     song.fileArrayBuffer = arrayBuffer;
-    song.metadata = await readMetaByBuffer(copyBuffer);
   };
 
   const coverClick = () => {
@@ -338,7 +330,7 @@ function AudioPlayer() {
   return (
     <div className="fixed bottom-0 left-0 w-full bg-playstatus text-playstatus-foreground min-h-[88px] max-h-[88px] flex justify-center items-center">
       <div className="grid grid-cols-[64px,1fr] gap-4 w-full h-full relative px-4 py-2">
-        {currentSong && currentSong.metadata && (
+        {currentSong && (
           <input
             className="play-progress w-full absolute top-[-6px] left-0"
             type="range"
@@ -348,14 +340,14 @@ function AudioPlayer() {
             onChange={handleSeekChange}
           />
         )}
-        {currentSong?.metadata && (
+        {currentSong && (
           <div className="flex gap-4 justify-center items-center min-w-[64px]">
             <div
               className="cursor-pointer rounded-full overflow-hidden border-[10px] box-border border-gray-950"
               onClick={coverClick}
             >
               <img
-                src={currentSong?.metadata.cover}
+                src={getCoverSmallUrl(currentSong.id)}
                 alt=""
                 width={42}
                 className={isPlaying ? "album-spin" : ""}
@@ -363,15 +355,15 @@ function AudioPlayer() {
             </div>
           </div>
         )}
-        {audioBuffer && currentSong?.metadata && (
+        {audioBuffer && currentSong && (
           <div className="gap-2 w-full grid grid-rows-2">
             <div className={`song-title flex flex-row gap-1 justify-center items-center overflow-hidden`}>
               <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
                 <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
-                  {currentSong?.metadata.title || "未知标题"}
+                  {currentSong.title || "未知标题"}
                 </span>
                 <span className="ml-2 text-sm text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis ">
-                  {currentSong?.metadata.artist}
+                  {currentSong.artist}
                 </span>
               </span>
             </div>
@@ -428,7 +420,7 @@ function AudioPlayer() {
               <div className="volume-control relative">
                 <div className="flex justify-center items-center gap-2">
                   <div
-                    className="hover:text-primary-hover volume-icon z-10"
+                    className="hover:text-primary-hover volume-icon"
                     onClick={(e) => showVolumeBox(e)}
                   >
                     {volume > 0.5 && <Volume2Icon />}
@@ -464,9 +456,9 @@ function AudioPlayer() {
             </div>
           </div>
         )}
-        {(!currentSong || !currentSong.metadata || !audioBuffer) && (
+        {(!currentSong || !audioBuffer) && (
           <>
-          {!currentSong || !currentSong.metadata && <div></div>}
+          {!currentSong && <div></div>}
           <div className="flex gap-2 justify-center items-center w-full h-full">
             <Loader2 className="animate-spin" size={48} />
             <span className="text-sm text-muted-foreground">{loadStatus}</span>

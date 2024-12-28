@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { IMeta } from '../lib/readmeta';
-import { lyric, Music } from '../lib/defined';
+import { lyric } from '../lib/defined';
 
 const volumestr = localStorage.getItem("volume") || "0.5";
 const volume = parseFloat(volumestr);
@@ -11,22 +10,14 @@ interface CurrentPlayState {
     currentLyric: { time: number, text: string } | null;
     duration: number;
     isPlaying: boolean;
-    isLooping: boolean;
-    isMuted: boolean; // 是否静音
     volume: number;
-    music: Music | null;
-    metadata: IMeta | null;
     lyrics: lyric[];
     setAudioContext: (audioContent: AudioContext | null) => void;
     setCurrentTime: (currentTime: number) => void;
     setCurrentLyric: (currentLyric: { time: number, text: string } | null) => void;
     setDuration: (duration: number) => void;
     setIsPlaying: (isPlaying: boolean) => void;
-    setIsLooping: (isLooping: boolean) => void;
-    setIsMuted: (isMuted: boolean) => void;
     setVolume: (volume: number) => void;
-    setMetadata: (metadata: IMeta) => void;
-    setMusic: (music: Music) => void;
     setLyrics: (lyrics: lyric[]) => void;
 }
 
@@ -36,11 +27,7 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     currentLyric: null,
     duration: 0,
     isPlaying: false,
-    isLooping: false,
-    isMuted: false,
     volume,
-    music: null,
-    metadata: null,
     lyrics: [],
     setAudioContext: (audioContent) => set(() => ({ audioContext: audioContent })),
     setCurrentTime: (currentTime) => set(() => {
@@ -70,13 +57,9 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     setCurrentLyric: (currentLyric) => set(() => ({ currentLyric })),
     setDuration: (duration) => set(() => ({ duration })),
     setIsPlaying: (isPlaying) => set(() => ({ isPlaying })),
-    setIsLooping: (isLooping) => set(() => ({ isLooping })),
-    setIsMuted: (isMuted) => set(() => ({ isMuted })),
     setVolume: (volume) => set(() => {
         localStorage.setItem("volume", volume.toString());
         return { volume }
     }),
-    setMetadata: (metadata) => set(() => ({ metadata })),
-    setMusic: (music) => set(() => ({ music })),
     setLyrics: (lyrics) => set(() => ({ lyrics })),
 }));

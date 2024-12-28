@@ -88,7 +88,7 @@ const FormLayout = ({ label, children, className = "" }: any) => {
     <div
       className={`${
         isSmallDevice ? "grid-rows-[50px,1fr]" : "grid-cols-[150px,1fr]"
-      } grid items-center gap-4`}
+      } grid gap-4`}
     >
       <label className="font-bold">{label}</label>
       <div className={"px-8 py-4 bg-card rounded-lg " + className}>
