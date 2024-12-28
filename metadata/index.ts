@@ -1,8 +1,25 @@
-import fs from 'fs';
-import path from 'path';
-import { IMeta, readMetaByBuffer, readTitle } from './readmeta';
-import { addArtist, addArtistSong, addCover, addLyric, addMetadata, addSongTag, addTag, Artist, ArtistSong, Cover, getMetadata, getMetadataById, getTag, Lyric, Metadata, SongTag } from './sql';
-import { generateUUID, readFilesRecursively } from './utils';
+import fs from "fs";
+import path from "path";
+import { IMeta, readMetaByBuffer, readTitle } from "./readmeta";
+import {
+  addArtist,
+  addArtistSong,
+  addCover,
+  addLyric,
+  addMetadata,
+  addSongTag,
+  addTag,
+  Artist,
+  Cover,
+  existMetadataByPath,
+  getMetadata,
+  getMetadataById,
+  getTag,
+  Lyric,
+  Metadata,
+  SongTag,
+} from "./sql";
+import { generateUUID, readFilesRecursively } from "./utils";
 
 const DIR = "./music";
 
@@ -20,16 +37,41 @@ const convetIMetaToDbMeta = (iMeta: IMeta, file_name: string): Metadata => {
     year: iMeta.year || 0,
     duration: iMeta.duration || 0,
     bitrate: iMeta.bitrate || 0,
-    sample_rate: iMeta.sampleRate || 0,
-  }
-}
+    samplerate: iMeta.sampleRate || 0,
+  };
+};
 
-const singleTask = async (file_path: string, arrayBuffer: Buffer): Promise<{ msg: string, file_path: string }> => {
+const singleTask = async (
+  file_path: string,
+  music_count: number,
+): Promise<{ msg: string; file_path: string }> => {
+
+
+  const exist_path = existMetadataByPath(file_path);
+  if (exist_path) {
+    success++;
+    exists.push({ file_path, title: "", exist: exist_path });
+    logProgress(music_count, success, faile);
+    return {msg: "exist", file_path};
+  }
+
   const file_name = path.basename(file_path);
-  const metadata = await readMetaByBuffer(arrayBuffer);
-  let title = metadata.title || file_name;
+  const start_read_file_time = new Date().getTime();
+  const arrayBuffer = fs.readFileSync(file_path);
+
+  const start_read_title_time = new Date().getTime();
+  const title = (await readTitle(arrayBuffer)) || file_name;
   const exist = getMetadata(title);
-  if (exist) return { msg: "exist", file_path };
+  if (exist) {
+    exists.push({ file_path, title, exist });
+    success++;
+    logProgress(music_count, success, faile);
+    return { msg: "exist", file_path };
+  }
+  
+
+  const start_read_meta_time = new Date().getTime();
+  const metadata = await readMetaByBuffer(arrayBuffer);
 
   // 最多尝试生成10次9位的uuid，冲突则重新生成
   let uuid = "";
@@ -39,7 +81,12 @@ const singleTask = async (file_path: string, arrayBuffer: Buffer): Promise<{ msg
     if (!exist) break;
   }
   if (!uuid) {
-    console.error(new Date().toLocaleString(), "generate uuid failed", metadata);
+    console.error(
+      new Date().toLocaleString(),
+      "generate uuid failed",
+      metadata
+    );
+    faile.push({ file_path, title, metadata });
     return { msg: "generate uuid failed", file_path };
   }
 
@@ -51,6 +98,7 @@ const singleTask = async (file_path: string, arrayBuffer: Buffer): Promise<{ msg
 
   // console.log(dbMeta);
 
+  const start_add_db_time = new Date().getTime();
   const song_tags = buildSongTags(dbMeta.id, file_path);
   // console.log(song_tags);
 
@@ -64,47 +112,81 @@ const singleTask = async (file_path: string, arrayBuffer: Buffer): Promise<{ msg
   // console.log(artists, artist_song);
 
   let result = addMetadata(dbMeta);
-  if (!result) return { msg: "failed to add metadata", file_path };
-  song_tags.forEach(song_tag => {
+  if (!result) {
+    faile.push({ file_path, title, metadata });
+    return { msg: "failed to add metadata", file_path }
+  };
+  song_tags.forEach((song_tag) => {
     let result = addSongTag(song_tag);
-    if (!result) console.error(new Date().toLocaleString(), "failed to add song tag", song_tag);
+    if (!result)
+      console.error(
+        new Date().toLocaleString(),
+        "failed to add song tag",
+        song_tag
+      );
   });
-  lyrics.forEach(lyric => {
+  lyrics.forEach((lyric) => {
     let result = addLyric(lyric);
-    if (!result) console.error(new Date().toLocaleString(), "failed to add lyric", lyric);
+    if (!result)
+      console.error(new Date().toLocaleString(), "failed to add lyric", lyric);
   });
-  covers.forEach(cover => {
+  covers.forEach((cover) => {
     let result = addCover(cover);
-    if (!result) console.error(new Date().toLocaleString(), "failed to add cover", cover);
+    if (!result)
+      console.error(new Date().toLocaleString(), "failed to add cover", cover);
   });
   let artist_ids: number[] = [];
-  artists.forEach(artist => {
+  artists.forEach((artist) => {
     let result = addArtist(artist);
     // console.log('artist', artist, result);
-    if (!result) console.error(new Date().toLocaleString(), "failed to add artist", artist);
+    if (!result)
+      console.error(
+        new Date().toLocaleString(),
+        "failed to add artist",
+        artist
+      );
     if (result) artist_ids.push(result.id);
   });
-  artist_ids.forEach(artist_id => {
+  artist_ids.forEach((artist_id) => {
     const artist_song = { song_id: dbMeta.id, artist_id };
     // console.log(artist_song);
     let result = addArtistSong(artist_song);
-    if (!result) console.error(new Date().toLocaleString(), "failed to add artist_song", artist_song);
+    if (!result)
+      console.error(
+        new Date().toLocaleString(),
+        "failed to add artist_song",
+        artist_song
+      );
   });
 
-  return { msg: "success", file_path };
-}
+  const task_end_time = new Date().getTime();
+  const read_file_time = start_read_title_time - start_read_file_time;
+  const read_title_time = start_read_meta_time - start_read_title_time;
+  const read_meta_time = start_add_db_time - start_read_meta_time;
+  const add_db_time = task_end_time - start_add_db_time;
+  console.log(
+    "title:", title,
+    "read_file:", read_file_time,
+    "read_title:", read_title_time,
+    "read_meta:", read_meta_time,
+    "add_db:", add_db_time,
+  );
 
+  success++;
+  logProgress(music_count, success, faile);
+  return { msg: "success", file_path };
+};
 
 const buildSongTags = (metadataId: string, file_path: string) => {
   let dir_paths: string[] = [];
   const dir_path = path.dirname(file_path);
   const relative_dir_path = dir_path.replace(DIR, "");
-  relative_dir_path.split(path.sep).forEach(dir_name => {
+  relative_dir_path.split(path.sep).forEach((dir_name) => {
     dir_paths.push(dir_name);
   });
 
   let song_tag_list: SongTag[] = [];
-  dir_paths.forEach(tag_name => {
+  dir_paths.forEach((tag_name) => {
     if (tag_name === "") return;
     if (tag_name === "music") return;
     if (tag_name === "mp3") return;
@@ -113,20 +195,31 @@ const buildSongTags = (metadataId: string, file_path: string) => {
     if (tag_name === "..") return;
     if (tag_name === "node_modules") return;
     let tag = getTag(tag_name);
-    if (!tag) tag = addTag({ id: 0, name: tag_name, color: "#000000", text_color: "#FFFFFF" });
+    if (!tag)
+      tag = addTag({
+        id: 0,
+        name: tag_name,
+        color: "#000000",
+        text_color: "#FFFFFF",
+      });
     if (!tag) return;
     song_tag_list.push({ song_id: metadataId, tag_id: tag.id });
   });
   return song_tag_list;
-}
+};
 
 const buildLyrics = (metadata: IMeta, metadataId: string): Lyric[] => {
   const lyrics: Lyric[] = [];
-  metadata.lyrics.forEach(lyric => {
-    lyrics.push({ id: 0, song_id: metadataId, time: lyric.time, text: lyric.text });
+  metadata.lyrics.forEach((lyric) => {
+    lyrics.push({
+      id: 0,
+      song_id: metadataId,
+      time: lyric.time,
+      text: lyric.text,
+    });
   });
   return lyrics;
-}
+};
 
 const buildCover = (metadata: IMeta, metadataId: string): Cover[] => {
   if (!metadata.cover) return [];
@@ -148,7 +241,7 @@ const buildCover = (metadata: IMeta, metadataId: string): Cover[] => {
     type: "small",
     extra: "{}",
     song_id: metadataId,
-  }
+  };
   const large_cover: Cover = {
     format: "webp",
     width: 600,
@@ -157,26 +250,39 @@ const buildCover = (metadata: IMeta, metadataId: string): Cover[] => {
     type: "medium",
     extra: "{}",
     song_id: metadataId,
-  }
+  };
 
   return [
-    // original_cover, 
+    // original_cover,
     small_cover,
-    large_cover];
-}
+    large_cover,
+  ];
+};
 
 const buildArtists = (metadata: IMeta): Artist[] => {
   const artists: Artist[] = [];
-  metadata.artists?.forEach(artist => {
+  metadata.artists?.forEach((artist) => {
     artists.push({ id: 0, name: artist, cover: "", description: "" });
   });
-  return artists
-}
+  return artists;
+};
 
 const logProgress = (count: number, success: number, failed: any[]) => {
-  console.log("count", count, "success:", success, "failed:", failed.length, "progress:", (success / count * 100).toFixed(2) + "%");
-}
+  console.log(
+    "count",
+    count,
+    "success:",
+    success,
+    "failed:",
+    failed.length,
+    "progress:",
+    ((success / count) * 100).toFixed(2) + "%"
+  );
+};
 
+let exists: any[] = [];
+let faile: any[] = [];
+let success = 0;
 const job = async () => {
   const job_start_time = new Date().getTime();
   console.log(new Date().toLocaleString(), "job start...");
@@ -185,90 +291,106 @@ const job = async () => {
   const all_files_count = files.length;
 
   // 过滤出以 mp3、flac 结尾的文件
-  const music_files = files.filter(file_path => {
+  const music_files = files.filter((file_path) => {
     const ext = path.extname(file_path).toLowerCase();
-    const hit = ext === '.mp3' || ext === '.flac'
+    const hit =
+      ext === ".mp3" ||
+      ext === ".flac" ||
+      ext === ".m4a" ||
+      ext === ".ape" ||
+      ext === ".wav" ||
+      ext === ".ogg";
     if (!hit) {
       console.log("ignore file:", file_path);
     }
     return hit;
   });
   const music_count = music_files.length;
-  console.log("all files count:", all_files_count, "music files count:", music_count, "ignore files count:", all_files_count - music_count);
+  console.log(
+    "all files count:",
+    all_files_count,
+    "music files count:",
+    music_count,
+    "ignore files count:",
+    all_files_count - music_count
+  );
 
-  let exists: any[] = [];
-  let faile: any[] = [];
-  let success = 0;
 
-  // 并发处理，每次拿出 n 个文件进行处理
-  // const concurrency = 3;
-  // const tasks: Promise<{msg: string, file_path: string}>[] = [];
-  // for (let i = 0; i < music_count; i += concurrency) {
-  //   const task_files = music_files.slice(i, i + concurrency);
-  //   task_files.forEach(async file_path => {
-  //     const file_name = path.basename(file_path);
-  //     const arrayBuffer = fs.readFileSync(file_path);
-  //     const title = await readTitle(arrayBuffer) || file_name;
-  //     const exist = getMetadata(title);
-  //     if (exist) {
-  //       exists.push({ file_path, title, exist });
-  //       success++;
-  //       logProgress(music_count, success, faile);
-  //       return;
-  //     }
-  //     tasks.push(singleTask(file_path, arrayBuffer));
-  //   });
-  //   await Promise.all(tasks).then(results => {
-  //     results.forEach(result => {
-  //       if (result.msg === "success") {
-  //         success++;
-  //         logProgress(music_count, success, faile);
-  //       } else {
-  //         faile.push({ file_path: result.file_path, result });
-  //       }
-  //     });
-  //   });
-  //   tasks.length = 0;
-  // }
-
-  for (let i = 0; i < music_count; i++) {
-    const file_path = music_files[i];
-    const file_name = path.basename(file_path);
-    const arrayBuffer = fs.readFileSync(file_path);
-    const title = await readTitle(arrayBuffer) || file_name;
-    const exist = getMetadata(title);
-    if (exist) {
-      exists.push({ file_path, title, exist });
-      success++;
-      logProgress(music_count, success, faile);
-      continue;
-    }
-
-    let result = await singleTask(file_path, arrayBuffer);
-    if (result.msg !== "success") {
-      faile.push({ file_path, result });
-      return;
-    }
-    success++;
-    logProgress(music_count, success, faile);
+  // 把总列表拆分成每个 n 个并发执行
+  const task_unit = 100;
+  const tasks = [];
+  for (let i = 0; i < music_count; i += task_unit) {
+    const task = music_files.slice(i, i + task_unit);
+    tasks.push(task);
   }
+
+  const task_count = tasks.length;
+  console.log("task count:", task_count);
+
+  for (let i = 0; i < task_count; i++) {
+    const task = tasks[i];
+    const task_start_time = new Date().getTime();
+    console.log(
+      new Date().toLocaleString(),
+      "task",
+      i + 1,
+      "start, count:",
+      task.length
+    );
+    await Promise.all(
+      task.map((file_path) => singleTask(file_path, music_count))
+    );
+    const task_end_time = new Date().getTime();
+    console.log(
+      new Date().toLocaleString(),
+      "task",
+      i + 1,
+      "end, cost time:",
+      (task_end_time - task_start_time) / 1000,
+      "s"
+    );
+  }
+
+  // for (let i = 0; i < music_count; i++) {
+  //   const file_path = music_files[i];
+  //   await singleTask(file_path, music_count);
+  // }
 
   const internal_id = setInterval(() => {
     if (success + faile.length === music_count) {
       clearInterval(internal_id);
 
-      exists.forEach(data => {
+      exists.forEach((data) => {
         if (data.exist.file_path === data.file_path) return;
-        console.log("exist:", data.file_path, data.title, data.exist.file_name, data.exist.file_path);
+        console.log(
+          "exist:",
+          data.file_path,
+          data.title,
+          data.exist.file_name,
+          data.exist.file_path
+        );
       });
 
-      console.log(new Date().toLocaleString(), "success:", success, "failed:", faile.length, "exists:", exists.length);
+      console.log(
+        new Date().toLocaleString(),
+        "success:",
+        success,
+        "failed:",
+        faile.length,
+        "exists:",
+        exists.length
+      );
       console.log(new Date().toLocaleString(), "job end...");
       const job_end_time = new Date().getTime();
-      console.log(new Date().toLocaleString(), "cost time:", (job_end_time - job_start_time) / 1000, "s");
+      console.log(
+        new Date().toLocaleString(),
+        "cost time:",
+        (job_end_time - job_start_time) / 1000,
+        "s"
+      );
       // console.log(new Date().toLocaleString(), "failed list:", faile);
     }
   }, 1000);
-}
+};
 
 job();

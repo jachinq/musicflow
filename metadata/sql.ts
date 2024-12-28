@@ -1,4 +1,5 @@
 const Database = require('better-sqlite3');
+const db_path = 'musicflow.db';
 
 // 定义数据模型
 export interface Metadata {
@@ -94,7 +95,7 @@ export interface ArtistSong {
 }
 
 // 创建或打开一个名为 'example.db' 的数据库
-const db = new Database('musicflow.db');
+const db = new Database(db_path);
 
 // 创建表
 db.exec(`
@@ -111,7 +112,7 @@ CREATE TABLE
     year INTEGER,
     duration REAL,
     bitrate REAL,
-    sample_rate REAL
+    samplerate REAL
   );
 
 CREATE TABLE
@@ -198,13 +199,13 @@ CREATE TABLE
 `);
 
 export const addMetadata = (metadata: Metadata) => {
-  const { id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, sample_rate } = metadata;
+  const { id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, samplerate } = metadata;
   const insert = db.prepare(`
-    INSERT INTO metadata (id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, sample_rate)
-    VALUES (@id, @file_name, @file_path, @file_url, @title, @artist, @artists, @album, @year, @duration, @bitrate, @sample_rate)
+    INSERT INTO metadata (id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, samplerate)
+    VALUES (@id, @file_name, @file_path, @file_url, @title, @artist, @artists, @album, @year, @duration, @bitrate, @samplerate)
   `);
-  insert.run({ id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, sample_rate });
-  return { id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, sample_rate };
+  insert.run({ id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, samplerate });
+  return { id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, samplerate };
 };
 
 export const addLyric = (data: Lyric) => {
@@ -336,6 +337,12 @@ export const getMetadataById = (id: string) => {
     SELECT * FROM metadata WHERE id = @id
   `);
   return select.get({ id });
+};
+export const existMetadataByPath = (file_path: string) => {
+  const select = db.prepare(`
+    SELECT * FROM metadata WHERE file_path = @file_path
+  `);
+  return select.get({ file_path });
 };
 
 export const getTag = (name: string) => {
