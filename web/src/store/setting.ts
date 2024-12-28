@@ -19,9 +19,18 @@ interface SettingState {
   setServerUrl: (url: string) => void;
 }
 
+const setLocalStorge = (key: string, value: any) => {
+  localStorage.setItem(key, JSON.stringify(value));
+}
 export const useSettingStore = create<SettingState>((set) => ({
   play_mode: defaultSetting.play_mode,
   server_url: defaultSetting.server_url,
-  setPlayMode: (mode: PlayMode) => set(() => ({ play_mode: mode })),
-  setServerUrl: (url: string) => set(() => ({ server_url: url })),
+  setPlayMode: (mode: PlayMode) => set(() => {
+    setLocalStorge("musicflow_setting", {...defaultSetting, play_mode: mode });
+    return { play_mode: mode };
+  }),
+  setServerUrl: (url: string) => set(() => {
+    setLocalStorge("musicflow_setting", {...defaultSetting, server_url: url });
+    return { server_url: url };
+  }),
 }));
