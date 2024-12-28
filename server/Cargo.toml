@@ -17,4 +17,5 @@ music-metadata = "0.3.0"
 base64 = "0.22.1"
 
 # db
-rusqlite = "0.32.1"
+# 通过 bundled features 来启用静态链接, 可以让 rusqlite 自动下载并编译 SQLite 库，这样就不需要手动管理库文件了
+rusqlite = { version = "0.32.1", features = ["bundled"]}
