@@ -28,7 +28,7 @@ export const AudioPlayer = () => {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const [loadStatus, setLoadStatus] = useState<string>("加载中...");
+  const [loadStatus, setLoadStatus] = useState<string>("");
 
   const isDetailPage = location.pathname.startsWith("/detail");
 
@@ -104,6 +104,9 @@ export const AudioPlayer = () => {
   });
 
   useEffect(() => {
+    if (isDetailPage && audioContext == null) {
+      return;
+    }
     initStatus();
     loadAudioFile();
     // 等待 10 秒后开始预加载下一首歌曲
@@ -111,15 +114,11 @@ export const AudioPlayer = () => {
       preDecodeAudioBuffer();
     }, 10 * 1000);
   }, [currentSong]);
+
   useEffect(() => {
-    console.log("audio buffer change", audioBuffer?.length);
     if (audioBuffer) {
-      if (gainNode === null) {
-        // 创建音量节点
-        const gainNodeTmp = audioContext.createGain();
-        gainNodeTmp.connect(audioContext.destination);
-        gainNodeTmp.gain.value = volume;
-        setGainNode(gainNodeTmp);
+      if (gainNode === null && audioContext) {
+        initGainNode(audioContext);
       }
       pauseAudio();
       playAudio(0);
@@ -155,8 +154,39 @@ export const AudioPlayer = () => {
       }
     }
   };
-  const playAudio = (startTime: number = 0) => {
+  const initAudioContext = () => {
+    if (audioContext) return audioContext;
+    let audioContextTmp = new AudioContext();
+    setAudioContext(audioContextTmp);
+    return audioContextTmp;
+  };
+  const initGainNode = (audioContext: AudioContext) => {
+    if (gainNode) return gainNode;
+    let gainNodeTmp = audioContext.createGain();
+    gainNodeTmp.connect(audioContext.destination);
+    gainNodeTmp.gain.value = volume;
+    setGainNode(gainNodeTmp);
+    return gainNodeTmp;
+  };
+  const initAudioBuffer = async (song: Music | null) => {
+    if (!song) return null;
+    if (audioBuffer) return audioBuffer;
+    if (song.decodedAudioBuffer) {
+      setAudioBuffer(song.decodedAudioBuffer);
+      return song.decodedAudioBuffer;
+    }
+    await decodeAudioBuffer(song, true);
+    return song.decodedAudioBuffer;
+  };
+
+  const playAudio = async (startTime: number = 0) => {
+    initGainNode(initAudioContext());
+    const audioBuffer = await initAudioBuffer(currentSong);
     // console.log("play", audioContext.state, startTime);
+    if (!audioContext) {
+      console.log("audio context is null");
+      return;
+    }
     if (!audioBuffer) {
       console.log("audio buffer is null");
       return;
@@ -189,7 +219,11 @@ export const AudioPlayer = () => {
   };
 
   const pauseAudio = () => {
-    console.log("pause", audioContext.state);
+    if (!audioContext) {
+      console.log("audio context is null");
+      return;
+    }
+    // console.log("pause", audioContext.state);
     if (progressIntevalId) {
       clearInterval(progressIntevalId);
     }
@@ -217,7 +251,6 @@ export const AudioPlayer = () => {
       setLoadStatus("加载中...");
       let audioContextTmp = audioContext;
       if (!audioContextTmp) {
-        // 理论上这里不会触发, 保险起见再加个判断
         setLoadStatus("设置音频上下文...");
         audioContextTmp = new AudioContext();
         setAudioContext(audioContextTmp);
@@ -245,6 +278,7 @@ export const AudioPlayer = () => {
       actuallyDecode && setLoadStatus("解码音频数据...");
       actuallyDecode && setAudioBuffer(song.decodedAudioBuffer);
       actuallyDecode && setDuration(song.decodedAudioBuffer.duration);
+      actuallyDecode && setLoadStatus("");
     } else {
       // 克隆一个新的ArrayBuffer，避免影响到原数组
       let copyBuffer = fileArrayBuffer.slice(0);
@@ -256,15 +290,11 @@ export const AudioPlayer = () => {
           actuallyDecode && setAudioBuffer(audioBuffer);
           actuallyDecode && setDuration(audioBuffer.duration);
           song.decodedAudioBuffer = audioBuffer;
-          // const currentIndex = allSongs.findIndex((music) => music.id === song.id);
-          // allSongs[currentIndex] = song;
-          // setAllSongs([...allSongs]);
-          // console.log("decode audio data end", song.name);
+          actuallyDecode && setLoadStatus("");
         })
-        .catch((error) => {
-          console.log("decode audio data error", error);
+        .catch((_error) => {
+          setLoadStatus("解码音频数据失败...");
         });
-      console.log("audio buffer size", audioBuffer?.length);
     }
   };
 
@@ -356,19 +386,13 @@ export const AudioPlayer = () => {
             </div>
           </div>
         )}
-        {audioBuffer && currentSong && (
+        {currentSong && (
           <div className="gap-2 w-full grid grid-rows-2">
             <div
               className={`song-title flex flex-row gap-1 justify-center items-center overflow-hidden`}
             >
-              <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
-                <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
-                  {currentSong.title || "未知标题"}
-                </span>
-                <span className="ml-2 text-sm text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis ">
-                  {currentSong.artist}
-                </span>
-              </span>
+              <ShowLoader loadStatus={loadStatus} />
+              <ShowTitle currentSong={currentSong} loadStatus={loadStatus} />
             </div>
 
             <div
@@ -461,20 +485,41 @@ export const AudioPlayer = () => {
             </div>
           </div>
         )}
-        {(!currentSong || !audioBuffer) && (
-          <>
-            {!currentSong && <div></div>}
-            <div className="flex gap-2 justify-center items-center w-full h-full">
-              <Loader2 className="animate-spin" size={48} />
-              <span className="text-sm text-muted-foreground">
-                {loadStatus}
-              </span>
-            </div>
-          </>
-        )}
       </div>
 
       <Playlist clearPlaylist={clearPlaylist} />
     </div>
+  );
+};
+
+const ShowLoader = ({ loadStatus }: { loadStatus: string }) => {
+  if (loadStatus.length === 0) {
+    return null;
+  }
+  return (
+    <div className="flex gap-2 justify-center items-center w-full h-full">
+      <Loader2 className="animate-spin" />
+      <span className="text-sm text-muted-foreground">{loadStatus}</span>
+    </div>
+  );
+};
+
+const ShowTitle = ({
+  currentSong,
+  loadStatus,
+}: {
+  currentSong: Music;
+  loadStatus: string;
+}) => {
+  if (loadStatus.length > 0) return null;
+  return (
+    <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
+      <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
+        {currentSong.title || "未知标题"}
+      </span>
+      <span className="ml-2 text-sm text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis ">
+        {currentSong.artist}
+      </span>
+    </span>
   );
 };

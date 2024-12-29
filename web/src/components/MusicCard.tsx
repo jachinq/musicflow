@@ -67,8 +67,8 @@ const Cover = ({ music }: { music: Music }) => {
 
   return (
     <div
-      style={{ borderRadius: "0 0 8px 8px" }}
-      className="min-h-[140px] min-w-[140px] flex items-center justify-center bg-background shadow-md"
+      style={{ borderRadius: "8px 8px 0 0" }}
+      className="min-h-[140px] min-w-[140px] flex items-center justify-center bg-background shadow-md overflow-hidden"
     >
       <img ref={imgRef} width={140} className="object-cover hidden" />
       {!loaded && <Loader className="animate-spin" size={32} />}

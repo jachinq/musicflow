@@ -7,6 +7,7 @@ import { Pagination } from "./Pagination";
 import { forwardRef, useRef } from "react";
 import { getCoverSmallUrl } from "../lib/api";
 import { useKeyPress } from "../hooks/use-keypress";
+import { useCurrentPlay } from "../store/current-play";
 
 interface Props {
   clearPlaylist: () => void;
@@ -34,6 +35,7 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
     setCurrentSong,
     setShowPlaylist,
   } = usePlaylist();
+  const { isPlaying } = useCurrentPlay();
 
   const playSong = (song: Music) => {
     setCurrentSong(song);
@@ -58,6 +60,7 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
 
   return (
     <>
+      <div className="mask" onClick={() => setShowPlaylist(false)}></div>
       <div
         ref={setRef}
         className="fixed top-[72px] right-2 w-[calc(100vw/3)] min-w-[320px] h-[calc(100vh-180px)] bg-secondary text-secondary-foreground rounded-md overflow-y-scroll overflow-x-hidden z-10 animate-playlist-fadein"
@@ -92,12 +95,11 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
             >
               <div className="rounded-lg overflow-hidden relative">
                 <img src={getCoverSmallUrl(song.id)} alt="" width={40} />
-                {currentSong?.id === song.id && (
+                {currentSong?.id === song.id && isPlaying && (
                   <>
-                    <div className="mask w-[40px] h-[40px] absolute top-0 left-0 bg-black opacity-70"></div>
                     <AudioLines
                       size={22}
-                      className="absolute animate-pulse text-sidebar-ring"
+                      className="absolute animate-pulse text-sidebar-ring z-50"
                       style={{
                         top: "50%",
                         left: "50%",

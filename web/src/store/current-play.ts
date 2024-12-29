@@ -5,7 +5,7 @@ const volumestr = localStorage.getItem("volume") || "0.5";
 const volume = parseFloat(volumestr);
 
 interface CurrentPlayState {
-    audioContext: AudioContext;
+    audioContext: AudioContext | null;
     currentTime: number;
     currentLyric: { time: number, text: string } | null;
     duration: number;
@@ -24,7 +24,7 @@ interface CurrentPlayState {
 }
 
 export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
-    audioContext: new AudioContext(),
+    audioContext: null,
     currentTime: 0,
     currentLyric: null,
     duration: 0,

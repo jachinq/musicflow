@@ -151,14 +151,14 @@ export const getTagSongs = (
 
 export const addTagToSong = (
   song_id: string,
-  tag_ids: number[],
+  tagname: string,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
   const url = `${API_URL}/api/add_tag_to_song`;
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
-    body: JSON.stringify({ song_id, tag_ids }),
+    body: JSON.stringify({ song_id, tagname }),
   });
 };
 
@@ -168,7 +168,7 @@ export const removeTagFromSong = (
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/remove_tag_from_song/${song_id}/${tag_id}`;
+  const url = `${API_URL}/api/delete_song_tag/${song_id}/${tag_id}`;
   fetchUtils(url, onSuccess, onError, {
     method: "DELETE",
   });

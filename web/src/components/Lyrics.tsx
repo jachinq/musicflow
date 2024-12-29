@@ -55,7 +55,7 @@ function Lyrics({song_id}: {song_id?: string}) {
         });
       }
     }
-    if (currentLyric === null) {
+    if (currentLyric === null && lyricsRef.current) {
       lyricsRef.current.scrollTo(0, 0);
     }
   }, [currentLyric]);
