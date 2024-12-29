@@ -1,8 +1,8 @@
 // App.tsx
 import "./styles/globals.css";
-
+import { Toaster } from 'sonner';
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import HomePage from "./pages/HomePage";
+import {HomePage} from "./pages/HomePage";
 import MusicPlayPage from "./pages/MusicPlayPage";
 import SettingsPage from "./pages/SettingsPage";
 import { usePlaylist } from "./store/playlist";
@@ -17,7 +17,7 @@ function App() {
     <ThemeProvider defaultTheme="dark">
       <Router>
         <div className="min-w-[320px] min-h-screen ">
-          <nav className="p-4 bg-primary-foreground">
+          <nav className="p-4 bg-primary-foreground sticky top-0">
             <div className="flex justify-between">
               <Link to="/" className="font-bold text-lg">
                 <div className="flex items-center justify-center gap-1">
@@ -49,7 +49,7 @@ function App() {
               currentSong && "mb-[90px]"
             } flex justify-center items-center w-full h-full `}
           >
-            <div className="max-w-[1560px]">
+            <div className="max-w-[1560px] w-full">
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/tags" element={<TagsPage />} />
@@ -61,6 +61,7 @@ function App() {
 
           {currentSong && <AudioPlayer />}
         </div>
+        <Toaster />
       </Router>
     </ThemeProvider>
   );

@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { Music, Tag } from "../lib/defined";
 
 interface MusicListState {
+  needFilter: boolean;
+  setNeedFilter: (filterTag: boolean) => void;
   filterTags: Tag[];
   setFilterTags: (tagId: Tag[]) => void;
   musicList: Music[];
@@ -11,6 +13,8 @@ interface MusicListState {
 }
 
 export const useMusicList = create<MusicListState>((set) => ({
+  needFilter: false,
+  setNeedFilter: (needFilter) => set(() => ({ needFilter })),
   filterTags: [],
   setFilterTags: (filterTags) => set(() => ({ filterTags })),
   musicList: [],

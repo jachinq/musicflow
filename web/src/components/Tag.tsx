@@ -2,8 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { Tag } from "../lib/defined";
 import { useMusicList } from "../store/musicList";
 
-export const TagElement = ({ tag, onClick }: { tag: Tag, onClick?: (tag: Tag) => void }) => {
-  const { filterTags, setFilterTags } = useMusicList();
+export const TagElement = ({ tag, onClick, children, className }: { tag: Tag, onClick?: (tag: Tag) => void } & React.HTMLAttributes<HTMLDivElement>) => {
+  const { filterTags, setFilterTags, setNeedFilter } = useMusicList();
   const navigate = useNavigate();
   const selectTag = () => {
     if (!tag) return;
@@ -16,12 +16,14 @@ export const TagElement = ({ tag, onClick }: { tag: Tag, onClick?: (tag: Tag) =>
     if (index === -1) {
       filterTags.push(tag);
       setFilterTags([...filterTags]);
+      setNeedFilter(true);
     }
     navigate("/");
   }
   return (
-    <div className="tag" key={tag.id} onClick={selectTag}>
+    <div className={"tag " + className} key={tag.id} onClick={selectTag}>
       {tag.name}
+      {children}
     </div>
   );
 };
