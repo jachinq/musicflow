@@ -34,16 +34,16 @@ export interface Cover {
   extra: string;
 }
 
-export interface Playlist {
+export interface SongList {
   id: number;
   user_id: number;
   name: string;
   description: string;
 }
 
-export interface PlaylistSong {
+export interface SongListSong {
   user_id: number;
-  playlist_id: number;
+  song_list_id: number;
   song_id: string;
   order_num: number;
 }
@@ -135,7 +135,7 @@ CREATE TABLE
   );
 
 CREATE TABLE
-  IF NOT EXISTS playlist (
+  IF NOT EXISTS song_list (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     name TEXT NOT NULL,
@@ -143,9 +143,9 @@ CREATE TABLE
   );
 
 CREATE TABLE
-  IF NOT EXISTS playlist_song (
+  IF NOT EXISTS song_list_song (
     user_id INTEGER NOT NULL,
-    playlist_id INTEGER NOT NULL,
+    song_list_id INTEGER NOT NULL,
     song_id TEXT NOT NULL,
     order_num INTEGER NOT NULL
   );
@@ -228,24 +228,24 @@ export const addCover = (cover: Cover) => {
   return { song_id, format, width, height, base64, type, extra };
 };
 
-export const addPlaylist = (playlist: Playlist) => {
-  const { user_id, name, description } = playlist;
+export const addSongList = (songlist: SongList) => {
+  const { user_id, name, description } = songlist;
   const insert = db.prepare(`
-    INSERT INTO playlist (user_id, name, description)
+    INSERT INTO song_list (user_id, name, description)
     VALUES (@user_id, @name, @description)
   `);
   insert.run({ user_id, name, description });
   return { id: insert.lastInsertRowid, user_id, name, description };
 };
 
-export const addPlaylistSong = (playlistSong: PlaylistSong) => {
-  const { user_id, playlist_id, song_id, order_num } = playlistSong;
+export const addSongListSong = (songlistSong: SongListSong) => {
+  const { user_id, song_list_id, song_id, order_num } = songlistSong;
   const insert = db.prepare(`
-    INSERT INTO playlist_song (user_id, playlist_id, song_id, order_num)
-    VALUES (@user_id, @playlist_id, @song_id, @order_num)
+    INSERT INTO song_list_song (user_id, song_list_id, song_id, order_num)
+    VALUES (@user_id, @song_list_id, @song_id, @order_num)
   `);
-  insert.run({ user_id, playlist_id, song_id, order_num });
-  return { user_id, playlist_id, song_id, order_num };
+  insert.run({ user_id, song_list_id, song_id, order_num });
+  return { user_id, song_list_id, song_id, order_num };
 };
 
 export const addUser = (user: User) => {

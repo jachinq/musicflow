@@ -34,7 +34,7 @@ CREATE TABLE
   );
 
 CREATE TABLE
-  IF NOT EXISTS playlist (
+  IF NOT EXISTS song_list (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     name TEXT NOT NULL,
@@ -42,9 +42,9 @@ CREATE TABLE
   );
 
 CREATE TABLE
-  IF NOT EXISTS playlist_song (
+  IF NOT EXISTS song_list_song (
     user_id INTEGER NOT NULL,
-    playlist_id INTEGER NOT NULL,
+    song_list_id INTEGER NOT NULL,
     song_id TEXT NOT NULL,
     order_num INTEGER NOT NULL
   );
