@@ -8,14 +8,14 @@ use std::collections::HashMap;
 use std::io;
 use walkdir::WalkDir; // 引入 CORS 中间件
 
-mod controller_playlist;
+mod controller_songlist;
 mod controller_song;
 mod controller_tag;
 mod controller_user;
 mod dbservice;
 
 use controller_song::*;
-use controller_playlist::*;
+use controller_songlist::*;
 use controller_tag::*;
 use controller_user::*;
 use dbservice::*;
@@ -71,6 +71,24 @@ async fn main() -> io::Result<()> {
             .route("/api/cover/small/{song_id}", web::get().to(get_cover_small))
             .route("/api/cover/medium/{song_id}", web::get().to(get_cover_medium))
             .route("/api/lyrics/{song_id}", web::get().to(get_lyrics))
+
+            .route("/api/songlist", web::get().to(handle_song_list))
+            .route("/api/songlist_songs/{songlist_id}", web::get().to(handle_song_list_songs))
+            .route("/api/song_songlist/{song_id}", web::get().to(handle_song_song_list))
+            .route("/api/delete_songlist/{songlist_id}", web::delete().to(handle_delete_song_list))
+            .route("/api/create_songlist", web::post().to(handle_create_song_list))
+            .route("/api/update_songlist", web::put().to(handle_update_song_list))
+            .route("/api/remove_song_from_songlist/{songlist_id}/{song_id}", web::delete().to(handle_remove_song_from_songlist))
+            .route("/api/add_song_to_songlist/{songlist_id}/{song_id}", web::post().to(handle_add_song_to_song_list))
+
+            .route("/api/user", web::get().to(handle_get_user))
+            .route("/api/login", web::post().to(handle_login))
+            .route("/api/logout", web::post().to(handle_logout))
+            .route("/api/register", web::post().to(handle_register))
+            .route("/api/update_user", web::put().to(handle_update_user))
+            .route("/api/change_password", web::post().to(handle_change_password))
+
+
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", "./web/dist").index_file("index.html"))

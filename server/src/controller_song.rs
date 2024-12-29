@@ -15,7 +15,7 @@ pub struct MusicListQuery {
     page: Option<u32>,
     page_size: Option<u32>,
     filter: Option<String>,
-    tag_ids: Option<Vec<i32>>,
+    tag_ids: Option<Vec<i64>>,
 }
 
 /// 获取服务器上所有音乐文件

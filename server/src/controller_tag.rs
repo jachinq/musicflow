@@ -21,7 +21,7 @@ pub async fn song_tags(song_id: web::Path<String>) -> impl Responder {
     }
 }
 
-pub async fn tag_songs(tag_id: web::Path<i32>) -> impl Responder {
+pub async fn tag_songs(tag_id: web::Path<i64>) -> impl Responder {
     let songs = crate::dbservice::get_tag_songs(*tag_id).await;
     if let Ok(songs) = songs {
         HttpResponse::Ok().json(JsonResult::success(songs))

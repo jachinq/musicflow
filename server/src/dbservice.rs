@@ -65,19 +65,21 @@ fn covert_row_to_tag(row: &rusqlite::Row) -> Result<Tag> {
     })
 }
 
-fn covert_row_to_playlist(row: &rusqlite::Row) -> Result<Playlist> {
-    Ok(Playlist {
+fn covert_row_to_song_list(row: &rusqlite::Row) -> Result<SongList> {
+    Ok(SongList {
         id: row.get(0)?,
         user_id: row.get(1)?,
         name: row.get(2)?,
         description: row.get(3)?,
+        cover: row.get(4)?,
+        created_at: row.get(5)?,
     })
 }
 
-fn covert_row_to_playlist_song(row: &rusqlite::Row) -> Result<PlaylistSong> {
-    Ok(PlaylistSong {
+fn covert_row_to_song_list_song(row: &rusqlite::Row) -> Result<SongListSong> {
+    Ok(SongListSong {
         user_id: row.get(0)?,
-        playlist_id: row.get(1)?,
+        song_list_id: row.get(1)?,
         song_id: row.get(2)?,
         order_num: row.get(3)?,
     })
@@ -227,7 +229,7 @@ pub async fn get_song_tags(song_id: &str) -> Result<Vec<Tag>> {
     Ok(tag_list)
 }
 
-pub async fn get_tag_songs(tag_id: i32) -> Result<Vec<Metadata>> {
+pub async fn get_tag_songs(tag_id: i64) -> Result<Vec<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.artists, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate FROM metadata INNER JOIN song_tag ON metadata.id = song_tag.song_id WHERE song_tag.tag_id = ?")?;
     let rows = stmt.query_map([tag_id], |row| covert_row_to_metadata(row))?;
@@ -253,7 +255,23 @@ pub async fn add_tag(tag: &Tag) -> Result<i64> {
     Ok(id)
 }
 
-// 批量新增歌曲标签关联数据
+// 歌单相关接口
+pub async fn get_song_list() -> Result<Vec<SongList>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM song_list")?;
+    let rows = stmt.query_map([], |row| covert_row_to_song_list(row))?;
+
+    let mut song_list_list = Vec::new();
+    for song_list in rows {
+        if let Ok(song_list) = song_list {
+            song_list_list.push(song_list);
+        } else {
+            println!("getPlaylist Error: {}", song_list.unwrap_err());
+        }
+    }
+    Ok(song_list_list)
+}
+
 pub async fn add_song_tag(list: Vec<SongTag>) -> Result<usize> {
     let mut conn = connect_db()?;
     let tx = conn.transaction()?;
@@ -270,8 +288,93 @@ pub async fn add_song_tag(list: Vec<SongTag>) -> Result<usize> {
 pub async fn delete_song_tag(song_id: &str, tag_id: i64) -> Result<usize> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("DELETE FROM song_tag WHERE song_id = ? AND tag_id = ?")?;
-    let _ = stmt.execute([song_id, &tag_id.to_string()])?;
-    Ok(1)
+    Ok(stmt.execute([song_id, &tag_id.to_string()])?)
+}
+
+pub async fn add_song_list(song_list: &SongList) -> Result<i64> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("INSERT INTO song_list (user_id, name, description, cover, created_at) VALUES (?, ?, ?, ?, ?)")?;
+    let _ = stmt.execute([
+        &song_list.user_id.to_string(),
+        &song_list.name.clone(),
+        &song_list.description.clone(),
+        &song_list.cover.clone(),
+        &song_list.created_at.clone(),
+    ])?;
+    // 拿到自增id
+    let id = conn.last_insert_rowid();
+    Ok(id)
+}
+
+pub async fn update_song_list(song_list: &SongList) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt =
+        conn.prepare("UPDATE song_list SET name = ?, description = ?, cover = ? WHERE id = ?")?;
+    let size = stmt.execute([
+        &song_list.name.clone(),
+        &song_list.description.clone(),
+        &song_list.cover.clone(),
+        &song_list.id.to_string(),
+    ])?;
+    Ok(size)
+}
+
+pub async fn delete_song_list(id: i64) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("DELETE FROM song_list WHERE id = ?")?;
+    Ok(stmt.execute([&id.to_string()])?)
+}
+
+pub async fn add_song_list_song(song_list_song: &SongListSong) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("INSERT INTO song_list_song (user_id, song_list_id, song_id, order_num) VALUES (?, ?, ?, ?)")?;
+    Ok(stmt.execute([
+        &song_list_song.user_id.to_string(),
+        &song_list_song.song_list_id.to_string(),
+        &song_list_song.song_id.clone(),
+        &song_list_song.order_num.to_string(),
+    ])?)
+}
+
+pub async fn delete_song_list_song(song_list_id: i64, song_id: &str) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt =
+        conn.prepare("DELETE FROM song_list_song WHERE song_list_id = ? AND song_id = ?")?;
+    Ok(stmt.execute([&song_list_id.to_string(), &song_id.to_string()])?)
+}
+
+pub async fn get_song_list_songs(song_list_id: i64) -> Result<Vec<Metadata>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.artists, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate FROM metadata INNER JOIN song_list_song ON metadata.id = song_list_song.song_id WHERE song_list_song.song_list_id = ?")?;
+    let rows = stmt.query_map([&song_list_id.to_string()], |row| {
+        covert_row_to_metadata(row)
+    })?;
+
+    let mut song_list = Vec::new();
+    for song in rows {
+        if let Ok(song) = song {
+            song_list.push(song);
+        } else {
+            println!("getPlaylist Error: {}", song.unwrap_err());
+        }
+    }
+    Ok(song_list)
+}
+
+pub async fn get_song_song_list(song_id: &str) -> Result<Vec<SongList>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT song_list.id, song_list.user_id, song_list.name, song_list.description, song_list.cover, song_list.created_at FROM song_list INNER JOIN song_list_song ON song_list.id = song_list_song.song_list_id WHERE song_list_song.song_id = ?")?;
+    let rows = stmt.query_map([song_id], |row| covert_row_to_song_list(row))?;
+
+    let mut song_list_list = Vec::new();
+    for song_list in rows {
+        if let Ok(song_list) = song_list {
+            song_list_list.push(song_list);
+        } else {
+            println!("getPlaylist Error: {}", song_list.unwrap_err());
+        }
+    }
+    Ok(song_list_list)
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -310,24 +413,26 @@ pub struct Metadata {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
-pub struct Playlist {
-    pub id: i32,
-    pub user_id: i32,
+pub struct SongList {
+    pub id: i64,
+    pub user_id: i64,
     pub name: String,
     pub description: String,
+    pub cover: String,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
-pub struct PlaylistSong {
-    pub user_id: i32,
-    pub playlist_id: i32,
+pub struct SongListSong {
+    pub user_id: i64,
+    pub song_list_id: i64,
     pub song_id: String,
-    pub order_num: i32,
+    pub order_num: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct User {
-    pub id: i32,
+    pub id: i64,
     pub name: String,
     pub password: String,
     pub email: String,
@@ -338,14 +443,14 @@ pub struct User {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct UserToken {
-    pub user_id: i32,
+    pub user_id: i64,
     pub token: String,
     pub expire_at: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct UserFavorite {
-    pub user_id: i32,
+    pub user_id: i64,
     pub song_id: String,
     pub created_at: String,
 }
@@ -366,7 +471,7 @@ pub struct SongTag {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Artist {
-    pub id: i32,
+    pub id: i64,
     pub name: String,
     pub cover: String,
     pub description: String,
@@ -374,7 +479,7 @@ pub struct Artist {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct ArtistSong {
-    pub artist_id: i32,
+    pub artist_id: i64,
     pub song_id: String,
 }
 
