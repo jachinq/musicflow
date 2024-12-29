@@ -67,6 +67,7 @@ async fn main() -> io::Result<()> {
             .route("/api/song_tags/{song_id}", web::get().to(song_tags))
             .route("/api/tag_songs/{tag_id}", web::get().to(tag_songs))
             .route("/api/add_tag_to_song", web::post().to(add_tag_to_song))
+            .route("/api/delete_song_tag/{song_id}/{tag_id}", web::delete().to(delete_tag_from_song))
             .route("/api/cover/small/{song_id}", web::get().to(get_cover_small))
             .route("/api/cover/medium/{song_id}", web::get().to(get_cover_medium))
             .route("/api/lyrics/{song_id}", web::get().to(get_lyrics))

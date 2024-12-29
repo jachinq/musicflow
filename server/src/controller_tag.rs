@@ -85,13 +85,12 @@ pub async fn add_tag_to_song(info: web::Json<QueryAddTagToMusic>) -> impl Respon
 }
 
 // 删除歌曲标签
-pub async fn delete_tag_from_song(song_id: web::Path<String>, tag_id: web::Path<i64>) -> impl Responder {
-    let song_id_get = song_id.clone();
-    let tag_id_get = *tag_id;
+pub async fn delete_tag_from_song(path: web::Path<(String, i64)>) -> impl Responder {
+    let (song_id, tag_id) = path.into_inner();
 
-    if let Ok(_) = dbservice::delete_song_tag(&song_id_get, tag_id_get).await {
+    if let Ok(_) = dbservice::delete_song_tag(&song_id, tag_id).await {
         // 操作完后，拿到新的歌曲标签
-        let new_song_tags = dbservice::get_song_tags(&song_id_get).await.unwrap();
+        let new_song_tags = dbservice::get_song_tags(&song_id).await.unwrap();
         HttpResponse::Ok().json(JsonResult::success(new_song_tags))
     } else {
         HttpResponse::Ok().json(JsonResult::<SongTag>::error("标签删除失败"))

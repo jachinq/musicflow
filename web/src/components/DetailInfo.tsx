@@ -1,9 +1,11 @@
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Music, Tag } from "../lib/defined";
-import { getSongTags, getTagList } from "../lib/api";
-import { SquarePlus } from "lucide-react";
+import { addTagToSong, getSongTags, getTagList, removeTagFromSong } from "../lib/api";
+import { SquarePlus, X } from "lucide-react";
 import { Input } from "./Input";
 import { TagElement } from "./Tag";
+import { toast } from "sonner";
+import { useConfirm } from "./confirm";
 
 export const DetailInfo = ({ song }: { song?: Music }) => {
   if (!song) return <div>暂无数据</div>;
@@ -24,39 +26,97 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
   }, [song]);
 
   return (
-    <div className="flex flex-col justify-center items-center px-8">
+    <div className="flex flex-col justify-center items-center px-8 py-4">
       <div className="flex flex-col gap-4">
         <ShowItem name="名称" value={song.title} />
-        <ShowItem name="歌手" value={song.artist} />
+        <ShowItem name="歌手" value={JSON.parse(song.artists).join(" / ")} />
         <ShowItem name="专辑" value={song.album} />
         <ShowItem name="比特率" value={song.bitrate.toFixed(2)} />
         <ShowItem name="采样率" value={song.samplerate.toFixed(2)} />
         <ShowItem name="年份" value={song.year} />
         <ShowItem name="时长" value={song.duration.toFixed(2)} />
-        <ShowItem name="标签" value={<Tags tags={tags} setTags={setTags} />} />
+        <ShowItem
+          name="标签"
+          value={<Tags song={song} tags={tags} setTags={setTags} />}
+        />
       </div>
     </div>
   );
 };
 
 const Tags = ({
+  song,
   tags,
   setTags,
 }: {
+  song: Music;
   tags: Tag[];
   setTags: (tags: Tag[]) => void;
 }) => {
+  const confirm = useConfirm();
   const [showNewTagForm, setShowNewTagForm] = useState(false);
-  const handleAddTag = (tag: Tag) => {
-    const newTags = [...tags, tag];
-    setTags(newTags);
-    setShowNewTagForm(false);
+  const handleAddTag = (tagname: string) => {
+    tagname = (tagname || "").trim();
+    if (tagname === "") return;
+    addTagToSong(
+      song.id,
+      tagname,
+      (result) => {
+        if (!result || !result.success) {
+          toast.error("添加标签失败", {
+            description: result?.message || "未知错误",
+          });
+          return;
+        }
+        setTags(result.data);
+        setShowNewTagForm(false);
+        toast.success("添加标签成功");
+      },
+      (error) => {
+        console.log(error);
+        toast.error("添加标签失败");
+      }
+    );
+  };
+
+  const handleDeleteTag = (evt: React.MouseEvent, tag: Tag) => {
+    evt.stopPropagation();
+    const confirmDeleteTag = () => {
+      removeTagFromSong(
+        song.id,
+        tag.id,
+        (result) => {
+          if (!result || !result.success) {
+            toast.error("删除标签失败", {
+              description: result?.message || "未知错误",
+            });
+            return;
+          }
+          setTags(result.data);
+          toast.success("删除标签成功");
+        },
+        (error) => {
+          console.log(error);
+          toast.error("删除标签失败");
+        }
+      )
+    };
+    confirm(
+      "确认删除标签？",
+      confirmDeleteTag,
+      () => {}
+    );
   };
 
   return (
     <div className="flex flex-wrap gap-2">
       {tags.map((tag) => (
-        <TagElement key={tag.id} tag={tag} />
+        <TagElement key={tag.id} tag={tag} className="flex items-center gap-1">
+          <X
+            onClick={(e) => handleDeleteTag(e, tag)}
+            className="hover:text-red-500"
+          />
+        </TagElement>
       ))}
       <div className="tag" onClick={setShowNewTagForm.bind(null, true)}>
         <SquarePlus strokeWidth={1} />
@@ -93,7 +153,7 @@ const NewTagForm = ({
   onCancel,
 }: {
   tags: Tag[];
-  onSubmit: (tag: Tag) => void;
+  onSubmit: (tagname: string) => void;
   onCancel?: () => void;
 }) => {
   const [newTag, setNewTag] = useState("");
@@ -101,19 +161,7 @@ const NewTagForm = ({
 
   const handleAddTag = () => {
     if (newTag.trim() === "") return;
-    const existingTag = tags.find((tag) => tag.name === newTag);
-    if (existingTag) {
-      onSubmit && onSubmit(existingTag);
-      return;
-    }
-    // TODO: 调用接口创建新标签，现在先假设成功
-    const newTagObj: Tag = {
-      id: tagList.reduce((acc, cur) => Math.max(acc, cur.id), 0) + 1,
-      name: newTag,
-      color: "#000000",
-      text_color: "#FFFFFF",
-    };
-    onSubmit && onSubmit(newTagObj);
+    onSubmit && onSubmit(newTag.trim());
   };
 
   useEffect(() => {
@@ -134,7 +182,7 @@ const NewTagForm = ({
   }, []);
 
   const selectTag = (tag: Tag) => {
-    onSubmit && onSubmit(tag);
+    onSubmit && onSubmit(tag.name);
   };
   return (
     <>

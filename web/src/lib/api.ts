@@ -164,7 +164,7 @@ export const addTagToSong = (
 
 export const removeTagFromSong = (
   song_id: string,
-  tag_id: string,
+  tag_id: number,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
