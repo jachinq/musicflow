@@ -244,6 +244,15 @@ pub async fn get_tag_songs(tag_id: i32) -> Result<Vec<Metadata>> {
     // Err(rusqlite::Error::QueryReturnedNoRows)
 }
 
+pub async fn add_tag(tag: &Tag) -> Result<i64> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("INSERT INTO tag (name, color, text_color) VALUES (?, ?, ?)")?;
+    let _ = stmt.execute([tag.name.clone(), tag.color.clone(), tag.text_color.clone()])?;
+    // 拿到自增id
+    let id = conn.last_insert_rowid();
+    Ok(id)
+}
+
 // 批量新增歌曲标签关联数据
 pub async fn add_song_tag(list: Vec<SongTag>) -> Result<usize> {
     let mut conn = connect_db()?;
@@ -256,6 +265,13 @@ pub async fn add_song_tag(list: Vec<SongTag>) -> Result<usize> {
     }
     tx.commit()?;
     Ok(list.len())
+}
+
+pub async fn delete_song_tag(song_id: &str, tag_id: i64) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("DELETE FROM song_tag WHERE song_id = ? AND tag_id = ?")?;
+    let _ = stmt.execute([song_id, &tag_id.to_string()])?;
+    Ok(1)
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -336,7 +352,7 @@ pub struct UserFavorite {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Tag {
-    pub id: i32,
+    pub id: i64,
     pub name: String,
     pub color: String,
     pub text_color: String,
@@ -345,7 +361,7 @@ pub struct Tag {
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct SongTag {
     pub song_id: String,
-    pub tag_id: i32,
+    pub tag_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
