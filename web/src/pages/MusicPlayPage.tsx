@@ -17,7 +17,17 @@ function MusicPlayPage() {
   const [song_id, setSongId] = useState<string>("");
   const [detailSong, setDetailSong] = useState<Music>();
   const [tabId, setTabId] = useState<number>(1);
-  const { isSmallDevice } = useDevice();
+  const { isSmallDevice, isMediumDevice, isLargeDevice, windowWidth } = useDevice();
+  const gridCols = `grid-cols-[${isSmallDevice? "1fr" : isMediumDevice ? "1fr,1fr" : "1fr,2fr"}]`;
+  // const album_size = isSmallDevice? 250 : isMediumDevice? 300 : 400;
+  // const album_border_width = isSmallDevice? 60 : isMediumDevice? 70 : 80;
+  const x = windowWidth ? isLargeDevice ? windowWidth / 2.5 : windowWidth / 1.2 : 0;
+  const album_size = windowWidth ? (
+    0.00016666 * (x*x) 
+    +0.05 * x + 83.335
+  ) : (isSmallDevice? 250 : isMediumDevice? 300 : 400);
+  const album_border_width = album_size / 3;
+  // windowWidth 和 album_size 的关系是一个二次方程。已知公式 ax^2 + bx + c = y, 且 x=500时y=150、x=700时y=200、x=1000时y=300，求公式中的a、b、c，解得 a=0.00016666、b=0.05、c=83.335
 
   useEffect(() => {
     const song_id = currentSong?.id || id || "";
@@ -61,7 +71,7 @@ function MusicPlayPage() {
     );
   }
 
-  if (isSmallDevice) {
+/*   if (isSmallDevice) {
     return (
       <div className="flex flex-col justify-center items-center w-full">
         <div className="flex justify-center items-center w-full my-10">
@@ -96,18 +106,18 @@ function MusicPlayPage() {
         </div>
       </div>
     );
-  }
+  } */
 
   return (
     <div className="flex flex-row justify-center items-center w-full p-4">
-      <div className="grid grid-cols-[1fr,2fr] gap-8">
-        <div className="flex justify-center items-center w-full min-h-[calc(100vh-150px)]">
-          <div className={`album-spin-wrapper border-[80px]`}>
+      <div className={"grid gap-8 items-start " + gridCols}>
+        <div className={`flex justify-center w-full ${isLargeDevice ? "min-h-[calc(100vh-150px)] items-center" : "p-8 items-start"}`}>
+          <div className="album-spin-wrapper" style={{ borderWidth: album_border_width }}>
             <img
               src={getCoverMediumUrl(song_id)}
               alt=""
-              width={400}
-              height={400}
+              width={album_size}
+              height={album_size}
               className={`${isPlaying ? "album-spin" : ""} object-cover`}
             />
           </div>

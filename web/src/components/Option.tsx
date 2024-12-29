@@ -47,7 +47,7 @@ export const OptionGroup = ({
     <context.Provider value={{ defaultValue, setValue }}>
       <div
       className={`flex items-center gap-2 w-full ${
-        isSmallDevice ? "justify-between" : "gap-8"
+        isSmallDevice ? "justify-evenly" : "gap-8"
       } ${className}`}
     >
       {children}
