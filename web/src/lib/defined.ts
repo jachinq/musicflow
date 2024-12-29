@@ -1,3 +1,10 @@
+export interface JsonResult<T> {
+    code: number;
+    success: boolean;
+    message: string;
+    data: T;
+}
+
 export interface Music {
     id: string;
     file_name: string;
@@ -35,4 +42,13 @@ export interface MusicFilter {
     album?: string;
     year?: number;
     tags?: number[];
+}
+
+export interface SongList {
+    id: number;
+    user_id: number;
+    name: string;
+    description: string;
+    cover: string;
+    created_at: string;
 }

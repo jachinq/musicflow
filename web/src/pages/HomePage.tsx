@@ -219,7 +219,7 @@ const MusicList = () => {
           <MusicCard
             key={music.id}
             music={music}
-            onClick={() => handleMusicClick(music)}
+            onClick={handleMusicClick}
           />
         ))}
       </div>

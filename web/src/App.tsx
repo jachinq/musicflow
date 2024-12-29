@@ -1,15 +1,16 @@
 // App.tsx
 import "./styles/globals.css";
-import { Toaster } from 'sonner';
+import { Toaster } from "sonner";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import {HomePage} from "./pages/HomePage";
+import { HomePage } from "./pages/HomePage";
 import MusicPlayPage from "./pages/MusicPlayPage";
 import SettingsPage from "./pages/SettingsPage";
 import { usePlaylist } from "./store/playlist";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { ThemeProvider } from "./components/theme-provider";
-import { Settings, Tag } from "lucide-react";
+import { FileMusicIcon, Settings, Tag } from "lucide-react";
 import { TagsPage } from "./pages/TagPage";
+import { SongListPage } from "./pages/SongListPage";
 
 function App() {
   const { currentSong } = usePlaylist();
@@ -28,16 +29,13 @@ function App() {
                 </div>
               </Link>
               <div className="flex space-x-4 items-center">
-                <Link
-                  to="/tags"
-                  className="text-muted-foreground hover:text-primary-hover"
-                >
+                <Link to="/playlist" className="navigation">
+                  <FileMusicIcon />
+                </Link>
+                <Link to="/tags" className="navigation">
                   <Tag />
                 </Link>
-                <Link
-                  to="/settings"
-                  className="text-muted-foreground hover:text-primary-hover"
-                >
+                <Link to="/settings" className="navigation">
                   <Settings />
                 </Link>
               </div>
@@ -52,6 +50,7 @@ function App() {
             <div className="max-w-[1560px] w-full">
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/playlist" element={<SongListPage />} />
                 <Route path="/tags" element={<TagsPage />} />
                 <Route path="/detail/:id" element={<MusicPlayPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

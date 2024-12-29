@@ -1,4 +1,4 @@
-import { Music, MusicFilter } from "./defined";
+import { JsonResult, Music, MusicFilter, SongList } from "./defined";
 
 const defaultSettingStr = localStorage.getItem("musicflow_setting") || "{}"
 const defaultSetting = JSON.parse(defaultSettingStr);
@@ -172,4 +172,98 @@ export const removeTagFromSong = (
   fetchUtils(url, onSuccess, onError, {
     method: "DELETE",
   });
+};
+
+// ----- songList 相关接口 -----//
+
+// 获取歌单列表
+export const getSongList = (
+  onSuccess: (data: JsonResult<SongList[]>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/songlist`;
+  fetchUtils(url, onSuccess, onError);
+};
+
+// 创建歌单
+export const createSongList = (
+  songList: SongList,
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/create_songlist`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+    body: JSON.stringify(songList),
+  });
+};
+export const updateSongList = (
+  songList: SongList,
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/update_songlist`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "PUT",
+    body: JSON.stringify(songList),
+  });
+};
+
+// 删除歌单
+export const deleteSongList = (
+  id: number,
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/delete_songlist/${id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "DELETE",
+  });
+};
+
+// 添加歌曲到歌单
+export const addSongToSongList = (
+  songlist_id: number,
+  song_id: string,
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/add_song_to_songlist/${songlist_id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+    body: JSON.stringify({ song_id }),
+  });
+};
+
+// 从歌单中移除歌曲
+export const removeSongFromSongList = (
+  songlist_id: number,
+  song_id: string,
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/remove_song_from_songlist/${songlist_id}/${song_id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "DELETE",
+  });
+};
+
+// 获取歌单歌曲列表
+export const getSongListSongs = (
+  songlist_id: number,
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/songlist_songs/${songlist_id}`;
+  fetchUtils(url, onSuccess, onError);
+};
+
+// 获取歌曲所在歌单
+export const getSongSongList = (
+  song_id: string,
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/song_songlist/${song_id}`;
+  fetchUtils(url, onSuccess, onError);
 };
