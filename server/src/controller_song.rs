@@ -6,7 +6,7 @@ use crate::{get_cover, get_lyric, get_tag_songs, AppState, JsonResult, Metadata}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListMusic {
-    musics: Vec<Metadata>,
+    list: Vec<Metadata>,
     total: u32,
 }
 
@@ -14,23 +14,23 @@ pub struct ListMusic {
 pub struct MusicListQuery {
     page: Option<u32>,
     page_size: Option<u32>,
-    filter: Option<String>,
     tag_ids: Option<Vec<i64>>,
+    any: Option<String>,
 }
 
 /// 获取服务器上所有音乐文件
-pub async fn list_musics(
+pub async fn handle_get_metadatas(
     data: web::Data<AppState>,
     query: web::Json<MusicListQuery>,
 ) -> impl Responder {
     // let music_path = data.music_path.clone();
     let musics = data.music_map.values().cloned().collect::<Vec<Metadata>>();
-    let mut musics = musics.clone();
+    let mut list = musics.clone();
 
     // 过滤
-    if let Some(filter) = &query.filter {
+    if let Some(filter) = &query.any {
         let filter = filter.to_lowercase();
-        musics.retain(|m| {
+        list.retain(|m| {
             // m.tags.iter().any(|t| t.to_lowercase().contains(&filter)) ||
             m.title.to_lowercase().contains(&filter)
                 || m.artist.to_lowercase().contains(&filter)
@@ -49,7 +49,7 @@ pub async fn list_musics(
             }
         }
         if tag_ids.len() > 0 {
-            musics.retain(|m| tag_song_ids.contains(&m.id));
+            list.retain(|m| tag_song_ids.contains(&m.id));
         }
     }
 
@@ -63,20 +63,20 @@ pub async fn list_musics(
         page_size = page_size1;
     }
     // println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
-    let total = musics.len() as u32;
+    let total = list.len() as u32;
 
     let start = (current_page - 1) * page_size;
     let end = start + page_size;
     let end = end.min(total); // 防止超过总数
-    musics = musics
+    list = list
         .get(start as usize..end as usize)
         .unwrap_or(&[])
         .to_vec();
 
-    HttpResponse::Ok().json(ListMusic { musics, total })
+    HttpResponse::Ok().json(JsonResult::success(ListMusic { list, total }))
 }
 
-pub async fn single_music(song_id: web::Path<String>, data: web::Data<AppState>) -> impl Responder {
+pub async fn handle_get_metadata(song_id: web::Path<String>, data: web::Data<AppState>) -> impl Responder {
     let metadata = data
         .music_map
         .get(&song_id.to_string())

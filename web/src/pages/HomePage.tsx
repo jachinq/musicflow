@@ -3,7 +3,7 @@ import "../styles/HomePage.css";
 import { createContext, useContext, useEffect, useState } from "react";
 import { MusicCard } from "../components/MusicCard";
 
-import { getMusicList, getMusicUrl } from "../lib/api";
+import { getMusicList } from "../lib/api";
 import { Pagination } from "../components/Pagination";
 import { Music, Tag } from "../lib/defined";
 import { FlameKindling, Loader, Play, Rabbit, X } from "lucide-react";
@@ -42,17 +42,14 @@ export const HomePage = () => {
     setLoading(true);
     setMusicList([]);
     getMusicList(
-      (data) => {
-        if (!data || !data.musics) {
+      (result) => {
+        if (!result || !result.success) {
           return;
         }
         // 更新音乐列表和分页信息
-        setMusicList(data.musics);
-        setTotalCount(data.total);
+        setMusicList(result.data.list);
+        setTotalCount(result.data.total);
         setLoading(false);
-        data.musics.forEach((music: Music) => {
-          music.file_url = getMusicUrl(music);
-        });
       },
       (error) => {
         console.error("获取音乐列表失败", error);
@@ -110,12 +107,12 @@ const Control = () => {
 
   const playAllSongs = () => {
     getMusicList(
-      (data) => {
-        if (!data || !data.musics || data.musics.length === 0) {
+      (result) => {
+        if (!result || !result.success || !result.data.list || result.data.list.length === 0) {
           return;
         }
         // 随机播放全部歌曲
-        const randomList = data.musics.sort(() => 0.5 - Math.random());
+        const randomList = result.data.list.sort(() => 0.5 - Math.random());
         setAllSongs(randomList);
         setCurrentSong(randomList[0]);
       },

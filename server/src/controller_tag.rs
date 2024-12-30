@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{dbservice, JsonResult, SongTag, Tag};
 
-pub async fn tags() -> impl Responder {
+pub async fn handle_get_tags() -> impl Responder {
     let tags = crate::dbservice::get_tags().await;
     if let Ok(tags) = tags {
         HttpResponse::Ok().json(JsonResult::success(tags))
@@ -12,7 +12,7 @@ pub async fn tags() -> impl Responder {
     }
 }
 
-pub async fn song_tags(song_id: web::Path<String>) -> impl Responder {
+pub async fn handle_get_song_tags(song_id: web::Path<String>) -> impl Responder {
     let tags = crate::dbservice::get_song_tags(&song_id).await;
     if let Ok(tags) = tags {
         HttpResponse::Ok().json(JsonResult::success(tags))
@@ -21,14 +21,14 @@ pub async fn song_tags(song_id: web::Path<String>) -> impl Responder {
     }
 }
 
-pub async fn tag_songs(tag_id: web::Path<i64>) -> impl Responder {
-    let songs = crate::dbservice::get_tag_songs(*tag_id).await;
-    if let Ok(songs) = songs {
-        HttpResponse::Ok().json(JsonResult::success(songs))
-    } else {
-        HttpResponse::Ok().json(JsonResult::<Vec<SongTag>>::error("获取标签歌曲失败"))
-    }
-}
+// pub async fn tag_songs(tag_id: web::Path<i64>) -> impl Responder {
+//     let songs = crate::dbservice::get_tag_songs(*tag_id).await;
+//     if let Ok(songs) = songs {
+//         HttpResponse::Ok().json(JsonResult::success(songs))
+//     } else {
+//         HttpResponse::Ok().json(JsonResult::<Vec<SongTag>>::error("获取标签歌曲失败"))
+//     }
+// }
 
 #[derive(Serialize, Deserialize)]
 pub struct QueryAddTagToMusic {
@@ -37,7 +37,7 @@ pub struct QueryAddTagToMusic {
 }
 
 /// 对音乐进行分组打标签
-pub async fn add_tag_to_song(info: web::Json<QueryAddTagToMusic>) -> impl Responder {
+pub async fn handle_add_song_tag(info: web::Json<QueryAddTagToMusic>) -> impl Responder {
     let song_id = info.song_id.clone();
     let tagname = info.tagname.clone();
 
@@ -85,7 +85,7 @@ pub async fn add_tag_to_song(info: web::Json<QueryAddTagToMusic>) -> impl Respon
 }
 
 // 删除歌曲标签
-pub async fn delete_tag_from_song(path: web::Path<(String, i64)>) -> impl Responder {
+pub async fn handle_delete_song_tag(path: web::Path<(String, i64)>) -> impl Responder {
     let (song_id, tag_id) = path.into_inner();
 
     if let Ok(_) = dbservice::delete_song_tag(&song_id, tag_id).await {

@@ -61,22 +61,27 @@ async fn main() -> io::Result<()> {
                 music_map: music_map.clone(),
             }))
             .route("/api/log", web::post().to(frontend_log))
-            .route("/api/list", web::post().to(list_musics))
-            .route("/api/single/{song_id}", web::get().to(single_music))
-            .route("/api/tags", web::get().to(tags))
-            .route("/api/song_tags/{song_id}", web::get().to(song_tags))
-            .route("/api/tag_songs/{tag_id}", web::get().to(tag_songs))
-            .route("/api/add_tag_to_song", web::post().to(add_tag_to_song))
-            .route(
-                "/api/delete_song_tag/{song_id}/{tag_id}",
-                web::delete().to(delete_tag_from_song),
-            )
+            // 歌曲相关接口
+            .route("/api/list", web::post().to(handle_get_metadatas))
+            .route("/api/single/{song_id}", web::get().to(handle_get_metadata))
             .route("/api/cover/small/{song_id}", web::get().to(get_cover_small))
             .route(
                 "/api/cover/medium/{song_id}",
                 web::get().to(get_cover_medium),
             )
             .route("/api/lyrics/{song_id}", web::get().to(get_lyrics))
+            // 标签相关接口
+            .route("/api/tags", web::get().to(handle_get_tags))
+            .route(
+                "/api/song_tags/{song_id}",
+                web::get().to(handle_get_song_tags),
+            )
+            .route("/api/add_tag_to_song", web::post().to(handle_add_song_tag))
+            .route(
+                "/api/delete_song_tag/{song_id}/{tag_id}",
+                web::delete().to(handle_delete_song_tag),
+            )
+            // 歌单相关接口
             .route("/api/songlist", web::get().to(handle_song_list))
             .route(
                 "/api/songlist_songs/{songlist_id}",
@@ -106,6 +111,7 @@ async fn main() -> io::Result<()> {
                 "/api/add_song_to_songlist/{songlist_id}/{song_id}",
                 web::post().to(handle_add_song_to_song_list),
             )
+            // 用户相关接口
             .route("/api/user", web::get().to(handle_get_user))
             .route("/api/login", web::post().to(handle_login))
             .route("/api/logout", web::post().to(handle_logout))
@@ -158,10 +164,7 @@ async fn init_music_map(music_dir: &str) -> HashMap<String, Metadata> {
     music_map
 }
 
-fn filter_real_music(
-    id: &str,
-    music_map: &HashMap<String, Metadata>,
-) -> Option<Metadata> {
+fn filter_real_music(id: &str, music_map: &HashMap<String, Metadata>) -> Option<Metadata> {
     let metadata = music_map.get(id);
     if metadata.is_none() {
         println!("Metadata not found for {}", id);

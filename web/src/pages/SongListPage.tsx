@@ -393,8 +393,8 @@ const AddSongDialog = ({
   useEffect(() => {
     getMusicList(
       (result) => {
-        if (result) {
-          setMusicList(result.musics);
+        if (result && result.success) {
+          setMusicList(result.data.list);
         }
       },
       (error) => {

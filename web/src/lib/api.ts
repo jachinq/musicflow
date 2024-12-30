@@ -1,4 +1,4 @@
-import { JsonResult, Music, MusicFilter, SongList } from "./defined";
+import { GetList, JsonResult, Music, MusicFilter, SongList } from "./defined";
 
 const defaultSettingStr = localStorage.getItem("musicflow_setting") || "{}"
 const defaultSetting = JSON.parse(defaultSettingStr);
@@ -47,7 +47,7 @@ const fetchUtils = (
 };
 
 export const getMusicList = (
-  onSuccess: (data: any) => void,
+  onSuccess: (data: JsonResult<GetList>) => void,
   onError: (error: any) => void,
   currentPage: number,
   pageSize?: number,

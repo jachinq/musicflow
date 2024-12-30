@@ -5,6 +5,14 @@ export interface JsonResult<T> {
     data: T;
 }
 
+export interface GetList {
+    list: any[];
+    total: number;
+}
+export interface GetMusicList extends GetList {
+    list: Music[];
+}
+
 export interface Music {
     id: string;
     file_name: string;
