@@ -101,11 +101,7 @@ const Tags = ({
         }
       )
     };
-    confirm(
-      "确认删除标签？",
-      confirmDeleteTag,
-      () => {}
-    );
+    confirm({ message: "确认删除标签？", onConfirm: confirmDeleteTag });
   };
 
   return (

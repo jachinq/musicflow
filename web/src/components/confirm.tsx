@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 
 // 创建确认对话框组件
 const ConfirmDialog: React.FC<{
-  message: string;
+  message: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
   onClose: () => void;
@@ -37,28 +37,32 @@ const ConfirmDialog: React.FC<{
   );
 };
 
+interface ConfirmOptions {
+  message?: React.ReactNode;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+}
+
+interface ConfirmStateProps {
+  message: React.ReactNode;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isOpen: boolean;
+}
+
 // 创建一个自定义的confirm函数
 export const useConfirm = () => {
-  const [confirmState, setConfirmState] = useState<{
-    message: string;
-    onConfirm: () => void;
-    onCancel: () => void;
-    isOpen: boolean;
-  }>({
+  const [confirmState, setConfirmState] = useState<ConfirmStateProps>({
     message: "",
-    onConfirm: () => {},
-    onCancel: () => {},
+    onConfirm: () => { },
+    onCancel: () => { },
     isOpen: false,
   });
 
   const confirmRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<ReactDOM.Root | null>(null);
 
-  const openConfirm = (
-    message: string,
-    onConfirm: () => void,
-    onCancel: () => void
-  ) => {
+  const openConfirm = ({ message = "message", onConfirm = () => { }, onCancel = () => { } }: ConfirmOptions) => {
     setConfirmState({ message, onConfirm, onCancel, isOpen: true });
   };
 

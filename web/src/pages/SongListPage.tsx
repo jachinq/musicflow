@@ -202,33 +202,36 @@ const SongListSelector = () => {
 
   const handleDelSongList = (evt: React.MouseEvent, item: SongList) => {
     evt.stopPropagation();
-    confirm(
-      "确定删除当前歌单吗？此操作不可恢复",
-      () => {
-        deleteSongList(
-          item.id,
-          (result) => {
-            if (result && result.success) {
-              let [listSize, songSize] = result.data || [];
-              toast.success("删除歌单成功", {
-                description: `删除歌单数量：${listSize} 歌单关联的歌曲数量：${songSize}` || "",
-              });
-              fetchSongList(true);
-            } else {
-              toast.error("删除歌单失败", {
-                description: "删除歌单失败" + result.message || "未知错误",
-              });
-            }
-          },
-          (error) => {
+    const onConfirm = () => {
+      deleteSongList(
+        item.id,
+        (result) => {
+          if (result && result.success) {
+            let [listSize, songSize] = result.data || [];
+            toast.success("删除歌单成功", {
+              description: `删除歌单数量：${listSize} 歌单关联的歌曲数量：${songSize}` || "",
+            });
+            fetchSongList(true);
+          } else {
             toast.error("删除歌单失败", {
-              description: "删除歌单失败" + error.message || "未知错误",
+              description: "删除歌单失败" + result.message || "未知错误",
             });
           }
-        )
-      },
-      () => { }
-    )
+        },
+        (error) => {
+          toast.error("删除歌单失败", {
+            description: "删除歌单失败" + error.message || "未知错误",
+          });
+        }
+      )
+    };
+    confirm({
+      message: <div>
+        确定删除当前歌单吗？
+        <div className="text-sm">注意：此操作不可恢复</div>
+      </div>,
+      onConfirm
+    })
   }
 
   return (
