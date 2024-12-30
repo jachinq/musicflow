@@ -34,20 +34,6 @@ export interface Cover {
   extra: string;
 }
 
-export interface SongList {
-  id: number;
-  user_id: number;
-  name: string;
-  description: string;
-}
-
-export interface SongListSong {
-  user_id: number;
-  song_list_id: number;
-  song_id: string;
-  order_num: number;
-}
-
 export interface User {
   id: number;
   name: string;
@@ -56,18 +42,6 @@ export interface User {
   role: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface UserToken {
-  user_id: number;
-  token: string;
-  expire_at: number;
-}
-
-export interface UserFavorite {
-  user_id: number;
-  song_id: string;
-  created_at: string;
 }
 
 export interface Tag {
@@ -138,8 +112,10 @@ CREATE TABLE
   IF NOT EXISTS song_list (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT NOT NULL
+    name TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    cover TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
   );
 
 CREATE TABLE
@@ -228,26 +204,6 @@ export const addCover = (cover: Cover) => {
   return { song_id, format, width, height, base64, type, extra };
 };
 
-export const addSongList = (songlist: SongList) => {
-  const { user_id, name, description } = songlist;
-  const insert = db.prepare(`
-    INSERT INTO song_list (user_id, name, description)
-    VALUES (@user_id, @name, @description)
-  `);
-  insert.run({ user_id, name, description });
-  return { id: insert.lastInsertRowid, user_id, name, description };
-};
-
-export const addSongListSong = (songlistSong: SongListSong) => {
-  const { user_id, song_list_id, song_id, order_num } = songlistSong;
-  const insert = db.prepare(`
-    INSERT INTO song_list_song (user_id, song_list_id, song_id, order_num)
-    VALUES (@user_id, @song_list_id, @song_id, @order_num)
-  `);
-  insert.run({ user_id, song_list_id, song_id, order_num });
-  return { user_id, song_list_id, song_id, order_num };
-};
-
 export const addUser = (user: User) => {
   const { name, password, email, role, created_at, updated_at } = user;
   const insert = db.prepare(`
@@ -256,26 +212,6 @@ export const addUser = (user: User) => {
   `);
   insert.run({ name, password, email, role, created_at, updated_at });
   return { id: insert.lastInsertRowid, name, password, email, role, created_at, updated_at };
-};
-
-export const addUserToken = (userToken: UserToken) => {
-  const { user_id, token, expire_at } = userToken;
-  const insert = db.prepare(`
-    INSERT INTO user_token (user_id, token, expire_at)
-    VALUES (@user_id, @token, @expire_at)
-  `);
-  insert.run({ user_id, token, expire_at });
-  return { user_id, token, expire_at };
-};
-
-export const addUserFavorite = (userFavorite: UserFavorite) => {
-  const { user_id, song_id, created_at } = userFavorite;
-  const insert = db.prepare(`
-    INSERT INTO user_favorite (user_id, song_id, created_at)
-    VALUES (@user_id, @song_id, @created_at)
-  `);
-  insert.run({ user_id, song_id, created_at });
-  return { user_id, song_id, created_at };
 };
 
 export const addTag = (tag: Tag) => {

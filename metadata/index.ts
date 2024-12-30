@@ -177,50 +177,6 @@ const singleTask = async (
   return { msg: "success", file_path };
 };
 
-const buildSongTags = (metadataId: string, file_path: string) => {
-  let dir_paths: string[] = [];
-  const dir_path = path.dirname(file_path);
-  const relative_dir_path = dir_path.replace(DIR, "");
-  relative_dir_path.split(path.sep).forEach((dir_name) => {
-    dir_paths.push(dir_name);
-  });
-
-  let song_tag_list: SongTag[] = [];
-  dir_paths.forEach((tag_name) => {
-    if (tag_name === "") return;
-    if (tag_name === "music") return;
-    if (tag_name === "mp3") return;
-    if (tag_name === "flac") return;
-    if (tag_name === ".") return;
-    if (tag_name === "..") return;
-    if (tag_name === "node_modules") return;
-    let tag = getTag(tag_name);
-    if (!tag)
-      tag = addTag({
-        id: 0,
-        name: tag_name,
-        color: "#000000",
-        text_color: "#FFFFFF",
-      });
-    if (!tag) return;
-    song_tag_list.push({ song_id: metadataId, tag_id: tag.id });
-  });
-  return song_tag_list;
-};
-
-const buildLyrics = (metadata: IMeta, metadataId: string): Lyric[] => {
-  const lyrics: Lyric[] = [];
-  metadata.lyrics.forEach((lyric) => {
-    lyrics.push({
-      id: 0,
-      song_id: metadataId,
-      time: lyric.time,
-      text: lyric.text,
-    });
-  });
-  return lyrics;
-};
-
 const buildCover = (metadata: IMeta, metadataId: string): Cover[] => {
   if (!metadata.cover) return [];
   // const original_cover: Cover = {
@@ -259,6 +215,19 @@ const buildCover = (metadata: IMeta, metadataId: string): Cover[] => {
   ];
 };
 
+const buildLyrics = (metadata: IMeta, metadataId: string): Lyric[] => {
+  const lyrics: Lyric[] = [];
+  metadata.lyrics.forEach((lyric) => {
+    lyrics.push({
+      id: 0,
+      song_id: metadataId,
+      time: lyric.time,
+      text: lyric.text,
+    });
+  });
+  return lyrics;
+};
+
 const buildArtists = (metadata: IMeta): Artist[] => {
   const artists: Artist[] = [];
   metadata.artists?.forEach((artist) => {
@@ -266,6 +235,38 @@ const buildArtists = (metadata: IMeta): Artist[] => {
   });
   return artists;
 };
+
+const buildSongTags = (metadataId: string, file_path: string) => {
+  let dir_paths: string[] = [];
+  const dir_path = path.dirname(file_path);
+  const relative_dir_path = dir_path.replace(DIR, "");
+  relative_dir_path.split(path.sep).forEach((dir_name) => {
+    dir_paths.push(dir_name);
+  });
+
+  let song_tag_list: SongTag[] = [];
+  dir_paths.forEach((tag_name) => {
+    if (tag_name === "") return;
+    if (tag_name === "music") return;
+    if (tag_name === "mp3") return;
+    if (tag_name === "flac") return;
+    if (tag_name === ".") return;
+    if (tag_name === "..") return;
+    if (tag_name === "node_modules") return;
+    let tag = getTag(tag_name);
+    if (!tag)
+      tag = addTag({
+        id: 0,
+        name: tag_name,
+        color: "#000000",
+        text_color: "#FFFFFF",
+      });
+    if (!tag) return;
+    song_tag_list.push({ song_id: metadataId, tag_id: tag.id });
+  });
+  return song_tag_list;
+};
+
 
 const logProgress = (count: number, success: number, failed: any[]) => {
   console.log(
