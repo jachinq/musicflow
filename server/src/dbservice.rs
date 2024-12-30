@@ -276,7 +276,6 @@ pub async fn add_song_tag(list: Vec<SongTag>) -> Result<usize> {
     let mut conn = connect_db()?;
     let tx = conn.transaction()?;
 
-    // let mut stmt = conn.prepare("INSERT INTO song_tag (song_id, tag_id) VALUES (?, ?)")?;
     for song_tag in &list {
         let mut stmt = tx.prepare("INSERT INTO song_tag (song_id, tag_id) VALUES (?, ?)")?;
         stmt.execute([song_tag.song_id.to_string(), song_tag.tag_id.to_string()])?;
@@ -319,21 +318,39 @@ pub async fn update_song_list(song_list: &SongList) -> Result<usize> {
     Ok(size)
 }
 
-pub async fn delete_song_list(id: i64) -> Result<usize> {
-    let conn = connect_db()?;
-    let mut stmt = conn.prepare("DELETE FROM song_list WHERE id = ?")?;
-    Ok(stmt.execute([&id.to_string()])?)
+pub async fn delete_song_list(id: i64) -> Result<(usize, usize)> {
+    let mut conn = connect_db()?;
+    let tx = conn.transaction()?; // 事务
+
+    // 删除歌单歌曲关系
+    let song_size =  tx.execute("DELETE FROM song_list_song WHERE song_list_id = ?", &[&id.to_string()])?;
+
+    // 删除歌单
+    let list_size = tx.execute("DELETE FROM song_list WHERE id = ?", &[&id.to_string()])?;
+
+    tx.commit()?;
+    Ok((list_size, song_size))
 }
 
-pub async fn add_song_list_song(song_list_song: &SongListSong) -> Result<usize> {
-    let conn = connect_db()?;
-    let mut stmt = conn.prepare("INSERT INTO song_list_song (user_id, song_list_id, song_id, order_num) VALUES (?, ?, ?, ?)")?;
-    Ok(stmt.execute([
-        &song_list_song.user_id.to_string(),
-        &song_list_song.song_list_id.to_string(),
-        &song_list_song.song_id.clone(),
-        &song_list_song.order_num.to_string(),
-    ])?)
+pub async fn add_song_list_song(song_list_id: i64, list: &Vec<SongListSong>) -> Result<usize> {
+    let mut conn = connect_db()?;
+    let tx = conn.transaction()?;
+
+    // 先删除原有关系
+    tx.execute("DELETE FROM song_list_song WHERE song_list_id = ?", &[&song_list_id.to_string()])?;
+
+    // 再插入新关系
+    for song_list_song in list {
+        let mut stmt = tx.prepare("INSERT INTO song_list_song (user_id, song_list_id, song_id, order_num) VALUES (?, ?, ?, ?)")?;
+        stmt.execute([
+            &song_list_song.user_id.to_string(),
+            &song_list_song.song_list_id.to_string(),
+            &song_list_song.song_id.clone(),
+            &song_list_song.order_num.to_string(),
+        ])?;
+    }
+    tx.commit()?;
+    Ok(list.len())
 }
 
 pub async fn delete_song_list_song(song_list_id: i64, song_id: &str) -> Result<usize> {

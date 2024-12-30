@@ -59,6 +59,7 @@ export const getMusicList = (
     page: currentPage,
     page_size: pageSize,
     tag_ids: tags,
+    ...filter,
   };
   let url = API_URL + "/api/list";
   console.log("api/list", params);
@@ -224,14 +225,14 @@ export const deleteSongList = (
 // 添加歌曲到歌单
 export const addSongToSongList = (
   song_list_id: number,
-  song_id: string,
+  song_ids: string[],
   onSuccess: (data: JsonResult<any>) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/add_song_to_songlist/${song_list_id}/${song_id}`;
+  const url = `${API_URL}/api/add_song_to_songlist`;
   fetchUtils(url, onSuccess, onError, {
-    method: "POST",
-    // body: JSON.stringify({ song_list_id, song_id }),
+    method: "PUT",
+    body: JSON.stringify({ song_list_id, song_ids }),
   });
 };
 

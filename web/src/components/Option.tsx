@@ -36,18 +36,20 @@ export const OptionGroup = ({
   defaultValue,
   children,
   className = "",
+  between = false,
 }: {
   setValue: any;
   defaultValue: any;
   className?: string;
   children: React.ReactNode;
+  between?: boolean;
 }) => {
   const { isSmallDevice } = useDevice();
   return (
     <context.Provider value={{ defaultValue, setValue }}>
       <div
       className={`flex items-center gap-2 w-full ${
-        isSmallDevice ? "justify-evenly" : "gap-8"
+        isSmallDevice ? between ? "justify-between" : "justify-evenly" : "gap-8"
       } ${className}`}
     >
       {children}

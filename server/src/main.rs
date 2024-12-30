@@ -108,8 +108,8 @@ async fn main() -> io::Result<()> {
                 web::delete().to(handle_remove_song_from_songlist),
             )
             .route(
-                "/api/add_song_to_songlist/{songlist_id}/{song_id}",
-                web::post().to(handle_add_song_to_song_list),
+                "/api/add_song_to_songlist",
+                web::put().to(handle_add_song_list_song),
             )
             // 用户相关接口
             .route("/api/user", web::get().to(handle_get_user))
