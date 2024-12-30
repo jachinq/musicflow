@@ -203,7 +203,7 @@ const MusicList = () => {
     setNeedFilter(false);
   }, [filterTags]);
 
-  function handleMusicClick(music: Music) {
+  const handleMusicClick = (music: Music) => {
     // navigate(`/music/${musicId}`);
     const index = allSongs.findIndex((song) => song.id === music.id);
     if (index === -1) {

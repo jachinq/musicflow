@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::io;
 use walkdir::WalkDir; // 引入 CORS 中间件
 
-mod controller_songlist;
 mod controller_song;
+mod controller_songlist;
 mod controller_tag;
 mod controller_user;
 mod dbservice;
@@ -44,7 +44,7 @@ async fn main() -> io::Result<()> {
     let music_map = init_music_map(&music_dir).await;
     // 映射音乐文件的静态路径
     let music_path = "/music";
-    
+
     println!("Server started on {}:{}", ip, port);
     // 启动 HTTP 服务
     HttpServer::new(move || {
@@ -67,28 +67,54 @@ async fn main() -> io::Result<()> {
             .route("/api/song_tags/{song_id}", web::get().to(song_tags))
             .route("/api/tag_songs/{tag_id}", web::get().to(tag_songs))
             .route("/api/add_tag_to_song", web::post().to(add_tag_to_song))
-            .route("/api/delete_song_tag/{song_id}/{tag_id}", web::delete().to(delete_tag_from_song))
+            .route(
+                "/api/delete_song_tag/{song_id}/{tag_id}",
+                web::delete().to(delete_tag_from_song),
+            )
             .route("/api/cover/small/{song_id}", web::get().to(get_cover_small))
-            .route("/api/cover/medium/{song_id}", web::get().to(get_cover_medium))
+            .route(
+                "/api/cover/medium/{song_id}",
+                web::get().to(get_cover_medium),
+            )
             .route("/api/lyrics/{song_id}", web::get().to(get_lyrics))
-
             .route("/api/songlist", web::get().to(handle_song_list))
-            .route("/api/songlist_songs/{songlist_id}", web::get().to(handle_song_list_songs))
-            .route("/api/song_songlist/{song_id}", web::get().to(handle_song_song_list))
-            .route("/api/delete_songlist/{songlist_id}", web::delete().to(handle_delete_song_list))
-            .route("/api/create_songlist", web::post().to(handle_create_song_list))
-            .route("/api/update_songlist", web::put().to(handle_update_song_list))
-            .route("/api/remove_song_from_songlist/{songlist_id}/{song_id}", web::delete().to(handle_remove_song_from_songlist))
-            .route("/api/add_song_to_songlist/{songlist_id}/{song_id}", web::post().to(handle_add_song_to_song_list))
-
+            .route(
+                "/api/songlist_songs/{songlist_id}",
+                web::get().to(handle_song_list_songs),
+            )
+            .route(
+                "/api/song_songlist/{song_id}",
+                web::get().to(handle_song_song_list),
+            )
+            .route(
+                "/api/delete_songlist/{songlist_id}",
+                web::delete().to(handle_delete_song_list),
+            )
+            .route(
+                "/api/create_songlist",
+                web::post().to(handle_create_song_list),
+            )
+            .route(
+                "/api/update_songlist",
+                web::put().to(handle_update_song_list),
+            )
+            .route(
+                "/api/remove_song_from_songlist/{songlist_id}/{song_id}",
+                web::delete().to(handle_remove_song_from_songlist),
+            )
+            .route(
+                "/api/add_song_to_songlist/{songlist_id}/{song_id}",
+                web::post().to(handle_add_song_to_song_list),
+            )
             .route("/api/user", web::get().to(handle_get_user))
             .route("/api/login", web::post().to(handle_login))
             .route("/api/logout", web::post().to(handle_logout))
             .route("/api/register", web::post().to(handle_register))
             .route("/api/update_user", web::put().to(handle_update_user))
-            .route("/api/change_password", web::post().to(handle_change_password))
-
-
+            .route(
+                "/api/change_password",
+                web::post().to(handle_change_password),
+            )
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", "./web/dist").index_file("index.html"))
@@ -108,12 +134,12 @@ async fn init_music_map(music_dir: &str) -> HashMap<String, Metadata> {
         path_metadata_map.insert(metadata.file_path.to_string(), metadata);
     }
 
-
     let mut music_map = HashMap::new();
     for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let ext = entry.path().extension().unwrap_or_default();
-            if ext == "ape" { // 前端 audioContent 解码器不支持 ape 格式，所以过滤掉
+            if ext == "ape" {
+                // 前端 audioContent 解码器不支持 ape 格式，所以过滤掉
                 continue;
             }
             let path = entry.path().display().to_string();
@@ -130,6 +156,21 @@ async fn init_music_map(music_dir: &str) -> HashMap<String, Metadata> {
     }
     println!("Music count: {}", music_map.len());
     music_map
+}
+
+fn filter_real_music(
+    id: &str,
+    music_map: &HashMap<String, Metadata>,
+) -> Option<Metadata> {
+    let metadata = music_map.get(id);
+    if metadata.is_none() {
+        println!("Metadata not found for {}", id);
+        return None;
+    }
+    let mut metadata = metadata.unwrap().clone();
+    let url = metadata.file_url.replace("\\", "/");
+    metadata.file_url = format!("/music{}", url);
+    Some(metadata)
 }
 
 // 前端日志记录
@@ -156,7 +197,7 @@ struct JsonResult<T: Serialize> {
     data: Option<T>,
 }
 
-impl <T: Serialize> JsonResult<T> {
+impl<T: Serialize> JsonResult<T> {
     pub fn new(code: i32, success: bool, message: &str, data: Option<T>) -> Self {
         Self {
             code,
@@ -168,13 +209,12 @@ impl <T: Serialize> JsonResult<T> {
     pub fn success(data: T) -> Self {
         Self::new(0, true, "success", Some(data))
     }
-    
+
     pub fn error(message: &str) -> Self {
         Self::new(-1, false, message, None)
     }
     #[allow(dead_code)]
     pub fn default() -> Self {
-        Self::new(0, true, "success",
-         None)
+        Self::new(0, true, "success", None)
     }
 }

@@ -12,10 +12,22 @@ pub async fn handle_song_list() -> impl Responder {
     }
 }
 
-pub async fn handle_song_list_songs(song_list_id: web::Path<i64>) -> impl Responder {
+pub async fn handle_song_list_songs(
+    song_list_id: web::Path<i64>,
+    app_data: web::Data<crate::AppState>,
+) -> impl Responder {
     let result = dbservice::get_song_list_songs(song_list_id.into_inner()).await;
     match result {
-        Ok(list) => HttpResponse::Ok().json(JsonResult::success(list)),
+        Ok(list) => {
+            let musics = app_data.music_map.values().cloned().collect::<Vec<_>>();
+
+            let ids: Vec<String> = list.into_iter().map(|s| s.id).collect();
+            let list: Vec<_> = musics
+                .into_iter()
+                .filter(|m| ids.contains(&m.id))
+                .collect();
+            HttpResponse::Ok().json(JsonResult::success(list))
+        }
         Err(e) => HttpResponse::InternalServerError()
             .json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }

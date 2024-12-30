@@ -8,10 +8,10 @@ export const Form = ({ title, children, onSubmit, onCancel }: Props) => {
   return (
     <>
       <div className="mask" onClick={onCancel}></div>
-      <div className="dialog flex flex-col gap-2 z-20 p-8">
+      <div className="dialog flex flex-col gap-2 z-20 p-8 max-h-[calc(100vh-100px)]">
         <div className="text-lg font-bold">{title}</div>
 
-        {children && <div className="form-content">{children}</div>}
+        {children && <div className="form-content overflow-y-scroll hide-scrollbar">{children}</div>}
 
         <div className="flex justify-end gap-2 items-center mt-4">
           <button onClick={onSubmit} className="button">

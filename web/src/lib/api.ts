@@ -223,15 +223,15 @@ export const deleteSongList = (
 
 // 添加歌曲到歌单
 export const addSongToSongList = (
-  songlist_id: number,
+  song_list_id: number,
   song_id: string,
   onSuccess: (data: JsonResult<any>) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/add_song_to_songlist/${songlist_id}`;
+  const url = `${API_URL}/api/add_song_to_songlist/${song_list_id}/${song_id}`;
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
-    body: JSON.stringify({ song_id }),
+    // body: JSON.stringify({ song_list_id, song_id }),
   });
 };
 

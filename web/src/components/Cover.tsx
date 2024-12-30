@@ -6,6 +6,7 @@ interface CoverProps {
   defaultSrc?: string;
   alt?: string;
   type?: string;
+  size?: number;
 }
 
 export const Cover = ({
@@ -14,6 +15,7 @@ export const Cover = ({
   alt,
   className,
   type = "album",
+  size = 140,
 }: CoverProps & React.HTMLAttributes<HTMLDivElement>) => {
   const [loaded, setLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -46,15 +48,28 @@ export const Cover = ({
     };
   }, [url, defaultSrc]);
 
+  const getStyle = () => {
+    let sizePx = size + "px";
+    const style = {
+        borderRadius: "8px",
+        minWidth: sizePx,
+        minHeight: sizePx,
+      };
+    if (type === "album") {
+      style.borderRadius = "8px 8px 0 0"
+    }
+    return style;
+  };
+
   return (
     <div
-      style={type === "album" ? { borderRadius: "8px 8px 0 0" } : {borderRadius: "8px"}}
+      style={getStyle()}
       className={
-        "min-h-[140px] min-w-[140px] flex items-center justify-center bg-background shadow-md overflow-hidden " +
+        "flex items-center justify-center bg-background shadow-md overflow-hidden " +
         className
       }
     >
-      <img ref={imgRef} width={140} className="object-cover hidden" alt={alt} />
+      <img ref={imgRef} width={size} className="object-cover hidden" alt={alt} />
       {!loaded && <Loader className="animate-spin" size={32} />}
     </div>
   );

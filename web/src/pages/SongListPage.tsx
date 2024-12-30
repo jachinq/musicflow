@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
+  addSongToSongList,
   createSongList,
+  getCoverSmallUrl,
+  getMusicList,
   getSongList,
   getSongListSongs,
   updateSongList,
@@ -14,6 +17,7 @@ import { useDevice } from "../hooks/use-device";
 import { MusicCard } from "../components/MusicCard";
 import { PlusCircle } from "lucide-react";
 import { Cover } from "../components/Cover";
+import { usePlaylist } from "../store/playlist";
 
 const buildSongList = (name: string, description?: string): SongList => {
   return {
@@ -35,7 +39,6 @@ export const SongListPage = () => {
   const [musicList, setMusicList] = useState<Music[]>([]);
 
   const [showAddSongDialog, setShowAddSongDialog] = useState(false);
-  const [addSongFormValues, setAddSongFormValues] = useState({});
 
   const fetchSongList = (autoSelect?: boolean) => {
     getSongList(
@@ -113,16 +116,68 @@ export const SongListPage = () => {
   const handleAddSong = () => {
     setShowAddSongDialog(true);
   };
-  const handleAddSongSubmit = () => {
-    setShowAddSongDialog(false);
+  const handleAddSongToSongList = (music: Music) => {
+    if (!selectSongList) return;
+    if (!music) return;
+    // confirm(
+    //   `是否要将 "${music.title}" 添加到 "${selectSongList.name}" 歌单？`,
+    //   () => {
+    addSongToSongList(
+      selectSongList.id,
+      music.id,
+      (result) => {
+        if (result && result.success) {
+          toast.success("添加歌曲成功", {
+            description: `"${music.title}" 已添加到 "${selectSongList.name}" 歌单`,
+          });
+          fetchSongList(true);
+          setShowAddSongDialog(false);
+        } else {
+          toast.error("添加歌曲失败", {
+            description: "添加歌曲失败" + result.message || "未知错误",
+          });
+        }
+      },
+      (error) => {
+        console.log(error);
+        toast.error("添加歌曲失败");
+      }
+    );
+    //   },
+    //   () => {}
+    // );
   };
 
   const handleRemoveSong = () => {};
-  const handlePlayAll = () => {};
+  const handlePlayAll = () => {
+    if (!selectSongList) return;
+    getSongListSongs(
+      selectSongList.id,
+      (result) => {
+        if (!result || !result.success) {
+          return;
+        }
+        const randomList = result.data;
+        setAllSongs(randomList);
+        setCurrentSong(randomList[0]);
+      },
+      (error) => {
+        console.error("获取音乐列表失败", error);
+        toast.error("获取歌单失败");
+      }
+    );
+  };
   const handleImportSong = () => {};
 
+  const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
   const handleMusicClick = (music: Music) => {
-    console.log(music);
+    // navigate(`/music/${musicId}`);
+    const index = allSongs.findIndex((song) => song.id === music.id);
+    if (index === -1) {
+      setAllSongs([...allSongs, music]);
+      console.log("add music to playlist", music.title);
+    }
+    setCurrentSong(music);
   };
 
   return (
@@ -182,7 +237,7 @@ export const SongListPage = () => {
                     修改歌单
                   </div>
                 </div>
-                <div>
+                <div className="flex flex-wrap gap-4">
                   {musicList.map((item) => (
                     <MusicCard
                       key={item.id}
@@ -211,7 +266,7 @@ export const SongListPage = () => {
       <AddSongDialog
         show={showAddSongDialog}
         setShow={setShowAddSongDialog}
-        onSubmit={handleAddSongSubmit}
+        onSelectSong={handleAddSongToSongList}
         // formValues={addSongFormValues}
         // setFormValues={setAddSongFormValues}
       />
@@ -252,7 +307,7 @@ const defaultFormValues = {
 interface DialogProps {
   show: boolean;
   setShow: (show: boolean) => void;
-  onSubmit: () => void;
+  onSubmit?: (data?: any) => void;
 }
 interface SongListFormProps extends DialogProps {
   formValues: SongList;
@@ -270,7 +325,7 @@ const SongListForm = ({
   return (
     <Form
       title="创建歌单"
-      onSubmit={onSubmit}
+      onSubmit={() => onSubmit && onSubmit()}
       onCancel={() => setShow(false)}
     >
       <div className="grid grid-rows-2 gap-4 mt-4">
@@ -321,21 +376,77 @@ const SongListForm = ({
 };
 
 interface AddSongDialogProps extends DialogProps {
+  onSelectSong: (music: Music) => void;
 }
 const AddSongDialog = ({
   show,
   setShow,
-  onSubmit,
   // formValues,
   // setFormValues,
+  onSelectSong,
 }: AddSongDialogProps) => {
   if (!show) return null;
 
-  return (
-    <Form title="添加歌曲" onSubmit={onSubmit} onCancel={() => setShow(false)}>
-      <div>
+  const [musicList, setMusicList] = useState<Music[]>([]);
+  const [searchText, setSearchText] = useState("");
 
+  useEffect(() => {
+    getMusicList(
+      (result) => {
+        if (result) {
+          setMusicList(result.musics);
+        }
+      },
+      (error) => {
+        console.log(error);
+        toast.error("获取歌曲失败", {
+          description: "获取歌曲失败" + error.message || "未知错误",
+        });
+      },
+      1,
+      10,
+      {
+        any: searchText,
+      }
+    );
+  }, [searchText]);
+
+  return (
+    <Form
+      title="添加歌曲"
+      onSubmit={() => setShow(false)}
+      onCancel={() => setShow(false)}
+    >
+      <div>
+        <Input
+          type="text"
+          placeholder="搜索歌曲"
+          value={searchText}
+          onChange={(e) => setSearchText(e)}
+        />
+        <div className="mt-4 flex flex-wrap gap-2 justify-center flex-col">
+          {musicList.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => onSelectSong(item)}
+              className="grid grid-cols-[auto,1fr,1fr,1fr] items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted"
+            >
+              <Cover
+                src={getCoverSmallUrl(item.id)}
+                alt={item.title}
+                type=""
+                size={48}
+              />
+              <span>{item.title}</span>
+              <span>{item.artist}</span>
+              <span>{item.album}</span>
+            </div>
+          ))}
+          {musicList.length === 0 && (
+            <div className="text-center py-4">没有找到相关歌曲</div>
+          )}
+        </div>
       </div>
     </Form>
-  )
-}
+  );
+};

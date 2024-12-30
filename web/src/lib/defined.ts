@@ -37,6 +37,7 @@ export interface Tag {
 }
 
 export interface MusicFilter {
+    any?: string;
     title?: string;
     artist?: string;
     album?: string;
