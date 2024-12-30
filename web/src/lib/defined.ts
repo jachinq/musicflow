@@ -12,6 +12,12 @@ export interface GetList {
 export interface GetMusicList extends GetList {
     list: Music[];
 }
+export interface GetAlbumList extends GetList {
+    list: Album[];
+}
+export interface GetArtistList extends GetList {
+    list: Artist[];
+}
 
 export interface Music {
     id: string;
@@ -47,7 +53,7 @@ export interface Tag {
 export interface MusicFilter {
     any?: string;
     title?: string;
-    artist?: string;
+    artist?: number[];
     album?: string;
     year?: number;
     tags?: number[];
@@ -60,4 +66,18 @@ export interface SongList {
     description: string;
     cover: string;
     created_at: string;
+}
+
+export interface Album {
+    id: number;
+    name: string;
+    description: string;
+    year: number;
+}
+
+export interface Artist {
+    id: number;
+    name: string;
+    cover: string;
+    description: string;
 }

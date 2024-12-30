@@ -1,4 +1,4 @@
-import { GetList, JsonResult, Music, MusicFilter, SongList } from "./defined";
+import { GetAlbumList, GetArtistList, GetList, JsonResult, Music, MusicFilter, SongList } from "./defined";
 
 const defaultSettingStr = localStorage.getItem("musicflow_setting") || "{}"
 const defaultSetting = JSON.parse(defaultSettingStr);
@@ -267,4 +267,34 @@ export const getSongSongList = (
 ) => {
   const url = `${API_URL}/api/song_songlist/${song_id}`;
   fetchUtils(url, onSuccess, onError);
+};
+
+// ----- 专辑相关接口 -----//
+
+// 获取专辑列表
+export const getAlbumList = (
+  currentPage: number,
+  pageSize: number,
+  onSuccess: (data: JsonResult<GetAlbumList>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/album`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+    body: JSON.stringify({ page: currentPage, page_size: pageSize }),
+  });
+};
+
+// --- 艺术家相关接口 ---//
+export const getArtistList = (
+  currentPage: number,
+  pageSize: number,
+  onSuccess: (data: JsonResult<GetArtistList>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/artist`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+    body: JSON.stringify({ page: currentPage, page_size: pageSize }),
+  });
 };

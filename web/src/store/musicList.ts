@@ -1,7 +1,9 @@
 import { create } from "zustand";
-import { Music, Tag } from "../lib/defined";
+import { Music, MusicFilter, Tag } from "../lib/defined";
 
 interface MusicListState {
+  filter: MusicFilter;
+  setFilter: (filter: MusicFilter) => void;
   needFilter: boolean;
   setNeedFilter: (filterTag: boolean) => void;
   filterTags: Tag[];
@@ -13,6 +15,8 @@ interface MusicListState {
 }
 
 export const useMusicList = create<MusicListState>((set) => ({
+  filter: {},
+  setFilter: (filter) => set(() => ({ filter })),
   needFilter: false,
   setNeedFilter: (needFilter) => set(() => ({ needFilter })),
   filterTags: [],

@@ -18,7 +18,7 @@ function App() {
     <ThemeProvider defaultTheme="dark">
       <Router>
         <div className="min-w-[320px] min-h-screen ">
-          <nav className="p-4 bg-primary-foreground sticky top-0">
+          <nav className="p-4 bg-primary-foreground sticky top-0" style={{zIndex: 1}}>
             <div className="flex justify-between">
               <Link to="/" className="font-bold text-lg">
                 <div className="flex items-center justify-center gap-1">

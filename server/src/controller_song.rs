@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
-use crate::{get_cover, get_lyric, get_tag_songs, AppState, JsonResult, Metadata};
+use crate::{dbservice, get_cover, get_lyric, get_tag_songs, AppState, JsonResult, Metadata};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListMusic {
@@ -15,6 +15,7 @@ pub struct MusicListQuery {
     page: Option<u32>,
     page_size: Option<u32>,
     tag_ids: Option<Vec<i64>>,
+    artist: Option<Vec<i64>>,
     any: Option<String>,
 }
 
@@ -53,6 +54,14 @@ pub async fn handle_get_metadatas(
         }
     }
 
+    if let Some(artist_ids) = &query.artist {
+        // 根据歌手查询
+        if artist_ids.len() > 0 {
+            let song_ids = get_song_id_by_artist_ids(artist_ids).await;
+            list.retain(|m| song_ids.contains(&m.id));
+        }
+    }
+
     // 分页
     let mut current_page = 1;
     let mut page_size = 10;
@@ -76,7 +85,10 @@ pub async fn handle_get_metadatas(
     HttpResponse::Ok().json(JsonResult::success(ListMusic { list, total }))
 }
 
-pub async fn handle_get_metadata(song_id: web::Path<String>, data: web::Data<AppState>) -> impl Responder {
+pub async fn handle_get_metadata(
+    song_id: web::Path<String>,
+    data: web::Data<AppState>,
+) -> impl Responder {
     let metadata = data
         .music_map
         .get(&song_id.to_string())
@@ -127,4 +139,17 @@ pub async fn get_lyrics(song_id: web::Path<String>) -> impl Responder {
     };
 
     HttpResponse::Ok().json(lyrics)
+}
+
+async fn get_song_id_by_artist_ids(artist_ids: &Vec<i64>) -> Vec<String> {
+    let mut song_ids = vec![];
+    for artist_id in artist_ids {
+        let songs = dbservice::artist_songs(*artist_id).await;
+        songs.iter().for_each(|s| {
+            s.into_iter().for_each(|m| {
+                song_ids.push(m.id.to_string());
+            });
+        });
+    }
+    song_ids
 }

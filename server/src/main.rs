@@ -8,12 +8,16 @@ use std::collections::HashMap;
 use std::io;
 use walkdir::WalkDir; // 引入 CORS 中间件
 
+mod controller_album;
+mod controller_artist;
 mod controller_song;
 mod controller_songlist;
 mod controller_tag;
 mod controller_user;
 mod dbservice;
 
+use controller_album::*;
+use controller_artist::*;
 use controller_song::*;
 use controller_songlist::*;
 use controller_tag::*;
@@ -25,6 +29,7 @@ use dbservice::*;
 struct AppState {
     music_path: String,
     music_map: HashMap<String, Metadata>, // 音乐 ID 到 Music 实例的映射表
+    album_list: Vec<Album>,
 }
 
 #[actix_web::main]
@@ -41,7 +46,7 @@ async fn main() -> io::Result<()> {
     // let music_dir = music_dir.replace("\\", "/");
     println!("Music dir: {}", music_dir);
 
-    let music_map = init_music_map(&music_dir).await;
+    let (music_map, album_list) = init_music_map(&music_dir).await;
     // 映射音乐文件的静态路径
     let music_path = "/music";
 
@@ -59,6 +64,7 @@ async fn main() -> io::Result<()> {
             .app_data(web::Data::new(AppState {
                 music_path: music_path.to_string(),
                 music_map: music_map.clone(),
+                album_list: album_list.clone(),
             }))
             .route("/api/log", web::post().to(frontend_log))
             // 歌曲相关接口
@@ -111,6 +117,18 @@ async fn main() -> io::Result<()> {
                 "/api/add_song_to_songlist",
                 web::put().to(handle_add_song_list_song),
             )
+            // 专辑相关接口
+            .route("/api/album", web::post().to(handle_get_album))
+            .route(
+                "/api/album_songs/{album_name}",
+                web::get().to(handle_get_album_songs),
+            )
+            // 艺术家相关接口
+            .route("/api/artist", web::post().to(handle_get_artist))
+            .route(
+                "/api/artist_songs/{artist_id}",
+                web::get().to(handle_get_artist_songs),
+            )
             // 用户相关接口
             .route("/api/user", web::get().to(handle_get_user))
             .route("/api/login", web::post().to(handle_login))
@@ -130,7 +148,7 @@ async fn main() -> io::Result<()> {
     .await
 }
 
-async fn init_music_map(music_dir: &str) -> HashMap<String, Metadata> {
+async fn init_music_map(music_dir: &str) -> (HashMap<String, Metadata>, Vec<Album>) {
     // 初始化数据库
     let res = get_metadata_list().await;
     // print!("db result: {:?}", res);
@@ -141,6 +159,7 @@ async fn init_music_map(music_dir: &str) -> HashMap<String, Metadata> {
     }
 
     let mut music_map = HashMap::new();
+    let mut album_list = Vec::new();
     for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let ext = entry.path().extension().unwrap_or_default();
@@ -155,25 +174,29 @@ async fn init_music_map(music_dir: &str) -> HashMap<String, Metadata> {
                 continue;
             }
             let mut metadata = metadata.unwrap().clone();
+
+            if metadata.album.is_empty() {
+                metadata.album = "未知专辑".to_string();
+            }
+            album_list.push(Album::new(metadata.album.clone()));
+
             let url = metadata.file_url.replace("\\", "/");
             metadata.file_url = format!("/music{}", url);
             music_map.insert(metadata.id.to_string(), metadata.clone());
         }
     }
     println!("Music count: {}", music_map.len());
-    music_map
+    // album_list remove duplicates
+    album_list.dedup();
+    (music_map, album_list)
 }
 
-fn filter_real_music(id: &str, music_map: &HashMap<String, Metadata>) -> Option<Metadata> {
-    let metadata = music_map.get(id);
-    if metadata.is_none() {
-        println!("Metadata not found for {}", id);
-        return None;
-    }
-    let mut metadata = metadata.unwrap().clone();
-    let url = metadata.file_url.replace("\\", "/");
-    metadata.file_url = format!("/music{}", url);
-    Some(metadata)
+fn pick_metadata(list: &Vec<Metadata>, music_map: &HashMap<String, Metadata>) -> Vec<Metadata> {
+    let musics: Vec<Metadata> = music_map.values().cloned().collect();
+
+    let ids: Vec<String> = list.into_iter().map(|s| s.id.clone()).collect();
+    let list: Vec<Metadata> = musics.into_iter().filter(|m| ids.contains(&m.id)).collect();
+    list
 }
 
 // 前端日志记录

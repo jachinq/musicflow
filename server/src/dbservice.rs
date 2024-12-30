@@ -129,6 +129,15 @@ fn covert_row_to_artist_song(row: &rusqlite::Row) -> Result<ArtistSong> {
     })
 }
 
+fn covert_row_to_album(row: &rusqlite::Row) -> Result<Album> {
+    Ok(Album {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        description: row.get(2)?,
+        year: row.get(3)?,
+    })
+}
+
 pub async fn get_metadata_by_id(id: &str) -> Result<Option<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM metadata WHERE id = ?")?;
@@ -394,6 +403,76 @@ pub async fn get_song_song_list(song_id: &str) -> Result<Vec<SongList>> {
     Ok(song_list_list)
 }
 
+// 专辑相关接口
+pub async fn get_album_list() -> Result<Vec<Album>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM album")?;
+    let rows = stmt.query_map([], |row| covert_row_to_album(row))?;
+
+    let mut album_list = Vec::new();
+    for album in rows {
+        if let Ok(album) = album {
+            album_list.push(album);
+        } else {
+            println!("getAlbumList Error: {}", album.unwrap_err());
+        }
+    }
+    Ok(album_list)
+}
+
+pub async fn album_songs(album_id: i64) -> Result<Vec<Metadata>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.artists, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate FROM metadata INNER JOIN album_song ON metadata.id = album_song.song_id WHERE album_song.album_id = ?")?;
+    let rows = stmt.query_map([&album_id.to_string()], |row| {
+        covert_row_to_metadata(row)
+    })?;
+
+    let mut song_list = Vec::new();
+    for song in rows {
+        if let Ok(song) = song {
+            song_list.push(song);
+        } else {
+            println!("getAlbumSongs Error: {}", song.unwrap_err());
+        }
+    }
+    Ok(song_list)
+}
+
+// 艺术家相关接口
+pub async fn artist() -> Result<Vec<Artist>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM artist")?;
+    let rows = stmt.query_map([], |row| covert_row_to_artist(row))?;
+
+    let mut artist_list = Vec::new();
+    for artist in rows {
+        if let Ok(artist) = artist {
+            artist_list.push(artist);
+        } else {
+            println!("getArtist Error: {}", artist.unwrap_err());
+        }
+    }
+    Ok(artist_list)
+}
+
+pub async fn artist_songs(artist_id: i64) -> Result<Vec<Metadata>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.artists, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate FROM metadata INNER JOIN artist_song ON metadata.id = artist_song.song_id WHERE artist_song.artist_id = ?")?;
+    let rows = stmt.query_map([&artist_id.to_string()], |row| {
+        covert_row_to_metadata(row)
+    })?;
+
+    let mut song_list = Vec::new();
+    for song in rows {
+        if let Ok(song) = song {
+            song_list.push(song);
+        } else {
+            println!("getArtistSongs Error: {}", song.unwrap_err());
+        }
+    }
+    Ok(song_list)
+}
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Cover {
     pub song_id: String,
@@ -500,9 +579,29 @@ pub struct ArtistSong {
     pub song_id: String,
 }
 
-// 假设 Song 结构体已经定义，这里仅作为示例引用
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Song {
     pub id: String,
     // 其他字段...
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+pub struct Album {
+    pub id: i64,
+    pub name: String,
+    pub description: String,
+    pub year: i64,
+}
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+pub struct AlbumSong {
+    pub album_id: i64,
+    pub song_id: String,
+}
+
+impl Album {
+    pub fn new(name: String) -> Self {
+        let mut album = Self::default();
+        album.name = name;
+        album
+    }
 }

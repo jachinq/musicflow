@@ -36,7 +36,7 @@ export const HomePage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { filterTags, setMusicList, setTotalCount } = useMusicList();
+  const { filterTags, setMusicList, setTotalCount, filter } = useMusicList();
 
   const fetchMusicList = async (currentPage: number) => {
     setLoading(true);
@@ -60,6 +60,7 @@ export const HomePage = () => {
       pageSize,
       {
         tags: filterTags.map((tag) => tag.id),
+        artist: filter.artist,
       }
     );
   };
