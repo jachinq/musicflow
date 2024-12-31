@@ -54,7 +54,7 @@ export interface MusicFilter {
     any?: string;
     title?: string;
     artist?: number[];
-    album?: string;
+    album?: string[];
     year?: number;
     tags?: number[];
 }

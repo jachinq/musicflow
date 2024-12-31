@@ -1,46 +1,62 @@
 // pages/HomePage.tsx
 import "../styles/HomePage.css";
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { MusicCard } from "../components/MusicCard";
 
 import { getMusicList } from "../lib/api";
 import { Pagination } from "../components/Pagination";
-import { Music, Tag } from "../lib/defined";
+import { Music, MusicFilter, Tag } from "../lib/defined";
 import { FlameKindling, Loader, Play, Rabbit, X } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
 import { useDevice } from "../hooks/use-device";
 import { useKeyPress } from "../hooks/use-keypress";
+import { create } from "zustand";
 
 interface ContextProps {
+  initialized: boolean;
+  setInitialized: (initialized: boolean) => void;
+  error: string | null;
+  loading: boolean;
   pageSize: number;
   currentPage: number;
   setCurrentPage: (currentPage: number) => void;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
-  fetchMusicList: (currentPage: number) => void;
+  fetchMusicList: (
+    currentPage: number,
+    setTotalCount: (totalCount: number) => void,
+    pageSize: number,
+    filter: MusicFilter,
+    filterTags: Tag[],
+    setMusicList: (musicList: Music[]) => void
+  ) => void;
 }
-const defaultContext: ContextProps = {
+const useHomePageStore = create<ContextProps>((set, get) => ({
+  initialized: false,
+  setInitialized: (initialized: boolean) =>
+    set((state) => ({ ...state, initialized })),
+  error: null,
+  loading: false,
   pageSize: 30,
   currentPage: 1,
-  setCurrentPage: () => {},
-  setError: () => {},
-  setLoading: () => {},
-  fetchMusicList: () => {},
-};
-const context = createContext<ContextProps>(defaultContext);
-
-export const HomePage = () => {
-  const { isSmallDevice } = useDevice();
-  const pageSize = isSmallDevice ? 6 : 30;
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { filterTags, setMusicList, setTotalCount, filter } = useMusicList();
-
-  const fetchMusicList = async (currentPage: number) => {
-    setLoading(true);
+  setCurrentPage: (currentPage: number) =>
+    set((state) => ({ ...state, currentPage })),
+  setError: (error: string | null) => set((state) => ({ ...state, error })),
+  setLoading: (loading: boolean) => set((state) => ({ ...state, loading })),
+  setMusicList: (musicList: Music[]) =>
+    set((state) => ({ ...state, musicList })),
+  fetchMusicList: (
+    currentPage: number,
+    setTotalCount: (totalCount: number) => void,
+    pageSize: number,
+    filter: MusicFilter,
+    filterTags: Tag[],
+    setMusicList: (musicList: Music[]) => void
+  ) => {
+    get().setLoading(true);
     setMusicList([]);
+    // console.log(needFilter, filter, filterTags)
     getMusicList(
       (result) => {
         if (!result || !result.success) {
@@ -49,21 +65,38 @@ export const HomePage = () => {
         // 更新音乐列表和分页信息
         setMusicList(result.data.list);
         setTotalCount(result.data.total);
-        setLoading(false);
+        get().setLoading(false);
       },
       (error) => {
         console.error("获取音乐列表失败", error);
-        setError(error);
-        setLoading(false);
+        get().setError(error);
+        get().setLoading(false);
       },
       currentPage,
       pageSize,
-      {
-        tags: filterTags.map((tag) => tag.id),
-        artist: filter.artist,
-      }
+      buildFilter(filter, filterTags)
     );
+  },
+}));
+const buildFilter = (filter: MusicFilter, filterTags: Tag[]) => {
+  return {
+    tags: filterTags.map((tag) => tag.id),
+    artist: filter.artist,
+    album: filter.album,
   };
+};
+export const HomePage = () => {
+  // const { isSmallDevice } = useDevice();
+  // const pageSize = isSmallDevice ? 6 : 30;
+  // const {
+  //   filterTags,
+  //   needFilter,
+  //   setNeedFilter,
+  //   setMusicList,
+  //   setTotalCount,
+  //   filter,
+  // } = useMusicList();
+  const { error, loading} = useHomePageStore();
 
   if (loading) {
     return (
@@ -88,28 +121,30 @@ export const HomePage = () => {
   }
 
   return (
-    <context.Provider value={{ pageSize, currentPage, setCurrentPage, setError, setLoading, fetchMusicList }}>
-      <div className="p-4">
-        <Control />
-        <MusicList />
-        <HomePagePagination />
-        <NotFound loading={loading} />
-      </div>
-    </context.Provider>
+    <div className="p-4">
+      <Control />
+      <MusicList />
+      <HomePagePagination />
+      <NotFound loading={loading} />
+    </div>
   );
 };
 
-
 const Control = () => {
-  const { filterTags, setFilterTags, setNeedFilter, totalCount } =
+  const { filterTags, filter, setFilterTags, setNeedFilter, totalCount } =
     useMusicList();
   const { setAllSongs, setCurrentSong } = usePlaylist();
-  const { setError } = useContext(context);
+  const { setError } = useHomePageStore();
 
   const playAllSongs = () => {
     getMusicList(
       (result) => {
-        if (!result || !result.success || !result.data.list || result.data.list.length === 0) {
+        if (
+          !result ||
+          !result.success ||
+          !result.data.list ||
+          result.data.list.length === 0
+        ) {
           return;
         }
         // 随机播放全部歌曲
@@ -123,9 +158,7 @@ const Control = () => {
       },
       1,
       totalCount,
-      {
-        tags: filterTags.map((tag) => tag.id),
-      }
+      buildFilter(filter, filterTags)
     );
   };
 
@@ -180,24 +213,34 @@ const Control = () => {
   );
 };
 
-
 const MusicList = () => {
   const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
-  const { filterTags, needFilter, setNeedFilter, musicList } = useMusicList();
-  const { setLoading, fetchMusicList } = useContext(context);
+  const { initialized, setInitialized, setLoading, fetchMusicList } = useHomePageStore();
+  const { isSmallDevice } = useDevice();
+  const pageSize = isSmallDevice ? 6 : 30;
+  const {
+    filterTags,
+    needFilter,
+    setNeedFilter,
+    setTotalCount,
+    filter,
+    musicList,
+    setMusicList,
+  } = useMusicList();
 
   useEffect(() => {
     // 第一次加载页面时获取音乐列表
-    if (musicList.length > 0) {
+    if (initialized) {
       setLoading(false);
       return;
     }
-    fetchMusicList(1);
+    setInitialized(true);
+    fetchMusicList(1, setTotalCount, pageSize, filter, filterTags, setMusicList);
   }, []);
 
   useEffect(() => {
     if (!needFilter) return;
-    fetchMusicList(1); // 标签切换时重新获取音乐列表
+    fetchMusicList(1, setTotalCount, pageSize, filter, filterTags, setMusicList); // 标签切换时重新获取音乐列表
     setNeedFilter(false);
   }, [filterTags]);
 
@@ -209,16 +252,12 @@ const MusicList = () => {
       console.log("add music to playlist", music.title);
     }
     setCurrentSong(music);
-  }
+  };
   return (
     <div className="flex justify-center items-center">
       <div className="card-container grid gap-4 w-full">
         {musicList.map((music: any) => (
-          <MusicCard
-            key={music.id}
-            music={music}
-            onClick={handleMusicClick}
-          />
+          <MusicCard key={music.id} music={music} onClick={handleMusicClick} />
         ))}
       </div>
     </div>
@@ -230,7 +269,13 @@ const HomePagePagination = () => {
   const pageSize = isSmallDevice ? 6 : 30;
   const { totalCount } = useMusicList();
   const { showPlaylist } = usePlaylist();
-  const { currentPage, setCurrentPage, fetchMusicList } = useContext(context);
+  const { currentPage, setCurrentPage, fetchMusicList } = useHomePageStore();
+  const {
+    filterTags,
+    setTotalCount,
+    filter,
+    setMusicList
+  } = useMusicList();
 
   // 左右箭头控制翻页
   useKeyPress("ArrowRight", () => {
@@ -249,7 +294,7 @@ const HomePagePagination = () => {
   });
   const onPageChange = (page: number) => {
     setCurrentPage(page);
-    fetchMusicList(page);
+    fetchMusicList(page, setTotalCount, pageSize, filter, filterTags, setMusicList);
   };
 
   if (totalCount <= 0) return null;

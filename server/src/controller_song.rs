@@ -16,6 +16,7 @@ pub struct MusicListQuery {
     page_size: Option<u32>,
     tag_ids: Option<Vec<i64>>,
     artist: Option<Vec<i64>>,
+    album: Option<Vec<String>>,
     any: Option<String>,
 }
 
@@ -59,6 +60,21 @@ pub async fn handle_get_metadatas(
         if artist_ids.len() > 0 {
             let song_ids = get_song_id_by_artist_ids(artist_ids).await;
             list.retain(|m| song_ids.contains(&m.id));
+        }
+    }
+
+    if let Some(album_names) = &query.album {
+        // 根据专辑查询
+        if album_names.len() > 0 {
+            let mut album_song_ids = vec![];
+            for album_name in album_names {
+                list.iter()
+                    .filter(|m| m.album.to_string() == album_name.to_string())
+                    .for_each(|m| {
+                        album_song_ids.push(m.id.to_string());
+                    });
+            }
+            list.retain(|m| album_song_ids.contains(&m.id));
         }
     }
 

@@ -7,6 +7,7 @@ use crate::{dbservice, pick_metadata, Artist, JsonResult};
 pub struct ArtistBody {
     page: Option<usize>,
     page_size: Option<usize>,
+    filter_text: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListArtistResponse {
@@ -26,19 +27,24 @@ pub async fn handle_get_artist(body: web::Json<ArtistBody>) -> impl Responder {
     }
 
     let albums = dbservice::artist().await;
-    match albums {
-        Ok(list) => {
-            let total = list.len();
-
-            let start = (current_page - 1) * page_size;
-            let end = start + page_size;
-            let end = end.min(total); // 防止超过总数
-            let list = list.get(start..end).unwrap_or(&[]).to_vec();
-            HttpResponse::Ok().json(JsonResult::success(ListArtistResponse { list, total }))
-        }
-        Err(e) => HttpResponse::InternalServerError()
-            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
+    if albums.is_err() {
+        return HttpResponse::InternalServerError().json(JsonResult::<()>::error(&format!(
+            "Error: {}",
+            albums.err().unwrap()
+        )));
     }
+    let mut list = albums.unwrap();
+    if let Some(filter_text) = &body.filter_text {
+        list.retain(|a| a.name.contains(filter_text));
+    }
+
+    let total = list.len();
+
+    let start = (current_page - 1) * page_size;
+    let end = start + page_size;
+    let end = end.min(total); // 防止超过总数
+    let list = list.get(start..end).unwrap_or(&[]).to_vec();
+    HttpResponse::Ok().json(JsonResult::success(ListArtistResponse { list, total }))
 }
 
 pub async fn handle_get_artist_songs(

@@ -47,7 +47,7 @@ pub async fn handle_get_album_songs(
         .music_map
         .clone()
         .into_iter()
-        .filter(|(name, _)| name.to_string() == album_name.clone())
+        .filter(|(_, metadata)| metadata.album.to_string() == album_name.clone())
         .map(|(_, meta)| meta)
         .collect();
     HttpResponse::Ok().json(JsonResult::success(list))

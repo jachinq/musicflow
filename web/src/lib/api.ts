@@ -62,7 +62,7 @@ export const getMusicList = (
     ...filter,
   };
   let url = API_URL + "/api/list";
-  console.log("api/list", params);
+  // console.log("api/list", params);
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
     body: JSON.stringify(params),
@@ -289,12 +289,15 @@ export const getAlbumList = (
 export const getArtistList = (
   currentPage: number,
   pageSize: number,
+  filterText: String,
   onSuccess: (data: JsonResult<GetArtistList>) => void,
   onError: (error: any) => void
 ) => {
   const url = `${API_URL}/api/artist`;
+  const params = { page: currentPage, page_size: pageSize, filter_text: filterText };
+  // console.log("api/artist", params);
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
-    body: JSON.stringify({ page: currentPage, page_size: pageSize }),
+    body: JSON.stringify(params),
   });
 };
