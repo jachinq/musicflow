@@ -23,7 +23,11 @@ export const useKeyPress = (
       event.shiftKey === shiftKey && // 检查 Shift 键
       event.altKey === altKey // 检查 Alt 键
     ) {
-      event.preventDefault(); // 阻止默认行为
+      // 按键触发元素不是 body 的话，不执行 callback
+      // console.log('useKeyPress prevent default', key, event);
+      if (event.target !== document.body) {
+        return;
+      }
       callbackRef.current(event);
     }
   });
