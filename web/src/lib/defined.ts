@@ -71,8 +71,11 @@ export interface SongList {
 export interface Album {
     id: number;
     name: string;
+    cover: string;
     description: string;
     year: number;
+    artist: string;
+    songs: Music[]; // songs in the album
 }
 
 export interface Artist {

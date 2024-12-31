@@ -9,7 +9,7 @@ import { usePlaylist } from "./store/playlist";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { ThemeProvider } from "./components/theme-provider";
 import { FileMusicIcon, Settings, Tag } from "lucide-react";
-import { TagsPage } from "./pages/TagPage";
+import { MoreInfoPage } from "./pages/TagPage";
 import { SongListPage } from "./pages/SongListPage";
 
 function App() {
@@ -51,7 +51,11 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/playlist" element={<SongListPage />} />
-                <Route path="/tags" element={<TagsPage />} />
+                <Route path="/tags" element={<MoreInfoPage />} />
+                <Route path="/albums" element={<MoreInfoPage />} />
+                <Route path="/artists" element={<MoreInfoPage />} />
+                <Route path="/albums/:id" element={<MoreInfoPage />} />
+                <Route path="/artists/:id" element={<MoreInfoPage />} />
                 <Route path="/detail/:id" element={<MusicPlayPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>

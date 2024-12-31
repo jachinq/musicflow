@@ -275,13 +275,16 @@ export const getSongSongList = (
 export const getAlbumList = (
   currentPage: number,
   pageSize: number,
+  filterText: String,
   onSuccess: (data: JsonResult<GetAlbumList>) => void,
   onError: (error: any) => void
 ) => {
   const url = `${API_URL}/api/album`;
+  const params = { page: currentPage, page_size: pageSize, filter_text: filterText };
+  // console.log("api/album", params);
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
-    body: JSON.stringify({ page: currentPage, page_size: pageSize }),
+    body: JSON.stringify(params),
   });
 };
 

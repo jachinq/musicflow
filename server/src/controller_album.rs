@@ -7,6 +7,7 @@ use crate::{Album, JsonResult, Metadata};
 pub struct AlbumsBody {
     page: Option<usize>,
     page_size: Option<usize>,
+    filter_text: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListAlbumResponse {
@@ -28,7 +29,11 @@ pub async fn handle_get_album(
         page_size = page_size1;
     }
 
-    let list = app_data.album_list.clone();
+    let mut list = app_data.album_list.clone();
+    if let Some(filter) = &body.filter_text {
+        let filter = filter.to_lowercase();
+        list.retain(|album| album.name.to_lowercase().contains(&filter));
+    }
 
     let total = list.len();
 

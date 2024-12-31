@@ -130,12 +130,6 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
           ))}
         </div>
       </div>
-      <div
-        className="fixed bottom-0 left-0 w-full h-full bg-slate-900 rounded-t-md flex justify-center items-center opacity-0"
-        onClick={() => {
-          setShowPlaylist(false);
-        }}
-      ></div>
     </>
   );
 });

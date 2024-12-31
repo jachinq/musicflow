@@ -39,7 +39,7 @@
   }
 
   .dark {
-    --primary: hsl(214, 6%, 25%);
+    --primary: hsl(217, 28%, 68%);
     --primary-foreground: hsl(222.2 47.4% 1.2%);
     --primary-hover: hsl(209, 60%, 61%);
     --background: #414355;
@@ -195,7 +195,7 @@
 }
 
 .mask {
-  @apply bg-background opacity-50 fixed top-0 left-0 w-full h-full z-10;
+  @apply bg-background opacity-50 fixed top-0 left-0 w-full h-full z-10 transition-opacity duration-300 ease-in-out;
 }
 .dialog {
   @apply bg-card rounded-lg shadow-md w-full max-w-xl mx-auto fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20;

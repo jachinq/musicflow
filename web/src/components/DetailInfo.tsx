@@ -6,8 +6,10 @@ import { Input } from "./Input";
 import { TagElement } from "./Tag";
 import { toast } from "sonner";
 import { useConfirm } from "./confirm";
+import { useNavigate } from "react-router-dom";
 
 export const DetailInfo = ({ song }: { song?: Music }) => {
+  const navigate = useNavigate();
   if (!song) return <div>暂无数据</div>;
 
   const [tags, setTags] = useState<Tag[]>([]);
@@ -25,12 +27,16 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
     );
   }, [song]);
 
+  const gotoAlbum = () => {
+    navigate(`/albums/${song.album}`);
+  };
+
   return (
     <div className="flex flex-col justify-center items-center px-8 py-4">
       <div className="flex flex-col gap-4">
         <ShowItem name="名称" value={song.title} />
         <ShowItem name="歌手" value={JSON.parse(song.artists).join(" / ")} />
-        <ShowItem name="专辑" value={song.album} />
+        <ShowItem name="专辑" value={song.album} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoAlbum() }} />
         <ShowItem name="比特率" value={song.bitrate.toFixed(2)} />
         <ShowItem name="采样率" value={song.samplerate.toFixed(2)} />
         <ShowItem name="年份" value={song.year} />
@@ -131,12 +137,14 @@ const Tags = ({
 const ShowItem = ({
   name,
   value,
+  className,
+  onClick
 }: {
   name: string;
   value: React.ReactNode;
-}) => {
+} & React.HTMLAttributes<HTMLDivElement>) => {
   return (
-    <div className="grid grid-cols-[1fr,4fr] gap-4">
+    <div className={`grid grid-cols-[1fr,4fr] gap-4 ${className}`} onClick={onClick}>
       <div>{name}</div>
       <div>{value}</div>
     </div>
