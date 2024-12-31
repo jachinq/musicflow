@@ -630,7 +630,7 @@ const AddSongDialog = ({
             >
               <input type="checkbox" checked={isSelected(item)} onChange={() => { }} />
               <Cover
-                src={getCoverSmallUrl(item.id)}
+                src={getCoverSmallUrl(item.album_id)}
                 alt={item.title}
                 type=""
                 size={48}

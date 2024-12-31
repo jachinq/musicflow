@@ -94,7 +94,7 @@ const Playlist = forwardRef<HTMLDivElement, Props>(({ clearPlaylist }, ref) => {
               className="flex items-center justify-center cursor-pointer hover:bg-muted gap-2 p-2"
             >
               <div className="rounded-lg overflow-hidden relative">
-                <img src={getCoverSmallUrl(song.id)} alt="" width={40} />
+                <img src={getCoverSmallUrl(song.album_id)} alt="" width={40} />
                 {currentSong?.id === song.id && isPlaying && (
                   <>
                     <AudioLines

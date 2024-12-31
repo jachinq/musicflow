@@ -11,7 +11,7 @@ interface MusicCardProps {
 export const MusicCard = ({ music, onClick }: MusicCardProps) => {
   return (
     <div className="w-[140px] max-h-[240px]">
-      <Cover src={getCoverSmallUrl(music.id)} />
+      <Cover src={getCoverSmallUrl(music.album_id)} />
       <div
         className="p-2 shadow-md bg-card text-card-foreground flex flex-col"
         style={{ borderRadius: "0 0 8px 8px" }}

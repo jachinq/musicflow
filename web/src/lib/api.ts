@@ -6,10 +6,10 @@ const defaultSetting = JSON.parse(defaultSettingStr);
 export const API_URL = defaultSetting.server_url || "";
 export const LOG_API = `${API_URL}/api/log`;
 
-export const getCoverSmallUrl = (id: string) => {
+export const getCoverSmallUrl = (id: number) => {
   return `${API_URL}/api/cover/small/${id}`;
 };
-export const getCoverMediumUrl = (id: string) => {
+export const getCoverMediumUrl = (id: number) => {
   return `${API_URL}/api/cover/medium/${id}`;
 };
 

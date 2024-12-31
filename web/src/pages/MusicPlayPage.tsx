@@ -105,7 +105,7 @@ function MusicPlayPage() {
           style={{ borderWidth: album_border_width }}
         >
           <img
-            src={getCoverMediumUrl(song_id)}
+            src={getCoverMediumUrl(currentSong?.album_id || 0)}
             alt=""
             width={album_size}
             height={album_size}

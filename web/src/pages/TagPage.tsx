@@ -159,7 +159,7 @@ const AlbumList = () => {
   const navigate = useNavigate();
   const { setNeedFilter, setFilter, filter } = useMusicList();
   const filterAlbum = (item: Album) => {
-    setFilter({ ...filter, album: [item.name] });
+    setFilter({ ...filter, album: [item.id] });
     setNeedFilter(true);
     navigate("/");
   };

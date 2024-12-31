@@ -2,12 +2,46 @@ use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
-use crate::{dbservice, get_cover, get_lyric, get_tag_songs, AppState, JsonResult, Metadata};
+use crate::{dbservice, get_lyric, get_tag_songs, AppState, JsonResult, Metadata};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListMusic {
-    list: Vec<Metadata>,
+    list: Vec<MetadataVo>,
     total: u32,
+}
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+struct MetadataVo {
+    pub id: String,
+    pub file_name: String,
+    pub file_path: String,
+    pub file_url: String,
+    pub title: String,
+    pub artist: String,
+    pub artists: String,
+    pub album: String,
+    pub year: usize,
+    pub duration: f64,
+    pub bitrate: f64,
+    pub samplerate: f64,
+    pub album_id: i64,
+}
+impl From<Metadata> for MetadataVo {
+    fn from(value: Metadata) -> Self {
+        let mut vo = MetadataVo::default();
+        vo.id = value.id.to_string();
+        vo.file_name = value.file_name.clone();
+        vo.file_path = value.file_path.clone();
+        vo.file_url = value.file_url.clone();
+        vo.title = value.title.clone();
+        vo.artist = value.artist.clone();
+        vo.artists = value.artists.clone();
+        vo.album = value.album.clone();
+        vo.year = value.year;
+        vo.duration = value.duration;
+        vo.bitrate = value.bitrate;
+        vo.samplerate = value.samplerate;
+        vo
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -16,7 +50,7 @@ pub struct MusicListQuery {
     page_size: Option<u32>,
     tag_ids: Option<Vec<i64>>,
     artist: Option<Vec<i64>>,
-    album: Option<Vec<String>>,
+    album: Option<Vec<i64>>,
     any: Option<String>,
 }
 
@@ -63,18 +97,11 @@ pub async fn handle_get_metadatas(
         }
     }
 
-    if let Some(album_names) = &query.album {
-        // 根据专辑查询
-        if album_names.len() > 0 {
-            let mut album_song_ids = vec![];
-            for album_name in album_names {
-                list.iter()
-                    .filter(|m| m.album.to_string() == album_name.to_string())
-                    .for_each(|m| {
-                        album_song_ids.push(m.id.to_string());
-                    });
-            }
-            list.retain(|m| album_song_ids.contains(&m.id));
+    if let Some(ids) = &query.album {
+        // 根据歌手查询
+        if ids.len() > 0 {
+            let song_ids = get_song_id_by_album_ids(ids).await;
+            list.retain(|m| song_ids.contains(&m.id));
         }
     }
 
@@ -98,6 +125,16 @@ pub async fn handle_get_metadatas(
         .unwrap_or(&[])
         .to_vec();
 
+    let mut list = list
+        .iter()
+        .map(|m| MetadataVo::from(m.clone()))
+        .collect::<Vec<MetadataVo>>();
+    for m in &mut list {
+        if let Ok(Some(album_song)) =  dbservice::album_song_by_song_id(&m.id).await {
+            m.album_id = album_song.album_id;
+        }
+    }
+
     HttpResponse::Ok().json(JsonResult::success(ListMusic { list, total }))
 }
 
@@ -110,33 +147,37 @@ pub async fn handle_get_metadata(
         .get(&song_id.to_string())
         .cloned()
         .unwrap_or_default();
+    let mut metadata = MetadataVo::from(metadata);
+    if let Ok(Some(album_song)) =  dbservice::album_song_by_song_id(&metadata.id).await {
+        metadata.album_id = album_song.album_id;
+    }
     HttpResponse::Ok().json(JsonResult::success(metadata))
 }
 
-pub async fn get_cover_small(song_id: web::Path<String>) -> impl Responder {
-    let data = get_cover_by_type(&song_id, "small").await;
+pub async fn get_cover_small(album_id: web::Path<i64>) -> impl Responder {
+    let data = get_cover_size(*album_id, "small").await;
     HttpResponse::Ok().content_type("image/webp").body(data)
 }
-pub async fn get_cover_medium(song_id: web::Path<String>) -> impl Responder {
-    let data = get_cover_by_type(&song_id, "medium").await;
+pub async fn get_cover_medium(album_id: web::Path<i64>) -> impl Responder {
+    let data = get_cover_size(*album_id, "medium").await;
     HttpResponse::Ok().content_type("image/webp").body(data)
 }
-pub async fn get_cover_by_type(song_id: &str, cover_type: &str) -> Vec<u8> {
-    let album_song = dbservice::album_song_by_song_id(song_id).await;
+pub async fn get_cover_size(album_id: i64, size: &str) -> Vec<u8> {
+    // let album_song = dbservice::album_song_by_song_id(album_id).await;
 
-    let album_id = if let Ok(Some(album_song)) = album_song {
-        album_song.album_id
-    } else {
-        0
-    };
+    // let album_id = if let Ok(Some(album_song)) = album_song {
+    //     album_song.album_id
+    // } else {
+    //     0
+    // };
 
-    let cover = get_cover(album_id, cover_type).await;
+    let cover = dbservice::get_cover(album_id, "album", size).await;
     let default_cover = "UklGRpYBAABXRUJQVlA4IIoBAACQEgCdASrAAMAAP3G42GK0sayopLkoEpAuCWVu4QXUMQU4nn/pWmF9o0DPifE+JlGhgZqOyVZgoy7NXUtGklgA0aiSG2RF2Kbm5jQ3eoKwLpyF9R8oVd509SVeXb/tHglG1W4wL8vovtTUJhW/Jxy+Dz2kkbDPiXZ2AE9bwGmE/rM3PifIKeoZRVuuc6yX3BGpY5qSDk0eFGcLFyoAAP1V/+KHvw994S1rsgmSb8eM4Ys0mSvZP+IPrAhBml27fCTgPcHy1S6f9iSr6o2btNKixxetBHWT70dP+hIZITsA3mwH6GT6Jph31q2YsJASsCnDSmiO9ctjViN5bcVXcoIwwUZTu+9jQATMseG7OR/yl1R++egpeBnLRwGRtbdMgxlpe/+cJM8j1XCD0gwSVPZDBJ2Ke/IK/iCzWPuDO2Nw6aGgfb5Rbhor4l+4FDZjWdPVG9qP3AimXDGjWyUPw1fYuf4rBYVj4XiNln/QypsIcatiR5DVPn/YR0CBfMXURwr5Dg+721oAAAAA";
 
     let base64str = if let Ok(Some(cover)) = cover {
         cover.base64
     } else {
-        println!("Cover not found for {}, cover: {:?}", song_id, cover);
+        println!("Cover not found for {}, cover: {:?}", album_id, cover);
         default_cover.to_string()
     };
     let base64str = if base64str.is_empty() {
@@ -174,6 +215,21 @@ async fn get_song_id_by_artist_ids(artist_ids: &Vec<i64>) -> Vec<String> {
                 song_ids.push(m.id.to_string());
             });
         });
+    }
+    song_ids
+}
+
+async fn get_song_id_by_album_ids(ids: &Vec<i64>) -> Vec<String> {
+    let mut song_ids = vec![];
+    for id in ids {
+        let songs = dbservice::album_song_by_album_id(*id).await;
+        println!("get album_songs: {:#?}", id);
+        println!("album_songs: {:#?}", songs);
+        if let Ok(songs) = songs {
+            songs.iter().for_each(|s| {
+                song_ids.push(s.song_id.to_string());
+            });
+        }
     }
     song_ids
 }

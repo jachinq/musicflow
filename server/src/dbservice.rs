@@ -181,10 +181,10 @@ pub async fn get_metadata_list() -> Result<Vec<Metadata>> {
     Ok(list)
 }
 
-pub async fn get_cover(link_id: i64, size: &str) -> Result<Option<Cover>> {
+pub async fn get_cover(link_id: i64, cover_type: &str, size: &str) -> Result<Option<Cover>> {
     let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT * FROM cover WHERE link_id = ? AND size = ?")?;
-    let mut rows = stmt.query([link_id.to_string(), size.to_string()])?;
+    let mut stmt = conn.prepare("SELECT * FROM cover WHERE link_id = ? AND type = ? AND size = ?")?;
+    let mut rows = stmt.query([link_id.to_string(), cover_type.to_string(), size.to_string()])?;
 
     let cover = rows
         .next()
@@ -339,7 +339,10 @@ pub async fn delete_song_list(id: i64) -> Result<(usize, usize)> {
     let tx = conn.transaction()?; // 事务
 
     // 删除歌单歌曲关系
-    let song_size =  tx.execute("DELETE FROM song_list_song WHERE song_list_id = ?", &[&id.to_string()])?;
+    let song_size = tx.execute(
+        "DELETE FROM song_list_song WHERE song_list_id = ?",
+        &[&id.to_string()],
+    )?;
 
     // 删除歌单
     let list_size = tx.execute("DELETE FROM song_list WHERE id = ?", &[&id.to_string()])?;
@@ -353,7 +356,10 @@ pub async fn add_song_list_song(song_list_id: i64, list: &Vec<SongListSong>) -> 
     let tx = conn.transaction()?;
 
     // 先删除原有关系
-    tx.execute("DELETE FROM song_list_song WHERE song_list_id = ?", &[&song_list_id.to_string()])?;
+    tx.execute(
+        "DELETE FROM song_list_song WHERE song_list_id = ?",
+        &[&song_list_id.to_string()],
+    )?;
 
     // 再插入新关系
     for song_list_song in list {
@@ -430,9 +436,7 @@ pub async fn get_album_list() -> Result<Vec<Album>> {
 pub async fn album_songs(album_id: i64) -> Result<Vec<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.artists, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate FROM metadata INNER JOIN album_song ON metadata.id = album_song.song_id WHERE album_song.album_id = ?")?;
-    let rows = stmt.query_map([&album_id.to_string()], |row| {
-        covert_row_to_metadata(row)
-    })?;
+    let rows = stmt.query_map([&album_id.to_string()], |row| covert_row_to_metadata(row))?;
 
     let mut song_list = Vec::new();
     for song in rows {
@@ -457,8 +461,21 @@ pub async fn album_song_by_song_id(song_id: &str) -> Result<Option<AlbumSong>> {
 
     Ok(album_song)
 }
+pub async fn album_song_by_album_id(album_id: i64) -> Result<Vec<AlbumSong>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM album_song WHERE album_id = ?")?;
+    let rows = stmt.query_map([&album_id.to_string()], |row| covert_row_to_album_song(row))?;
 
-
+    let mut album_song_list = Vec::new();
+    for album_song in rows {
+        if let Ok(album_song) = album_song {
+            album_song_list.push(album_song);
+        } else {
+            println!("getAlbumSongByAlbumId Error: {}", album_song.unwrap_err());
+        }
+    }
+    Ok(album_song_list)
+}
 
 // 艺术家相关接口
 pub async fn artist() -> Result<Vec<Artist>> {
@@ -480,9 +497,7 @@ pub async fn artist() -> Result<Vec<Artist>> {
 pub async fn artist_songs(artist_id: i64) -> Result<Vec<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.artists, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate FROM metadata INNER JOIN artist_song ON metadata.id = artist_song.song_id WHERE artist_song.artist_id = ?")?;
-    let rows = stmt.query_map([&artist_id.to_string()], |row| {
-        covert_row_to_metadata(row)
-    })?;
+    let rows = stmt.query_map([&artist_id.to_string()], |row| covert_row_to_metadata(row))?;
 
     let mut song_list = Vec::new();
     for song in rows {
@@ -620,7 +635,7 @@ pub struct AlbumSong {
     pub song_id: String,
     pub album_name: String,
     pub song_title: String,
-    pub song_artist: String,    
+    pub song_artist: String,
 }
 
 impl Album {

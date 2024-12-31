@@ -28,6 +28,7 @@ export interface Music {
     artist: string;
     artists: string;
     album: string;
+    album_id: number;
     year: number;
     duration: number;
     bitrate: number;
@@ -54,7 +55,7 @@ export interface MusicFilter {
     any?: string;
     title?: string;
     artist?: number[];
-    album?: string[];
+    album?: number[];
     year?: number;
     tags?: number[];
 }

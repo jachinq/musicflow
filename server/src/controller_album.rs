@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 
-use crate::{Album, JsonResult, Metadata};
+use crate::{dbservice, pick_metadata, Album, JsonResult};
 
 #[derive(Deserialize)]
 pub struct AlbumsBody {
@@ -15,7 +15,7 @@ pub struct ListAlbumResponse {
     total: usize,
 }
 
-pub async fn handle_get_album(
+/* pub async fn handle_get_album(
     body: web::Json<AlbumsBody>,
     app_data: web::Data<crate::AppState>,
 ) -> impl Responder {
@@ -57,8 +57,8 @@ pub async fn handle_get_album_songs(
         .collect();
     HttpResponse::Ok().json(JsonResult::success(list))
 }
-
-/* pub async fn handle_get_album(body: web::Json<AlbumsBody>) -> impl Responder {
+ */
+pub async fn handle_get_album(body: web::Json<AlbumsBody>) -> impl Responder {
     // 分页
     let mut current_page = 1;
     let mut page_size = 10;
@@ -71,7 +71,13 @@ pub async fn handle_get_album_songs(
 
     let albums = dbservice::get_album_list().await;
     match albums {
-        Ok(list) => {
+        Ok(mut list) => {
+
+            if let Some(filter) = &body.filter_text {
+                let filter = filter.to_lowercase();
+                list.retain(|album| album.name.to_lowercase().contains(&filter));
+            }
+
             let total = list.len();
 
             let start = (current_page - 1) * page_size;
@@ -99,4 +105,3 @@ pub async fn handle_get_album_songs(
             .json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
 }
- */

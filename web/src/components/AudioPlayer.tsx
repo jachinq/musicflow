@@ -386,7 +386,7 @@ export const AudioPlayer = () => {
               onClick={coverClick}
             >
               <img
-                src={getCoverSmallUrl(currentSong.id)}
+                src={getCoverSmallUrl(currentSong.album_id)}
                 alt=""
                 width={42}
                 className={isPlaying ? "album-spin" : ""}
