@@ -37,20 +37,22 @@ export const OptionGroup = ({
   children,
   className = "",
   between = false,
+  drirection = "row",
 }: {
   setValue: any;
   defaultValue: any;
   className?: string;
   children: React.ReactNode;
   between?: boolean;
+  drirection?: "row" | "column";
 }) => {
   const { isSmallDevice } = useDevice();
   return (
     <context.Provider value={{ defaultValue, setValue }}>
       <div
-      className={`flex items-center gap-2 w-full ${
+      className={`flex items-center gap-2 w-full select-none ${
         isSmallDevice ? between ? "justify-between" : "justify-evenly" : "gap-8"
-      } ${className}`}
+      } ${className} ${drirection === "column" ? "flex-col" : ""}` }
     >
       {children}
     </div>

@@ -51,11 +51,12 @@ export const Pagination = ({
     }
   };
   const handlePageClick = (page: number) => {
+    if (currentPage === page) return;
     onPageChange && onPageChange(page);
   };
 
   return (
-    <div className={`flex justify-center items-center ${className}`}>
+    <div className={`flex items-center ${className}`}>
       <div className="flex items-center flex-wrap">
         {
           showTotal && (

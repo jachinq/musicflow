@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Music } from "../lib/defined";
 import { useKeyPress } from "../hooks/use-keypress";
+import { toast } from "sonner";
 
 export const AudioPlayer = () => {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -84,8 +85,15 @@ export const AudioPlayer = () => {
 
   // b 静音/取消静音
   useKeyPress("b", () => {
-    if (volume > 0) setMutedVolume(volume);
-    changeVolume(volume > 0 ? 0 : mutedVolume || 0.5);
+    let isMuted = volume > 0;
+    if (isMuted) {
+      setMutedVolume(volume);
+      toast.success("开启静音");
+    } else {
+      setMutedVolume(0);
+      toast.success("取消静音");
+    }
+    changeVolume(isMuted? 0 : mutedVolume || 0.5);
   });
 
   // v 显示/隐藏音量
