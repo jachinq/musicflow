@@ -37,13 +37,13 @@ fn covert_row_to_metadata(row: &rusqlite::Row) -> Result<Metadata> {
 
 fn covert_row_to_cover(row: &rusqlite::Row) -> Result<Cover> {
     Ok(Cover {
-        song_id: row.get(0)?,
-        format: row.get(1)?,
-        width: row.get(2)?,
-        height: row.get(3)?,
-        base64: row.get(4)?,
-        r#type: row.get(5)?,
-        extra: row.get(6)?,
+        r#type: row.get(0)?,
+        link_id: row.get(1)?,
+        format: row.get(2)?,
+        size: row.get(3)?,
+        width: row.get(4)?,
+        height: row.get(5)?,
+        base64: row.get(6)?,
     })
 }
 
@@ -138,6 +138,16 @@ fn covert_row_to_album(row: &rusqlite::Row) -> Result<Album> {
     })
 }
 
+fn covert_row_to_album_song(row: &rusqlite::Row) -> Result<AlbumSong> {
+    Ok(AlbumSong {
+        album_id: row.get(0)?,
+        song_id: row.get(1)?,
+        album_name: row.get(2)?,
+        song_title: row.get(3)?,
+        song_artist: row.get(4)?,
+    })
+}
+
 pub async fn get_metadata_by_id(id: &str) -> Result<Option<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM metadata WHERE id = ?")?;
@@ -171,13 +181,10 @@ pub async fn get_metadata_list() -> Result<Vec<Metadata>> {
     Ok(list)
 }
 
-pub async fn get_cover(song_id: &str, cover_type: &str) -> Result<Option<Cover>> {
-    // 打开数据库连接（如果数据库文件不存在，会自动创建）
+pub async fn get_cover(link_id: i64, size: &str) -> Result<Option<Cover>> {
     let conn = connect_db()?;
-
-    // 查询数据
-    let mut stmt = conn.prepare("SELECT * FROM cover WHERE song_id = ? and type = ?")?;
-    let mut rows = stmt.query([song_id, cover_type])?;
+    let mut stmt = conn.prepare("SELECT * FROM cover WHERE link_id = ? AND size = ?")?;
+    let mut rows = stmt.query([link_id.to_string(), size.to_string()])?;
 
     let cover = rows
         .next()
@@ -438,6 +445,21 @@ pub async fn album_songs(album_id: i64) -> Result<Vec<Metadata>> {
     Ok(song_list)
 }
 
+pub async fn album_song_by_song_id(song_id: &str) -> Result<Option<AlbumSong>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM album_song WHERE song_id = ?")?;
+    let mut rows = stmt.query([song_id])?;
+
+    let album_song = rows
+        .next()
+        .map(|row| convert_single(row, covert_row_to_album_song))
+        .unwrap_or(None);
+
+    Ok(album_song)
+}
+
+
+
 // 艺术家相关接口
 pub async fn artist() -> Result<Vec<Artist>> {
     let conn = connect_db()?;
@@ -475,13 +497,13 @@ pub async fn artist_songs(artist_id: i64) -> Result<Vec<Metadata>> {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Cover {
-    pub song_id: String,
+    pub r#type: String,
+    pub link_id: i64,
     pub format: String,
+    pub size: String,
     pub width: f32,
     pub height: f32,
     pub base64: String,
-    pub r#type: String,
-    pub extra: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -596,6 +618,9 @@ pub struct Album {
 pub struct AlbumSong {
     pub album_id: i64,
     pub song_id: String,
+    pub album_name: String,
+    pub song_title: String,
+    pub song_artist: String,    
 }
 
 impl Album {
