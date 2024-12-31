@@ -105,9 +105,6 @@ const singleTask = async (
   const lyrics = buildLyrics(metadata, dbMeta.id);
   // console.log(lyrics);
 
-  const covers = buildCover(metadata, dbMeta.id);
-  // console.log(covers);
-
   const artists = buildArtists(metadata);
   // console.log(artists, artist_song);
 
@@ -129,11 +126,6 @@ const singleTask = async (
     let result = addLyric(lyric);
     if (!result)
       console.error(new Date().toLocaleString(), "failed to add lyric", lyric);
-  });
-  covers.forEach((cover) => {
-    let result = addCover(cover);
-    if (!result)
-      console.error(new Date().toLocaleString(), "failed to add cover", cover);
   });
   let artist_ids: number[] = [];
   artists.forEach((artist) => {
@@ -175,44 +167,6 @@ const singleTask = async (
   success++;
   logProgress(music_count, success, faile);
   return { msg: "success", file_path };
-};
-
-const buildCover = (metadata: IMeta, metadataId: string): Cover[] => {
-  if (!metadata.cover) return [];
-  // const original_cover: Cover = {
-  //   format: metadata.cover.format || "",
-  //   width: metadata.cover.width || 0,
-  //   height: metadata.cover.height || 0,
-  //   base64: metadata.cover.original || "",
-  //   type: "original",
-  //   extra: "{}",
-  //   song_id: metadataId,
-  // }
-
-  const small_cover: Cover = {
-    format: "webp",
-    width: 128,
-    height: 128,
-    base64: metadata.cover.small || "",
-    type: "small",
-    extra: "{}",
-    song_id: metadataId,
-  };
-  const large_cover: Cover = {
-    format: "webp",
-    width: 600,
-    height: 600,
-    base64: metadata.cover.large || "",
-    type: "medium",
-    extra: "{}",
-    song_id: metadataId,
-  };
-
-  return [
-    // original_cover,
-    small_cover,
-    large_cover,
-  ];
 };
 
 const buildLyrics = (metadata: IMeta, metadataId: string): Lyric[] => {

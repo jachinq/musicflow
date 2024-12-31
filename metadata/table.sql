@@ -1,3 +1,5 @@
+BEGIN TRANSACTION;
+
 CREATE TABLE
   IF NOT EXISTS metadata (
     id TEXT NOT NULL,
@@ -24,21 +26,24 @@ CREATE TABLE
 
 CREATE TABLE
   IF NOT EXISTS cover (
-    song_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    link_id INTEGER NOT NULL DEFAULT 0,
+    song_id TEXT NOT NULL DEFAULT '',
     format TEXT NOT NULL,
+    size TEXT NOT NULL,
     width REAL,
     height REAL,
-    base64 TEXT NOT NULL,
-    type TEXT NOT NULL,
-    extra TEXT
+    base64 TEXT NOT NULL
   );
 
 CREATE TABLE
   IF NOT EXISTS song_list (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT NOT NULL
+    name TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    cover TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
   );
 
 CREATE TABLE
@@ -95,3 +100,23 @@ CREATE TABLE
 
 CREATE TABLE
   IF NOT EXISTS artist_song (artist_id INTEGER NOT NULL, song_id TEXT NOT NULL);
+
+CREATE TABLE
+  IF NOT EXISTS album (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    year INTEGER,
+    artist TEXT NOT NULL
+  );
+
+CREATE TABLE
+  IF NOT EXISTS album_song (
+    album_id INTEGER NOT NULL, 
+    song_id TEXT NOT NULL,
+    album_name TEXT NOT NULL,
+    song_title TEXT NOT NULL,
+    song_artist TEXT NOT NULL
+  );
+
+COMMIT;

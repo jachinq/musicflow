@@ -25,13 +25,14 @@ export interface Lyric {
 }
 
 export interface Cover {
-  song_id: string;
+  type: string;
+  link_id: number;
   format: string;
   width: number;
   height: number;
   base64: string;
-  type: string;
-  extra: string;
+  size: string;
+  song_id?: string;
 }
 
 export interface User {
@@ -68,11 +69,30 @@ export interface ArtistSong {
   song_id: string;
 }
 
+export interface Album {
+  id: number;
+  name: string;
+  artist: string;
+  year: number;
+  description: string;
+}
+
+export interface AlbumSong {
+  album_id: number;
+  song_id: string;
+  album_name: string;
+  song_title: string;
+  song_artist: string;
+}
+
+
 // 创建或打开一个名为 'example.db' 的数据库
-const db = new Database(db_path);
+export const db = new Database(db_path);
 
 // 创建表
 db.exec(`
+BEGIN TRANSACTION;
+
 CREATE TABLE
   IF NOT EXISTS metadata (
     id TEXT NOT NULL,
@@ -99,13 +119,14 @@ CREATE TABLE
 
 CREATE TABLE
   IF NOT EXISTS cover (
-    song_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    link_id INTEGER NOT NULL DEFAULT 0,
+    song_id TEXT NOT NULL DEFAULT '',
     format TEXT NOT NULL,
+    size TEXT NOT NULL,
     width REAL,
     height REAL,
-    base64 TEXT NOT NULL,
-    type TEXT NOT NULL,
-    extra TEXT
+    base64 TEXT NOT NULL
   );
 
 CREATE TABLE
@@ -172,8 +193,50 @@ CREATE TABLE
 
 CREATE TABLE
   IF NOT EXISTS artist_song (artist_id INTEGER NOT NULL, song_id TEXT NOT NULL);
+
+CREATE TABLE
+  IF NOT EXISTS album (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    year INTEGER,
+    artist TEXT NOT NULL
+  );
+
+CREATE TABLE
+  IF NOT EXISTS album_song (
+    album_id INTEGER NOT NULL, 
+    song_id TEXT NOT NULL,
+    album_name TEXT NOT NULL,
+    song_title TEXT NOT NULL,
+    song_artist TEXT NOT NULL
+  );
+
+COMMIT;
 `);
 
+export const getMetadata = (title: string) => {
+  const select = db.prepare(`
+    SELECT * FROM metadata WHERE title = @title
+  `);
+  return select.get({ title });
+};
+export const getMetadataById = (id: string) => {
+  const select = db.prepare(`
+    SELECT * FROM metadata WHERE id = @id
+  `);
+  return select.get({ id });
+};
+export const existMetadataByPath = (file_path: string) => {
+  const select = db.prepare(`
+    SELECT * FROM metadata WHERE file_path = @file_path
+  `);
+  return select.get({ file_path });
+};
+export const getAllMetadata = (): Metadata[] => {
+  const select = db.prepare(`SELECT * FROM metadata`);
+  return select.all();
+};
 export const addMetadata = (metadata: Metadata) => {
   const { id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, samplerate } = metadata;
   const insert = db.prepare(`
@@ -195,13 +258,26 @@ export const addLyric = (data: Lyric) => {
 };
 
 export const addCover = (cover: Cover) => {
-  const { song_id, format, width, height, base64, type, extra } = cover;
+  const { type, link_id, format, size, width, height, base64 } = cover;
+  const exist = getCoverByIdAndSize(link_id, size);
+  if (exist) return exist;
+
   const insert = db.prepare(`
-    INSERT INTO cover (song_id, format, width, height, base64, type, extra)
-    VALUES (@song_id, @format, @width, @height, @base64, @type, @extra)
+    INSERT INTO cover (type, link_id, format, size, width, height, base64)
+    VALUES (@type, @link_id, @format, @size, @width, @height, @base64)
   `);
-  insert.run({ song_id, format, width, height, base64, type, extra });
-  return { song_id, format, width, height, base64, type, extra };
+  insert.run({ type, link_id, format, size, width, height, base64 });
+  return { id: insert.lastInsertRowid, type, link_id, format, size, width, height, base64 };
+};
+export const getAllCover = () => {
+  const select = db.prepare(`SELECT * FROM cover`);
+  return select.all();
+};
+export const getCoverByIdAndSize = (link_id: number, size: string) => {
+  const select = db.prepare(`
+    SELECT * FROM cover WHERE link_id = @link_id AND size = @size
+  `);
+  return select.get({ link_id, size });
 };
 
 export const addUser = (user: User) => {
@@ -262,25 +338,6 @@ export const addArtistSong = (artistSong: ArtistSong) => {
   return { artist_id, song_id };
 };
 
-export const getMetadata = (title: string) => {
-  const select = db.prepare(`
-    SELECT * FROM metadata WHERE title = @title
-  `);
-  return select.get({ title });
-};
-export const getMetadataById = (id: string) => {
-  const select = db.prepare(`
-    SELECT * FROM metadata WHERE id = @id
-  `);
-  return select.get({ id });
-};
-export const existMetadataByPath = (file_path: string) => {
-  const select = db.prepare(`
-    SELECT * FROM metadata WHERE file_path = @file_path
-  `);
-  return select.get({ file_path });
-};
-
 export const getTag = (name: string) => {
   const select = db.prepare(`
     SELECT * FROM tag WHERE name = @name
@@ -293,6 +350,39 @@ export const getArtist = (name: string) => {
     SELECT * FROM artist WHERE name = @name
   `);
   return select.get({ name });
+};
+
+export const getAlbum = (name: string, artist: string) => {
+  const select = db.prepare(`
+    SELECT * FROM album WHERE name = @name AND artist = @artist
+  `);
+  return select.get({ name, artist });
+};
+export const addAlbum = (album: Album) => {
+  const { name, artist, year, description } = album;
+  const exist = getAlbum(name, artist);
+  if (exist) return exist;
+
+  const insert = db.prepare(`
+    INSERT INTO album (name, artist, year, description)
+    VALUES (@name, @artist, @year, @description)
+  `);
+  insert.run({ name, artist, year, description });
+  const { id } = getAlbum(name, artist);
+  return { id, name, artist, year, description };
+};
+export const addAlbumSong = (albumSong: AlbumSong) => {
+  const { album_id, song_id, album_name, song_title, song_artist } = albumSong;
+  const insert = db.prepare(`
+    INSERT INTO album_song (album_id, song_id, album_name, song_title, song_artist)
+    VALUES (@album_id, @song_id, @album_name, @song_title, @song_artist)
+  `);
+  insert.run({ album_id, song_id, album_name, song_title, song_artist });
+  return { album_id, song_id, album_name, song_title, song_artist };
+};
+export const getAllAlbumSongs = () => {
+  const select = db.prepare(` SELECT * FROM album_song `);
+  return select.all();
 };
 
 export const closeDb = () => {

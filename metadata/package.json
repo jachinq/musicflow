@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "npx ts-node index.ts",
     "testsql": "npx ts-node sql.ts",
-    "test": "npx ts-node utils.ts"
+    "test": "npx ts-node utils.ts",
+    "db_album": "npx ts-node db_album.ts"
   },
   "keywords": [],
   "author": "",
