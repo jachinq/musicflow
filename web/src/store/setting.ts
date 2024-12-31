@@ -1,22 +1,28 @@
 import { create } from "zustand";
+export enum OnlineEngine {
+  Bing = "必应",
+  Baidu = "百度",
+  Google = "谷歌",
+};
 
 const defaultSettingStr = localStorage.getItem("musicflow_setting") || "{}"
 const defaultSetting = JSON.parse(defaultSettingStr) as SettingState;
+const autoInit = defaultSettingStr === "{}";
+if (defaultSetting.play_mode === undefined) defaultSetting.play_mode = 1;
+if (defaultSetting.server_url === undefined) defaultSetting.server_url = "";
+if (defaultSetting.online_engine === undefined) defaultSetting.online_engine = OnlineEngine.Bing;
+if (autoInit) localStorage.setItem("musicflow_setting", JSON.stringify(defaultSetting));
 
-if (defaultSetting.play_mode === undefined) {
-  defaultSetting.play_mode = 1;
-}
 
-if (defaultSetting.server_url === undefined) {
-  defaultSetting.server_url = "";
-}
 
 type PlayMode = 1 | 2 | 3; // 1:顺序播放 2:单曲循环 3:随机播放
 interface SettingState {
   play_mode: PlayMode; // 1:顺序播放 2:单曲循环 3:随机播放
   server_url: string;
+  online_engine: OnlineEngine;
   setPlayMode: (mode: PlayMode) => void;
   setServerUrl: (url: string) => void;
+  setOnlineEngine: (engine: OnlineEngine) => void;
 }
 
 const setLocalStorge = (key: string, value: any) => {
@@ -25,6 +31,7 @@ const setLocalStorge = (key: string, value: any) => {
 export const useSettingStore = create<SettingState>((set) => ({
   play_mode: defaultSetting.play_mode,
   server_url: defaultSetting.server_url,
+  online_engine: defaultSetting.online_engine,
   setPlayMode: (mode: PlayMode) => set(() => {
     setLocalStorge("musicflow_setting", {...defaultSetting, play_mode: mode });
     return { play_mode: mode };
@@ -33,4 +40,8 @@ export const useSettingStore = create<SettingState>((set) => ({
     setLocalStorge("musicflow_setting", {...defaultSetting, server_url: url });
     return { server_url: url };
   }),
+  setOnlineEngine: (engine: OnlineEngine) => set(() => {
+    setLocalStorge("musicflow_setting", {...defaultSetting, online_engine: engine });
+    return { online_engine: engine };
+  })
 }));

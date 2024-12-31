@@ -3,7 +3,7 @@ import { Input } from "../components/Input";
 import { Option, OptionGroup } from "../components/Option";
 import { useTheme } from "../components/theme-provider";
 import { useDevice } from "../hooks/use-device";
-import { useSettingStore } from "../store/setting";
+import { OnlineEngine, useSettingStore } from "../store/setting";
 import {
   ListMusic,
   Moon,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 function SettingsPage() {
-  const { play_mode, server_url, setPlayMode, setServerUrl } =
+  const { play_mode, server_url, online_engine, setPlayMode, setServerUrl, setOnlineEngine } =
     useSettingStore();
 
   const { theme, setTheme } = useTheme();
@@ -74,6 +74,17 @@ function SettingsPage() {
               onChange={(value) => setServerUrl(value)}
             />
           </FormItem>
+          <FormItem label="在线搜索">
+            <OptionGroup
+              defaultValue={online_engine}
+              setValue={setOnlineEngine}
+              className="flex gap-2"
+            >
+              <Option value={OnlineEngine.Bing}>必应</Option>
+              <Option value={OnlineEngine.Baidu}>百度</Option>
+              <Option value={OnlineEngine.Google}>谷歌</Option>
+            </OptionGroup>
+          </FormItem>
         </FormLayout>
       </div>
     </div>
@@ -86,9 +97,8 @@ const FormLayout = ({ label, children, className = "" }: any) => {
   const { isSmallDevice } = useDevice();
   return (
     <div
-      className={`${
-        isSmallDevice ? "grid-rows-[50px,1fr]" : "grid-cols-[150px,1fr]"
-      } grid gap-4`}
+      className={`${isSmallDevice ? "grid-rows-[50px,1fr]" : "grid-cols-[150px,1fr]"
+        } grid gap-4`}
     >
       <label className="font-bold">{label}</label>
       <div className={"px-8 py-4 bg-card rounded-lg " + className}>
@@ -102,11 +112,10 @@ const FormItem = ({ label, children }: any) => {
   const { isSmallDevice } = useDevice();
   return (
     <div
-      className={`${
-        isSmallDevice
+      className={`${isSmallDevice
           ? "grid-rows-[25px,1fr] gap-1"
           : "grid-cols-[150px,1fr] gap-4"
-      } grid items-center`}
+        } grid items-center`}
     >
       <label className="text-sm">{label}</label>
       <div className="w-full">{children}</div>
