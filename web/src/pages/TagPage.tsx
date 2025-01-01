@@ -14,7 +14,6 @@ import { Album, Artist, Music, Tag } from "../lib/defined";
 import { TagElement } from "../components/Tag";
 import { toast } from "sonner";
 import { Pagination } from "../components/Pagination";
-import { useMusicList } from "../store/musicList";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Input } from "../components/Input";
 import { useDevice } from "../hooks/use-device";

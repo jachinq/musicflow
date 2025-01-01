@@ -53,12 +53,10 @@ export const getMusicList = (
   pageSize?: number,
   filter?: MusicFilter
 ) => {
-  const { tags } = filter || {};
 
   const params = {
     page: currentPage,
     page_size: pageSize,
-    tag_ids: tags,
     ...filter,
   };
   let url = API_URL + "/api/list";

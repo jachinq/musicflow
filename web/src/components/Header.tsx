@@ -8,11 +8,11 @@ import { useEffect, useState } from "react";
 
 export const Header = () => {
   const { showPlaylist } = usePlaylist();
-  const { setFilter, setTotalCount, fetchMusicList } = useMusicList();
+  const { filter, setFilter, setTotalCount, fetchMusicList } = useMusicList();
   const { pageSize, setLoading, setError } = useHomePageStore();
   const [fitlerText, setFitlerText] = useState("");
   useEffect(() => {
-    setFilter({ any: fitlerText });
+    setFilter({ ...filter, any: fitlerText });
     if (fitlerText==="") { // 如果搜索框为空，则显示全部
       search();
     }

@@ -48,6 +48,8 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
           name="标签"
           value={<Tags song={song} tags={tags} setTags={setTags} />}
         />
+        <ShowItem name="路径" value={song.file_path} />
+        <ShowItem name="URL" value={song.file_url} />
       </div>
     </div>
   );

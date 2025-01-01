@@ -4,13 +4,14 @@ import { MusicCard } from "../components/MusicCard";
 
 import { getMusicList } from "../lib/api";
 import { Pagination } from "../components/Pagination";
-import { Music, MusicFilter, Tag } from "../lib/defined";
+import { Music, Tag } from "../lib/defined";
 import { FlameKindling, Loader, Play, Rabbit, X } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
 import { useDevice } from "../hooks/use-device";
 import { useKeyPress } from "../hooks/use-keypress";
 import { create } from "zustand";
+import { toast } from "sonner";
 
 interface ContextProps {
   initialized: boolean;
@@ -38,13 +39,6 @@ export const useHomePageStore = create<ContextProps>((set) => ({
   setMusicList: (musicList: Music[]) =>
     set((state) => ({ ...state, musicList })),
 }));
-const buildFilter = (filter: MusicFilter, filterTags: Tag[]) => {
-  return {
-    tags: filterTags.map((tag) => tag.id),
-    artist: filter.artist,
-    album: filter.album,
-  };
-};
 export const HomePage = () => {
   // const { isSmallDevice } = useDevice();
   // const pageSize = isSmallDevice ? 6 : 30;
@@ -91,7 +85,7 @@ export const HomePage = () => {
 };
 
 const Control = () => {
-  const { filterTags, filter, setFilterTags, setNeedFilter, totalCount } =
+  const { filterTags, filter, setFilterTags, setFilter, setNeedFilter, totalCount } =
     useMusicList();
   const { setAllSongs, setCurrentSong } = usePlaylist();
   const { setError } = useHomePageStore();
@@ -99,12 +93,12 @@ const Control = () => {
   const playAllSongs = () => {
     getMusicList(
       (result) => {
-        if (
-          !result ||
-          !result.success ||
-          !result.data.list ||
-          result.data.list.length === 0
-        ) {
+        if (!result || !result.success) {
+          toast.error("获取音乐列表失败");
+          return;
+        }
+        if (result.data.list.length === 0) {
+          toast.error("没有找到相关歌曲");
           return;
         }
         // 随机播放全部歌曲
@@ -118,13 +112,15 @@ const Control = () => {
       },
       1,
       totalCount,
-      buildFilter(filter, filterTags)
+      filter,
     );
   };
 
   const removeSelectedTag = (tag: Tag) => {
     const newFilterTags = filterTags.filter((t) => t.id !== tag.id);
     setFilterTags(newFilterTags);
+    filter.tags = newFilterTags.map((t) => t.id);
+    setFilter({...filter, });
     setNeedFilter(true);
   };
 
@@ -175,7 +171,8 @@ const Control = () => {
 
 const MusicList = () => {
   const { playSingleSong } = usePlaylist();
-  const { initialized, setInitialized, setLoading, setError } = useHomePageStore();
+  const { initialized, setInitialized, setLoading, setError } =
+    useHomePageStore();
   const { isSmallDevice } = useDevice();
   const pageSize = isSmallDevice ? 6 : 30;
   const {
@@ -194,24 +191,12 @@ const MusicList = () => {
       return;
     }
     setInitialized(true);
-    fetchMusicList(
-      1,
-      pageSize,
-      setTotalCount,
-      setLoading,
-      setError,
-    );
+    fetchMusicList(1, pageSize, setTotalCount, setLoading, setError);
   }, []);
 
   useEffect(() => {
     if (!needFilter) return;
-    fetchMusicList(
-      1,
-      pageSize,
-      setTotalCount,
-      setLoading,
-      setError,
-    ); // 标签切换时重新获取音乐列表
+    fetchMusicList(1, pageSize, setTotalCount, setLoading, setError); // 标签切换时重新获取音乐列表
     setNeedFilter(false);
   }, [filterTags]);
 

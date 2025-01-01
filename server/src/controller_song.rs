@@ -49,7 +49,7 @@ impl From<Metadata> for MetadataVo {
 pub struct MusicListQuery {
     page: Option<u32>,
     page_size: Option<u32>,
-    tag_ids: Option<Vec<i64>>,
+    tags: Option<Vec<i64>>,
     artist: Option<Vec<i64>>,
     album: Option<Vec<i64>>,
     any: Option<String>,
@@ -76,7 +76,7 @@ pub async fn handle_get_metadatas(
         });
     }
 
-    if let Some(tag_ids) = &query.tag_ids {
+    if let Some(tag_ids) = &query.tags {
         // 根据标签查询
         let mut tag_song_ids = vec![];
         for tag_id in tag_ids {

@@ -3,7 +3,7 @@ import { Tag } from "../lib/defined";
 import { useMusicList } from "../store/musicList";
 
 export const TagElement = ({ tag, onClick, children, className }: { tag: Tag, onClick?: (tag: Tag) => void } & React.HTMLAttributes<HTMLDivElement>) => {
-  const { filterTags, setFilterTags, setNeedFilter } = useMusicList();
+  const { filterTags, setFilterTags, filter, setNeedFilter, setFilter } = useMusicList();
   const navigate = useNavigate();
   const selectTag = () => {
     if (!tag) return;
@@ -12,10 +12,13 @@ export const TagElement = ({ tag, onClick, children, className }: { tag: Tag, on
       return;
     }
     // console.log("select tag", tagId);
-    const index = filterTags.findIndex((t) => t.id === tag.id);
+    if (!filter.tags) filter.tags = [];
+    const index = filter.tags.findIndex((t) => t === tag.id);
     if (index === -1) {
       filterTags.push(tag);
       setFilterTags([...filterTags]);
+      filter.tags = filterTags.map((t) => t.id);
+      setFilter({...filter });
       setNeedFilter(true);
     }
     navigate("/");
