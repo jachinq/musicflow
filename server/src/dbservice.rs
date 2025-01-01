@@ -65,6 +65,13 @@ fn covert_row_to_tag(row: &rusqlite::Row) -> Result<Tag> {
     })
 }
 
+fn covert_row_to_song_tag(row: &rusqlite::Row) -> Result<SongTag> {
+    Ok(SongTag {
+        song_id: row.get(0)?,
+        tag_id: row.get(1)?,
+    })
+}
+
 fn covert_row_to_song_list(row: &rusqlite::Row) -> Result<SongList> {
     Ok(SongList {
         id: row.get(0)?,
@@ -213,6 +220,7 @@ pub async fn get_lyric(song_id: &str) -> Result<Vec<Lyric>> {
     Ok(lyric_list)
 }
 
+// 标签相关接口
 pub async fn get_tags() -> Result<Vec<Tag>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM tag")?;
@@ -229,6 +237,21 @@ pub async fn get_tags() -> Result<Vec<Tag>> {
     Ok(tag_list)
 }
 
+pub async fn get_tags_by_like_name(name: &str) -> Result<Vec<Tag>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM tag WHERE name LIKE ?")?;
+    let rows = stmt.query_map([format!("%{}%", name)], |row| covert_row_to_tag(row))?;
+
+    let mut tag_list = Vec::new();
+    for tag in rows {
+        if let Ok(tag) = tag {
+            tag_list.push(tag);
+        } else {
+            println!("getTags Error: {}", tag.unwrap_err());
+        }
+    }
+    Ok(tag_list)
+}
 pub async fn get_song_tags(song_id: &str) -> Result<Vec<Tag>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT tag.id, tag.name, tag.color, tag.text_color FROM tag INNER JOIN song_tag ON tag.id = song_tag.tag_id WHERE song_tag.song_id = ?")?;
@@ -259,7 +282,23 @@ pub async fn get_tag_songs(tag_id: i64) -> Result<Vec<Metadata>> {
         }
     }
     Ok(song_list)
-    // Err(rusqlite::Error::QueryReturnedNoRows)
+}
+pub async fn get_song_tag_by_tag_ids(tag_ids: Vec<i64>) -> Result<Vec<SongTag>> {
+    let conn = connect_db()?;
+    let ids = tag_ids.iter().map(|id| id.to_string()).collect::<Vec<String>>();
+    let ids = ids.join(",");
+    let mut stmt = conn.prepare("SELECT * from song_tag WHERE tag_id IN (?)")?;
+    let rows = stmt.query_map([&ids], |row| covert_row_to_song_tag(row))?;
+
+    let mut song_tag_list = Vec::new();
+    for song in rows {
+        if let Ok(song) = song {
+            song_tag_list.push(song);
+        } else {
+            println!("getTags Error: {}", song.unwrap_err());
+        }
+    }
+    Ok(song_tag_list)
 }
 
 pub async fn add_tag(tag: &Tag) -> Result<i64> {

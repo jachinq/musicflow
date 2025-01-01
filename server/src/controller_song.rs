@@ -66,6 +66,15 @@ pub async fn handle_get_metadatas(
 
     // 过滤
     if let Some(filter) = &query.any {
+        let mut tags_filter = vec![];
+        let tags = dbservice::get_tags_by_like_name(&filter).await;
+        if let Ok(tags) = tags {
+            let tags = dbservice::get_song_tag_by_tag_ids(tags.iter().map(|t| t.id).collect()).await;
+            if let Ok(tags) = tags {
+                tags_filter = tags.iter().map(|t| t.song_id.to_string()).collect();
+            }
+        }
+
         let filter = filter.to_lowercase();
         list.retain(|m| {
             // m.tags.iter().any(|t| t.to_lowercase().contains(&filter)) ||
@@ -73,6 +82,7 @@ pub async fn handle_get_metadatas(
                 || m.artist.to_lowercase().contains(&filter)
                 || m.album.to_lowercase().contains(&filter)
                 || m.year.to_string().contains(&filter)
+                || tags_filter.contains(&m.id)
         });
     }
 
@@ -114,7 +124,10 @@ pub async fn handle_get_metadatas(
     if let Some(page_size1) = query.page_size {
         page_size = page_size1;
     }
-    println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
+    println!(
+        "current_page: {}, page_size: {}, {:?}",
+        current_page, page_size, query
+    );
     let total = list.len() as u32;
 
     let start = (current_page - 1) * page_size;
@@ -130,7 +143,7 @@ pub async fn handle_get_metadatas(
         .map(|m| MetadataVo::from(m.clone()))
         .collect::<Vec<MetadataVo>>();
     for m in &mut list {
-        if let Ok(Some(album_song)) =  dbservice::album_song_by_song_id(&m.id).await {
+        if let Ok(Some(album_song)) = dbservice::album_song_by_song_id(&m.id).await {
             m.album_id = album_song.album_id;
         }
     }
