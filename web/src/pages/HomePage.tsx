@@ -22,16 +22,8 @@ interface ContextProps {
   setCurrentPage: (currentPage: number) => void;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
-  fetchMusicList: (
-    currentPage: number,
-    setTotalCount: (totalCount: number) => void,
-    pageSize: number,
-    filter: MusicFilter,
-    filterTags: Tag[],
-    setMusicList: (musicList: Music[]) => void
-  ) => void;
 }
-const useHomePageStore = create<ContextProps>((set, get) => ({
+export const useHomePageStore = create<ContextProps>((set) => ({
   initialized: false,
   setInitialized: (initialized: boolean) =>
     set((state) => ({ ...state, initialized })),
@@ -45,37 +37,6 @@ const useHomePageStore = create<ContextProps>((set, get) => ({
   setLoading: (loading: boolean) => set((state) => ({ ...state, loading })),
   setMusicList: (musicList: Music[]) =>
     set((state) => ({ ...state, musicList })),
-  fetchMusicList: (
-    currentPage: number,
-    setTotalCount: (totalCount: number) => void,
-    pageSize: number,
-    filter: MusicFilter,
-    filterTags: Tag[],
-    setMusicList: (musicList: Music[]) => void
-  ) => {
-    get().setLoading(true);
-    setMusicList([]);
-    // console.log(needFilter, filter, filterTags)
-    getMusicList(
-      (result) => {
-        if (!result || !result.success) {
-          return;
-        }
-        // 更新音乐列表和分页信息
-        setMusicList(result.data.list);
-        setTotalCount(result.data.total);
-        get().setLoading(false);
-      },
-      (error) => {
-        console.error("获取音乐列表失败", error);
-        get().setError(error);
-        get().setLoading(false);
-      },
-      currentPage,
-      pageSize,
-      buildFilter(filter, filterTags)
-    );
-  },
 }));
 const buildFilter = (filter: MusicFilter, filterTags: Tag[]) => {
   return {
@@ -214,8 +175,7 @@ const Control = () => {
 
 const MusicList = () => {
   const { playSingleSong } = usePlaylist();
-  const { initialized, setInitialized, setLoading, fetchMusicList } =
-    useHomePageStore();
+  const { initialized, setInitialized, setLoading, setError } = useHomePageStore();
   const { isSmallDevice } = useDevice();
   const pageSize = isSmallDevice ? 6 : 30;
   const {
@@ -223,9 +183,8 @@ const MusicList = () => {
     needFilter,
     setNeedFilter,
     setTotalCount,
-    filter,
     musicList,
-    setMusicList,
+    fetchMusicList,
   } = useMusicList();
 
   useEffect(() => {
@@ -237,11 +196,10 @@ const MusicList = () => {
     setInitialized(true);
     fetchMusicList(
       1,
-      setTotalCount,
       pageSize,
-      filter,
-      filterTags,
-      setMusicList
+      setTotalCount,
+      setLoading,
+      setError,
     );
   }, []);
 
@@ -249,11 +207,10 @@ const MusicList = () => {
     if (!needFilter) return;
     fetchMusicList(
       1,
-      setTotalCount,
       pageSize,
-      filter,
-      filterTags,
-      setMusicList
+      setTotalCount,
+      setLoading,
+      setError,
     ); // 标签切换时重新获取音乐列表
     setNeedFilter(false);
   }, [filterTags]);
@@ -272,8 +229,9 @@ const HomePagePagination = () => {
   const pageSize = isSmallDevice ? 6 : 30;
   const { totalCount } = useMusicList();
   const { openPlaylist } = usePlaylist();
-  const { currentPage, setCurrentPage, fetchMusicList } = useHomePageStore();
-  const { filterTags, setTotalCount, filter, setMusicList } = useMusicList();
+  const { currentPage, setCurrentPage, setLoading, setError } =
+    useHomePageStore();
+  const { setTotalCount, fetchMusicList } = useMusicList();
 
   // 左右箭头控制翻页
   useKeyPress("ArrowRight", () => {
@@ -292,14 +250,7 @@ const HomePagePagination = () => {
   });
   const onPageChange = (page: number) => {
     setCurrentPage(page);
-    fetchMusicList(
-      page,
-      setTotalCount,
-      pageSize,
-      filter,
-      filterTags,
-      setMusicList
-    );
+    fetchMusicList(page, pageSize, setTotalCount, setLoading, setError);
   };
 
   if (totalCount <= 0) return null;

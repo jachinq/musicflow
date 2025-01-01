@@ -383,15 +383,15 @@ const DetaialDrawer = () => {
   };
   const navigate = useNavigate();
   // const location = useLocation();
-  const { setNeedFilter, setFilter, filter } = useMusicList();
-  const onSelect = (item: any) => {
-    if (type === DrawerType.ALBUM) {
-      setFilter({ ...filter, album: [item.id] });
-    } else if (type === DrawerType.ARTIST) {
-      setFilter({ ...filter, artist: [item.id] });
-    }
-    setNeedFilter(true);
-    navigate("/");
+  // const { setNeedFilter, setFilter, filter } = useMusicList();
+  const onSelect = (_item: any) => {
+    // if (type === DrawerType.ALBUM) {
+    //   setFilter({ ...filter, album: [item.id] });
+    // } else if (type === DrawerType.ARTIST) {
+    //   setFilter({ ...filter, artist: [item.id] });
+    // }
+    // setNeedFilter(true);
+    // navigate("/");
   };
 
   const { isSmallDevice } = useDevice();

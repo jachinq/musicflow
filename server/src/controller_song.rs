@@ -72,6 +72,7 @@ pub async fn handle_get_metadatas(
             m.title.to_lowercase().contains(&filter)
                 || m.artist.to_lowercase().contains(&filter)
                 || m.album.to_lowercase().contains(&filter)
+                || m.year.to_string().contains(&filter)
         });
     }
 
@@ -91,7 +92,6 @@ pub async fn handle_get_metadatas(
     }
 
     if let Some(artist_ids) = &query.artist {
-        // 根据歌手查询
         if artist_ids.len() > 0 {
             let song_ids = get_song_id_by_artist_ids(artist_ids).await;
             list.retain(|m| song_ids.contains(&m.id));
@@ -99,7 +99,6 @@ pub async fn handle_get_metadatas(
     }
 
     if let Some(ids) = &query.album {
-        // 根据歌手查询
         if ids.len() > 0 {
             let song_ids = get_song_id_by_album_ids(ids).await;
             list.retain(|m| song_ids.contains(&m.id));
@@ -115,7 +114,7 @@ pub async fn handle_get_metadatas(
     if let Some(page_size1) = query.page_size {
         page_size = page_size1;
     }
-    // println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
+    println!("current_page: {}, page_size: {}, {:?}", current_page, page_size, query);
     let total = list.len() as u32;
 
     let start = (current_page - 1) * page_size;

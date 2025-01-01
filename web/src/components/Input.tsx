@@ -8,10 +8,11 @@ interface InputProps {
   onChange?: (value: string, name: string) => void; // 可选的onChange回调函数
   name?: string; // 可选的name属性
   className?: string; // 可选的className
+  onEnter?: (value: string, name: string) => void; // 可选的onEnter回调函数
 }
 
 // 自定义Input组件
-export const Input = ({ type = 'text', placeholder, value, onChange, name, className }: InputProps) => {
+export const Input = ({ type = 'text', placeholder, value, name, className, onChange, onEnter }: InputProps) => {
   // 使用useState来管理输入框的值
   const [inputValue, setInputValue] = useState(value || '');
 
@@ -30,8 +31,13 @@ export const Input = ({ type = 'text', placeholder, value, onChange, name, class
       placeholder={placeholder}
       value={inputValue}
       onChange={handleInputChange}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          onEnter && onEnter(inputValue, name || '');
+        }
+      }}
       name={name}
-      className={`${className} outline-none bg-muted px-4 py-2 rounded-sm w-full`}
+      className={`${className || ''} outline-none bg-muted px-4 py-2 rounded-sm w-full`}
     />
   );
 };

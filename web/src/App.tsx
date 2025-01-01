@@ -1,51 +1,25 @@
 // App.tsx
 import "./styles/globals.css";
 import { Toaster } from "sonner";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { HomePage } from "./pages/HomePage";
 import MusicPlayPage from "./pages/MusicPlayPage";
 import SettingsPage from "./pages/SettingsPage";
 import { usePlaylist } from "./store/playlist";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { ThemeProvider } from "./components/theme-provider";
-import { FileMusicIcon, Settings, Tag } from "lucide-react";
 import { MoreInfoPage } from "./pages/TagPage";
 import { SongListPage } from "./pages/SongListPage";
+import { Header } from "./components/Header";
 
 function App() {
-  const { currentSong, showPlaylist } = usePlaylist();
+  const { currentSong } = usePlaylist();
+ 
   return (
     <ThemeProvider defaultTheme="dark">
       <Router>
         <div className="min-w-[320px] min-h-screen ">
-          <nav
-            className={
-              "p-4 bg-primary-foreground top-0 w-full sticky" +
-              (showPlaylist ? "" : " z-[1]")
-            }
-          >
-            <div className="flex justify-between">
-              <Link to="/" className="font-bold text-lg">
-                <div className="flex items-center justify-center gap-1">
-                  <div className="rounded-full overflow-hidden">
-                    <img src="/favicon.ico" alt="" width={28} />
-                  </div>
-                  <span className="hover:text-primary-hover">Musicflow</span>
-                </div>
-              </Link>
-              <div className="flex space-x-4 items-center">
-                <Link to="/playlist" className="navigation">
-                  <FileMusicIcon />
-                </Link>
-                <Link to="/tags" className="navigation">
-                  <Tag />
-                </Link>
-                <Link to="/settings" className="navigation">
-                  <Settings />
-                </Link>
-              </div>
-            </div>
-          </nav>
+          <Header />
 
           <div
             className={`${
