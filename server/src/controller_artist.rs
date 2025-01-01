@@ -61,3 +61,12 @@ pub async fn handle_get_artist_songs(
             .json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
 }
+
+pub async fn handle_get_artist_by_id(id: web::Path<i64>) -> impl Responder {
+    if let Ok(Some(artist)) = dbservice::artist_by_id(id.into_inner()).await {
+        HttpResponse::Ok().json(JsonResult::success(artist))
+    }
+    else {
+        HttpResponse::NotFound().json(JsonResult::<()>::error("Artist not found"))
+    }
+}

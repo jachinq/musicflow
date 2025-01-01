@@ -119,12 +119,14 @@ async fn main() -> io::Result<()> {
             )
             // 专辑相关接口
             .route("/api/album", web::post().to(handle_get_album))
+            .route("/api/album_by_id/{id}", web::get().to(handle_get_album_by_id))
             .route(
                 "/api/album_songs/{album_name}",
                 web::get().to(handle_get_album_songs),
             )
             // 艺术家相关接口
             .route("/api/artist", web::post().to(handle_get_artist))
+            .route("/api/artist_by_id/{id}", web::get().to(handle_get_artist_by_id))
             .route(
                 "/api/artist_songs/{artist_id}",
                 web::get().to(handle_get_artist_songs),

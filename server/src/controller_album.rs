@@ -72,7 +72,6 @@ pub async fn handle_get_album(body: web::Json<AlbumsBody>) -> impl Responder {
     let albums = dbservice::get_album_list().await;
     match albums {
         Ok(mut list) => {
-
             if let Some(filter) = &body.filter_text {
                 let filter = filter.to_lowercase();
                 list.retain(|album| album.name.to_lowercase().contains(&filter));
@@ -91,6 +90,7 @@ pub async fn handle_get_album(body: web::Json<AlbumsBody>) -> impl Responder {
     }
 }
 
+
 pub async fn handle_get_album_songs(
     album_id: web::Path<i64>,
     app_data: web::Data<crate::AppState>,
@@ -103,5 +103,14 @@ pub async fn handle_get_album_songs(
         ))),
         Err(e) => HttpResponse::InternalServerError()
             .json(JsonResult::<()>::error(&format!("Error: {}", e))),
+    }
+}
+
+pub async fn handle_get_album_by_id(id: web::Path<i64>) -> impl Responder {
+    if let Ok(Some(album)) = dbservice::album_by_id(id.into_inner()).await {
+        HttpResponse::Ok().json(JsonResult::success(album))
+    }
+    else {
+        HttpResponse::NotFound().json(JsonResult::<()>::error("Album not found"))
     }
 }

@@ -23,6 +23,7 @@ interface PlaylistState {
   removeSong: (song: Music) => void;
   clearPlaylist: () => void;
   getTotal: () => number;
+  playSingleSong: (song: Music) => void;
 }
 
 export const usePlaylist = create<PlaylistState>((set, get) => ({
@@ -116,4 +117,12 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
       currentSong: null,
     })),
   getTotal: () => get().allSongs.length,
+  playSingleSong: (song) => set(() => {
+    const allSongs = get().allSongs;
+    const index = allSongs.findIndex((song) => song.id === song.id);
+    if (index === -1) {
+      get().setAllSongs([...allSongs, song]);
+    }
+    return { currentSong: song };
+  }),
 }));

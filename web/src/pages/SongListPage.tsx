@@ -401,23 +401,14 @@ const SongListContent = () => {
   const {
     musicList,
   } = useSongListStore();
-  const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
-  const handleMusicClick = (music: Music) => {
-    // navigate(`/music/${musicId}`);
-    const index = allSongs.findIndex((song) => song.id === music.id);
-    if (index === -1) {
-      setAllSongs([...allSongs, music]);
-      console.log("add music to playlist", music.title);
-    }
-    setCurrentSong(music);
-  };
+  const { playSingleSong } = usePlaylist();
   return (
     <div className="flex flex-wrap gap-4 w-full px-4">
       {musicList.map((item) => (
         <MusicCard
           key={item.id}
           music={item}
-          onClick={handleMusicClick}
+          onClick={playSingleSong}
         />
       ))}
       {musicList.length === 0 && (

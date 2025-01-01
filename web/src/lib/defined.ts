@@ -85,4 +85,5 @@ export interface Artist {
     name: string;
     cover: string;
     description: string;
+    year?: number;
 }

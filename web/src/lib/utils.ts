@@ -1,9 +1,12 @@
 import { OnlineEngine } from "../store/setting";
 
-export const formatTime = (time: number) => {
+export const formatTime = (time: number, format?: string) => {
+  format = format || ":";
+  const hours = Math.floor(time / 3600);
+  time %= 3600;
   const minutes = Math.floor(time / 60);
   const seconds = Math.floor(time % 60);
-  return `${minutes.toString().padStart(2, "0")}:${seconds
+  return `${hours.toString().padStart(2, "0")}${format}${minutes.toString().padStart(2, "0")}${format}${seconds
     .toString()
     .padStart(2, "0")}`;
 };

@@ -213,7 +213,7 @@ const Control = () => {
 };
 
 const MusicList = () => {
-  const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
+  const { playSingleSong } = usePlaylist();
   const { initialized, setInitialized, setLoading, fetchMusicList } =
     useHomePageStore();
   const { isSmallDevice } = useDevice();
@@ -258,19 +258,10 @@ const MusicList = () => {
     setNeedFilter(false);
   }, [filterTags]);
 
-  const handleMusicClick = (music: Music) => {
-    // navigate(`/music/${musicId}`);
-    const index = allSongs.findIndex((song) => song.id === music.id);
-    if (index === -1) {
-      setAllSongs([...allSongs, music]);
-      console.log("add music to playlist", music.title);
-    }
-    setCurrentSong(music);
-  };
   return (
     <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
       {musicList.map((music: any) => (
-        <MusicCard key={music.id} music={music} onClick={handleMusicClick} />
+        <MusicCard key={music.id} music={music} onClick={playSingleSong} />
       ))}
     </div>
   );

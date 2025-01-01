@@ -1,12 +1,14 @@
 import { X } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDevice } from "../hooks/use-device";
+import { useClickAway } from "@uidotdev/usehooks";
 
 interface DrawerProps {
   title?: string;
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  hasTitle?: boolean;
 }
 
 export const Drawer: React.FC<DrawerProps> = ({
@@ -14,10 +16,11 @@ export const Drawer: React.FC<DrawerProps> = ({
   isOpen,
   onClose,
   children,
+  hasTitle = true,
 }) => {
   const [showDrawer, setShowDrawer] = useState(false); // 控制动画
-  const maskRef = useRef(null);
   const { isSmallDevice } = useDevice();
+  const ref = useClickAway(() => delayClose());
 
   useEffect(() => {
     // 当打开的时候，isopen=true，showDrawer from false to true, className from "translate-x-full" to "translate-x-0"
@@ -35,35 +38,42 @@ export const Drawer: React.FC<DrawerProps> = ({
   }
 
   const adaptiveClass = () => {
-    let className = "w-1/2 h-[100vh]";
+    let width = "w-1/2";
     let translate = showDrawer ? "translate-x-0" : "translate-x-full";
     if (isSmallDevice) {
-      className = "w-full h-full";
+      width = "w-full";
       translate = showDrawer ? "translate-y-0" : "translate-y-full";
     }
     // console.log(className, translate);
-    return `${className} ${translate}`
-  }
+    return `h-[100vh] ${width} ${translate}`;
+  };
 
-  return <>
-    <div ref={maskRef} className="mask" style={{opacity: showDrawer ? 0.5 : 0}}></div>
-    <div
-      className={`fixed inset-0 flex z-50 overflow-y-scroll overflow-x-hidden  ${isSmallDevice ? "flex-col" : "flex-row"}`}
-    >
-      <div className="flex-1 bg-gray-800 opacity-0" onClick={delayClose}></div>
+  return (
+    <>
+      <div className="mask" style={{ opacity: showDrawer ? 0.5 : 0 }}></div>
       <div
-        className={`bg-secondary flex flex-col shadow-lg transform transition-transform duration-300 ease-in-out  ${adaptiveClass()}
-        `}
+        className={`fixed inset-0 flex z-50 overflow-y-scroll overflow-x-hidden  ${
+          isSmallDevice ? "flex-col" : "flex-row"
+        }`}
       >
-        <div className="flex justify-between items-center p-4 select-none text-md font-bold">
-          <div>{title}</div>
-          <X
-            className="cursor-pointer hover:text-primary-hover"
-            onClick={delayClose}
-          />
+        <div className="flex-1"></div>
+        <div
+          ref={ref as any}
+          className={`bg-secondary flex flex-col shadow-lg transform transition-transform duration-300 ease-in-out  ${adaptiveClass()}
+        `}
+        >
+          {hasTitle && (
+            <div className="flex justify-between items-center p-4 select-none text-md font-bold">
+              <div>{title}</div>
+              <X
+                className="cursor-pointer hover:text-primary-hover"
+                onClick={delayClose}
+              />
+            </div>
+          )}
+          <div className="p-4 bg-secondary">{children}</div>
         </div>
-        <div className="p-4 bg-secondary">{children}</div>
       </div>
-    </div>
-  </>
+    </>
+  );
 };

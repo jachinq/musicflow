@@ -433,6 +433,19 @@ pub async fn get_album_list() -> Result<Vec<Album>> {
     Ok(album_list)
 }
 
+pub async fn album_by_id(id: i64) -> Result<Option<Album>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM album WHERE id = ?")?;
+    let mut rows = stmt.query([id])?;
+
+    let album = rows
+        .next()
+        .map(|row| convert_single(row, covert_row_to_album))
+        .unwrap_or(None);
+
+    Ok(album)
+}
+
 pub async fn album_songs(album_id: i64) -> Result<Vec<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.artists, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate FROM metadata INNER JOIN album_song ON metadata.id = album_song.song_id WHERE album_song.album_id = ?")?;
@@ -461,6 +474,7 @@ pub async fn album_song_by_song_id(song_id: &str) -> Result<Option<AlbumSong>> {
 
     Ok(album_song)
 }
+
 pub async fn album_song_by_album_id(album_id: i64) -> Result<Vec<AlbumSong>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM album_song WHERE album_id = ?")?;
@@ -492,6 +506,19 @@ pub async fn artist() -> Result<Vec<Artist>> {
         }
     }
     Ok(artist_list)
+}
+
+pub async fn artist_by_id(id: i64) -> Result<Option<Artist>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM artist WHERE id = ?")?;
+    let mut rows = stmt.query([id])?;
+
+    let artist = rows
+        .next()
+        .map(|row| convert_single(row, covert_row_to_artist))
+        .unwrap_or(None);
+
+    Ok(artist)
 }
 
 pub async fn artist_songs(artist_id: i64) -> Result<Vec<Metadata>> {

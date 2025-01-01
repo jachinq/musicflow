@@ -28,7 +28,6 @@ const Playlist = ({ clearPlaylist }: Props) => {
   const { isPlaying } = useCurrentPlay();
   // 使用 useClickAway 控制点击播放列表外面关闭播放列表
   const playlistRef = useClickAway(() => {
-    console.log("toggle playlist 1111", showPlaylist);
     return togglePlaylist(false)
   });
   const { isSmallDevice, isMediumDevice, isLargeDevice } = useDevice();

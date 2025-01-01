@@ -1,4 +1,4 @@
-import { GetAlbumList, GetArtistList, GetList, JsonResult, Music, MusicFilter, SongList } from "./defined";
+import { Album, Artist, GetAlbumList, GetArtistList, GetList, JsonResult, Music, MusicFilter, SongList } from "./defined";
 
 const defaultSettingStr = localStorage.getItem("musicflow_setting") || "{}"
 const defaultSetting = JSON.parse(defaultSettingStr);
@@ -287,6 +287,26 @@ export const getAlbumList = (
     body: JSON.stringify(params),
   });
 };
+export const getAlbumById = (
+  id: number,
+  onSuccess: (data: JsonResult<Album>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/album_by_id/${id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "GET",
+  });
+};
+export const getAlbumSongs = (
+  id: number,
+  onSuccess: (data: JsonResult<Music[]>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/album_songs/${id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "GET",
+  });
+};
 
 // --- 艺术家相关接口 ---//
 export const getArtistList = (
@@ -304,3 +324,24 @@ export const getArtistList = (
     body: JSON.stringify(params),
   });
 };
+export const getArtistById = (
+  id: number,
+  onSuccess: (data: JsonResult<Artist>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/artist_by_id/${id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "GET",
+  });
+};
+export const getArtistSongs = (
+  id: number,
+  onSuccess: (data: JsonResult<Music[]>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/artist_songs/${id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "GET",
+  });
+};
+
