@@ -45,7 +45,7 @@ export const Header = () => {
           </div>
         </Link>
         <div className="w-1/2 flex justify-end items-center gap-2">
-          <Input value={fitlerText} onChange={setFitlerText} placeholder="搜索音乐/歌手/专辑/年份" onEnter={search} />
+          <Input value={fitlerText} onChange={setFitlerText} placeholder="搜索音乐/歌手/专辑/标签/年份" onEnter={search} />
           <SearchIcon onClick={search} className="cursor-pointer hover:text-primary-hover" />
         </div>
         <div className="flex space-x-4 items-center">

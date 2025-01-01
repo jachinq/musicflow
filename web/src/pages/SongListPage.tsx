@@ -152,9 +152,9 @@ export const SongListPage = () => {
   if (isSmallDevice) {
     return (
       <div className="p-4">
-        <div className="flex flex-col items-center justify-center h-full ">
+        <div className="flex flex-col items-center justify-center h-full gap-4">
           <div className="w-full px-4">
-            <OptionGroup defaultValue={tabId} setValue={setTabId} className="font-bold text-2xl mb-4" between>
+            <OptionGroup defaultValue={tabId} setValue={setTabId} className="font-bold text-2xl" between>
               <Option value="songlist">歌单</Option>
               <Option value="music">详情</Option>
             </OptionGroup>
@@ -343,14 +343,14 @@ const SongListHeader = () => {
   if (!selectSongList) return null;
   return (
     <>
-      <div className="px-4 w-full">
-        <div className="grid grid-cols-[auto,1fr] mb-2 gap-2">
+      <div className="px-4 w-full flex flex-col gap-4">
+        <div className="grid grid-cols-[auto,1fr] gap-4">
           {selectSongList.cover ? (
             <Cover src={selectSongList.cover}
               alt={selectSongList.name}
             />) : (<div></div>)}
-          <div>
-            <div className="text-2xl font-bold mb-4">
+          <div className="flex flex-col justify-center">
+            <div className="text-4xl font-bold mb-4">
               {selectSongList.name}
             </div>
             <div className="flex gap-2 flex-wrap items-center">
@@ -362,7 +362,7 @@ const SongListHeader = () => {
           </div>
         </div>
 
-        <div className={`${isSmallDevice ? "grid grid-cols-2 grid-rows-2" : "flex"} gap-4 my-2`}>
+        <div className={`${isSmallDevice ? "grid grid-cols-2 grid-rows-2" : "flex"} gap-4`}>
           <div className="button" onClick={handlePlayAll}>
             播放全部
           </div>
@@ -578,7 +578,7 @@ const AddSongDialog = ({
     return selectMusics.findIndex((item) => item.id === music.id) !== -1;
   }
   const getGripCols = () => {
-    return isSmallDevice ? "grid-cols-[auto,auto,2fr,1fr]" : "grid-cols-[auto,auto,1fr,1fr]"
+    return isSmallDevice ? "grid-cols-[auto,48px,2fr,1fr]" : "grid-cols-[auto,48px,1fr,1fr]"
   }
   const selectAll = (checked: boolean) => {
     if (checked) {
@@ -594,7 +594,7 @@ const AddSongDialog = ({
       onSubmit={() => onSubmit && onSubmit(selectMusics)}
       onCancel={() => setShow(false)}
     >
-      <div>
+      <div className="flex flex-col gap-4">
         <Input
           type="text"
           placeholder="搜索歌曲"
@@ -604,12 +604,11 @@ const AddSongDialog = ({
         <div>
           <Pagination total={total} currentPage={currentPage} onPageChange={filterMusicList} />
         </div>
-        <div className="overflow-scroll hide-scrollbar mt-4 flex gap-2 justify-center flex-col overflow-y-scroll max-h-[calc(100vh-200px)]">
+        <div className="overflow-scroll hide-scrollbar flex gap-2 justify-center flex-col overflow-y-scroll max-h-[calc(100vh-200px)]">
           <div className={"text-sm grid items-center justify-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted " + getGripCols()}>
             <span><input type="checkbox" onChange={(e) => selectAll(e.target.checked)} /></span>
             <span>封面</span>
-            <span>歌曲名{isSmallDevice && <span>/歌手</span>}</span>
-            {!isSmallDevice && <span>歌手</span>}
+            <span>歌曲名/歌手</span>
             <span>专辑</span>
           </div>
           {fmusicList.map((item) => (

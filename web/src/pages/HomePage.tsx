@@ -75,7 +75,7 @@ export const HomePage = () => {
   }
 
   return (
-    <div className="p-4 grid gap-2">
+    <div className="p-4 grid gap-4">
       <Control />
       <MusicList />
       <HomePagePagination />
@@ -85,10 +85,11 @@ export const HomePage = () => {
 };
 
 const Control = () => {
-  const { filterTags, filter, setFilterTags, setFilter, setNeedFilter, totalCount } =
-    useMusicList();
+  const { filterTags, filter, totalCount } = useMusicList();
   const { setAllSongs, setCurrentSong } = usePlaylist();
   const { setError } = useHomePageStore();
+  const {isSmallDevice} = useDevice();
+  const newLineTag = isSmallDevice ? filterTags.length > 5 : filterTags.length > 10;
 
   const playAllSongs = () => {
     getMusicList(
@@ -112,59 +113,67 @@ const Control = () => {
       },
       1,
       totalCount,
-      filter,
+      filter
     );
-  };
-
-  const removeSelectedTag = (tag: Tag) => {
-    const newFilterTags = filterTags.filter((t) => t.id !== tag.id);
-    setFilterTags(newFilterTags);
-    filter.tags = newFilterTags.map((t) => t.id);
-    setFilter({...filter, });
-    setNeedFilter(true);
   };
 
   useKeyPress("o", playAllSongs); // o键播放全部歌曲
 
   return (
-    <div className="flex justify-center items-center">
-      <div className="control mb-4 flex flex-row gap-4 justify-start items-center w-full select-none">
+    <div className="flex justify-center items-center gap-4 flex-col">
+      <div className="control flex flex-row gap-4 justify-start items-center w-full select-none">
         <div
-          className="flex items-center gap-2 cursor-pointer hover:bg-primary-hover p-2 rounded-md bg-primary text-primary-foreground transition-all duration-300"
+          className="flex items-center gap-2 cursor-pointer hover:bg-primary-hover p-2 rounded-md bg-primary text-primary-foreground transition-all duration-300 max-h-10"
           onClick={playAllSongs}
           title="随机播放全部歌曲"
         >
           <Play />
-          播放全部
+          <span className="break-keep">播放全部</span>
         </div>
 
-        <div>
-          {filterTags.length > 0 && (
-            <div>
-              <div className="flex flex-row gap-2 justify-center items-center w-full">
-                <div className="text-sm ">标签</div>
-                <div className="flex gap-2 flex-wrap">
-                  {filterTags.map((tag) => (
-                    <div
-                      key={tag.id}
-                      className="flex items-center gap-1 p-1 rounded-md bg-muted text-muted-foreground transition-all duration-300"
-                    >
-                      {tag.name}
-                      <div
-                        onClick={() => removeSelectedTag(tag)}
-                        className="hover:text-primary-hover cursor-pointer"
-                      >
-                        <X />
-                      </div>
-                      {/* <span className="text-xs text-gray-500">({tag.count})</span> */}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        {!newLineTag && <SelectTag />}
       </div>
+      {newLineTag && <SelectTag />}
+    </div>
+  );
+};
+
+const SelectTag = () => {
+  const { filterTags, filter, setFilterTags, setFilter, setNeedFilter } =
+    useMusicList();
+  const removeSelectedTag = (tag: Tag) => {
+    const newFilterTags = filterTags.filter((t) => t.id !== tag.id);
+    setFilterTags(newFilterTags);
+    filter.tags = newFilterTags.map((t) => t.id);
+    setFilter({ ...filter });
+    setNeedFilter(true);
+  };
+  return (
+    <div>
+      {filterTags.length > 0 && (
+        <div>
+          <div className="flex flex-row gap-2 justify-center items-center w-full">
+            {/* <div className="text-sm break-keep">标签</div> */}
+            <div className="flex gap-2 flex-wrap">
+              {filterTags.map((tag) => (
+                <div
+                  key={tag.id}
+                  className="flex items-center gap-1 p-1 rounded-md bg-muted text-muted-foreground transition-all duration-300"
+                >
+                  {tag.name}
+                  <div
+                    onClick={() => removeSelectedTag(tag)}
+                    className="hover:text-primary-hover cursor-pointer"
+                  >
+                    <X />
+                  </div>
+                  {/* <span className="text-xs text-gray-500">({tag.count})</span> */}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -246,7 +255,6 @@ const HomePagePagination = () => {
       limit={pageSize}
       total={totalCount}
       onPageChange={onPageChange}
-      className="mt-4"
     />
   );
 };
