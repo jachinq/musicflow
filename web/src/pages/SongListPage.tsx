@@ -348,7 +348,6 @@ const SongListHeader = () => {
           {selectSongList.cover ? (
             <Cover src={selectSongList.cover}
               alt={selectSongList.name}
-              type="songlist"
             />) : (<div></div>)}
           <div>
             <div className="text-2xl font-bold mb-4">
@@ -632,7 +631,6 @@ const AddSongDialog = ({
               <Cover
                 src={getCoverSmallUrl(item.album_id)}
                 alt={item.title}
-                type=""
                 size={48}
               />
               <div className="flex gap-1 flex-col">

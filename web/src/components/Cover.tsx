@@ -5,7 +5,7 @@ interface CoverProps {
   src: string;
   defaultSrc?: string;
   alt?: string;
-  type?: string;
+  roundType?: string;
   size?: number;
   fallback?: React.ReactNode;
 }
@@ -15,7 +15,7 @@ export const Cover = ({
   defaultSrc,
   alt,
   className,
-  type = "album",
+  roundType,
   size = 140,
   fallback = <ImageIcon />,
 }: CoverProps & React.HTMLAttributes<HTMLDivElement>) => {
@@ -66,10 +66,11 @@ export const Cover = ({
       maxWidth: sizePx,
       maxHeight: sizePx,
     };
-    if (type === "album") {
+    console.log(roundType);
+    if (roundType === "card_text") {
       style.borderRadius = "8px 8px 0 0"
     }
-    if (type === "avatar") {
+    if (roundType === "circle") {
       style.borderRadius = "50%"
     }
     return style;

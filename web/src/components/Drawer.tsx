@@ -52,7 +52,7 @@ export const Drawer: React.FC<DrawerProps> = ({
     >
       <div className="flex-1 bg-gray-800 opacity-0" onClick={delayClose}></div>
       <div
-        className={`bg-background flex flex-col shadow-lg transform transition-transform duration-300 ease-in-out  ${adaptiveClass()}
+        className={`bg-secondary flex flex-col shadow-lg transform transition-transform duration-300 ease-in-out  ${adaptiveClass()}
         `}
       >
         <div className="flex justify-between items-center p-4 select-none text-md font-bold">
@@ -62,7 +62,7 @@ export const Drawer: React.FC<DrawerProps> = ({
             onClick={delayClose}
           />
         </div>
-        <div className="p-4 bg-background">{children}</div>
+        <div className="p-4 bg-secondary">{children}</div>
       </div>
     </div>
   </>

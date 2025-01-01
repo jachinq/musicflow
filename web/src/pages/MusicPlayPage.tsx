@@ -25,7 +25,7 @@ function MusicPlayPage() {
     windowWidth,
   } = useDevice();
   const gridCols = `${
-    isSmallDevice ? "1fr" : isMediumDevice ? "1fr 1fr" : "1fr 2fr"
+    isSmallDevice ? "1fr" : isMediumDevice || isLargeDevice ? "1fr 1fr" : "1fr 2fr"
   }`;
   // const album_size = isSmallDevice? 250 : isMediumDevice? 300 : 400;
   // const album_border_width = isSmallDevice? 60 : isMediumDevice? 70 : 80;
@@ -96,7 +96,7 @@ function MusicPlayPage() {
       <div
         className={`flex justify-center w-full ${
           !isSmallDevice
-            ? "min-h-[calc(100vh-150px)] items-center"
+            ? "min-h-[calc(100vh-150px)] items-center sticky top-[60px]"
             : "p-8 items-start"
         }`}
       >

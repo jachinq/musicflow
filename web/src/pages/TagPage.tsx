@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { getAlbumList, getArtistList, getTagList } from "../lib/api";
+import {
+  getAlbumList,
+  getArtistList,
+  getCoverSmallUrl,
+  getTagList,
+} from "../lib/api";
 import { Album, Artist, Tag } from "../lib/defined";
 import { TagElement } from "../components/Tag";
 import { toast } from "sonner";
@@ -46,7 +51,7 @@ export const MoreInfoPage = () => {
     setTabId(parseTabId);
   }, []);
   return (
-    <div className={"px-8 py-4 grid gap-4 " + getLayout()}>
+    <div className={"px-8 py-4 grid gap-8 " + getLayout()}>
       <OptionGroup
         defaultValue={tabId}
         setValue={setTabId}
@@ -64,8 +69,8 @@ export const MoreInfoPage = () => {
         </Option>
       </OptionGroup>
       {tabId == "tags" && <TagList />}
-      {tabId == "albums" && <AlbumList />}
-      {tabId == "artists" && <ArtistList />}
+      {tabId == "albums" && <WithDrawerList type={DrawerType.ALBUM} />}
+      {tabId == "artists" && <WithDrawerList type={DrawerType.ARTIST} />}
     </div>
   );
 };
@@ -97,32 +102,38 @@ const TagList = () => {
   );
 };
 
-const AlbumList = () => {
-  const [selectedAlbum, setSelectedAlbum] = useState<Album>();
+type WithDrawerItem = Album | Artist;
+enum DrawerType{
+  ALBUM = "专辑",
+  ARTIST = "歌手",
+} 
+const WithDrawerList = ({type}: {type: DrawerType}) => {
+  const [selectedItem, setSelectedItem] = useState<WithDrawerItem>();
   const [showDrawer, setShowDrawer] = useState(false);
-  const [albums, setAlbums] = useState<Album[]>([]);
+  const [items, setItems] = useState<WithDrawerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(30);
   const [total, setTotal] = useState(0);
   const [filterText, setFilterText] = useState("");
-  const {online_engine} = useSettingStore();
-  const {id} = useParams();
+  const { online_engine } = useSettingStore();
+  const { id } = useParams();
 
-  const fetchAlbums = (currentPage: number, pageSize?: number) => {
+  const fetchItems = (currentPage: number, pageSize?: number) => {
     setCurrentPage(currentPage);
     if (!pageSize) {
       pageSize = 30;
     }
     setPageSize(pageSize);
-    getAlbumList(
+    const fetchFunc = type === DrawerType.ALBUM? getAlbumList : getArtistList;
+    fetchFunc(
       currentPage,
       pageSize,
       filterText,
       (result) => {
         if (result && result.success) {
-          setAlbums(result.data.list);
+          setItems(result.data.list);
           setTotal(result.data.total);
         } else {
           toast.error("获取专辑列表失败", {
@@ -140,162 +151,43 @@ const AlbumList = () => {
     );
   };
   useEffect(() => {
-    fetchAlbums(currentPage);
+    fetchItems(currentPage);
   }, []);
   useEffect(() => {
-    fetchAlbums(1, pageSize);
+    fetchItems(1, pageSize);
   }, [filterText]);
   useEffect(() => {
     if (id) {
-      const album = albums.find((item) => item.name === id);
-      // console.log("hit album", album);
-      if (album) {
-        setSelectedAlbum(album);
+      const item = items.find((item) => item.name === id);
+      if (item) {
+        setSelectedItem(item);
         setShowDrawer(true);
       }
     }
-  }, [id, albums]);
+  }, [id, items]);
 
   const navigate = useNavigate();
   const { setNeedFilter, setFilter, filter } = useMusicList();
-  const filterAlbum = (item: Album) => {
-    setFilter({ ...filter, album: [item.id] });
+  const onSelect = (item: any) => {
+    if (type === DrawerType.ALBUM) {
+      setFilter({ ...filter, album: [item.id] });
+    } else if (type === DrawerType.ARTIST) {
+      setFilter({ ...filter, artist: [item.id] });
+    }
     setNeedFilter(true);
     navigate("/");
   };
   const onlineSearch = () => {
-    if (!selectedAlbum) return;
-    window.open(getOnlineEngineUrl(online_engine, selectedAlbum.name), "_blank");
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
-
-  return (
-    <div>
-      <div className="grid gap-4 mb-4 grid-cols-1">
-        <Input
-          placeholder="搜索专辑"
-          value={filterText}
-          onChange={setFilterText}
-        />
-        <Pagination
-          total={total}
-          limit={pageSize}
-          currentPage={currentPage}
-          onPageChange={fetchAlbums}
-        />
-      </div>
-      <div className="flex flex-wrap gap-4 mb-4">
-        {albums.map((album, index) => (
-          <AlbumItem key={album.name + index} album={album} onSelect={() => { setShowDrawer(true); setSelectedAlbum(album); }} />
-        ))}
-      </div>
-      <Drawer isOpen={showDrawer} onClose={() => setShowDrawer(false)} title="专辑详情">
-        <div>
-          {selectedAlbum && (
-            <div className="grid grid-cols-1 gap-4 justify-center text-center">
-              <div className="w-full flex justify-center">
-                <AlbumItem album={selectedAlbum} onSelect={filterAlbum} type="detail" />
-              </div>
-              <div className="flex justify-center items-center gap-2 cursor-pointer" onClick={onlineSearch}>
-                <SearchIcon />
-                <span>在线搜索</span>
-              </div>
-              <div className="font-bold">{selectedAlbum.name || "暂无专辑名"}</div>
-              <div>{selectedAlbum.description || "暂无描述"}</div>
-            </div>)
-          }
-        </div>
-      </Drawer>
-    </div>
-  );
-};
-
-const AlbumItem = ({ album, type = "thumbnail", onSelect }: { album: Album, type?: string, onSelect?: (item: Album) => void }) => {
-  const iconSize = type == 'thumbnail' ? 80 : 120;
-  const cutSize = type == 'thumbnail' ? 4 : 8;
-  const handleClick = () => {
-    onSelect && onSelect(album);
-  };
-  const fallback = () => {
-    return <div className="group-hover:text-primary-hover">
-      {album.name.slice(0, Math.min(album.name.length, cutSize))}
-    </div>
-  }
-  return (
-    <div className="bg-muted rounded-md cursor-pointer group" onClick={handleClick}>
-      <Cover src={album.cover} alt={album.name} type="avatar" fallback={fallback()} size={iconSize} />
-    </div>
-  );
-};
-
-const ArtistList = () => {
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(30);
-  const [total, setTotal] = useState(0);
-  const [filterText, setFilterText] = useState("");
-  const [openDrawer, setOpenDrawer] = useState(false);
-  const [selectedArtist, setSelectedArtist] = useState<Artist>();
-  const {online_engine} = useSettingStore();
-
-  const fetchArtists = (currentPage: number, pageSize?: number) => {
-    setCurrentPage(currentPage);
-    if (!pageSize) pageSize = 30;
-    setPageSize(pageSize);
-    getArtistList(
-      currentPage,
-      pageSize,
-      filterText,
-      (result) => {
-        if (result && result.success) {
-          setArtists(result.data.list);
-          setTotal(result.data.total);
-        } else {
-          toast.error("获取歌手列表失败", {
-            description: result.message,
-          });
-          setError(result.message as any);
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error(error);
-        toast.error(error.message);
-        setError(error.message);
-      }
+    if (!selectedItem) return;
+    window.open(
+      getOnlineEngineUrl(online_engine, selectedItem.name),
+      "_blank"
     );
   };
-  useEffect(() => {
-    fetchArtists(currentPage);
-  }, []);
-  useEffect(() => {
-    fetchArtists(1, pageSize);
-  }, [filterText]);
-
-  const navigate = useNavigate();
-  const { setNeedFilter, setFilter, filter } = useMusicList();
-  const filterArtist = (item: Artist) => {
-    setFilter({ ...filter, artist: [item.id] });
-    setNeedFilter(true);
-    navigate("/");
-  };
-  const onlineSearch = () => {
-    if (!selectedArtist) return;
-    window.open(getOnlineEngineUrl(online_engine, selectedArtist.name), "_blank");
-  };
 
   if (loading) {
     return <div>Loading...</div>;
   }
-
   if (error) {
     return <div>Error: {error}</div>;
   }
@@ -304,7 +196,7 @@ const ArtistList = () => {
     <div>
       <div className="grid gap-4 mb-4 grid-cols-1">
         <Input
-          placeholder="搜索歌手"
+          placeholder={"搜索" + type}
           value={filterText}
           onChange={setFilterText}
         />
@@ -312,49 +204,103 @@ const ArtistList = () => {
           total={total}
           limit={pageSize}
           currentPage={currentPage}
-          onPageChange={fetchArtists}
+          onPageChange={fetchItems}
         />
       </div>
-      <div className="flex flex-wrap gap-4 my-4">
-        {artists.map((artist, index) => (
-          <ArtistItem key={artist.name + index} artist={artist} onSelect={(item) => {
-            setSelectedArtist(item);
-            setOpenDrawer(true);
-          }} />
+      <div className="flex flex-wrap gap-10 mb-4">
+        {items.map((album, index) => (
+          <div className="flex flex-col items-center gap-2">
+            <CoverItem
+              key={album.name + index}
+              item={album}
+              type={type}
+              onSelect={() => {
+                setShowDrawer(true);
+                setSelectedItem(album);
+              }}
+            />
+            <div className="w-[100px] overflow-hidden text-center">
+              <span className="text-sm overflow-hidden text-ellipsis whitespace-nowrap">
+                {album.name}
+              </span>
+            </div>
+          </div>
         ))}
       </div>
-      <Drawer isOpen={openDrawer} onClose={() => setOpenDrawer(false)} title="歌手详情">
+      <Drawer
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        title={type + "详情"}
+      >
         <div>
-          {selectedArtist && (
+          {selectedItem && (
             <div className="grid grid-cols-1 gap-4 justify-center text-center">
               <div className="w-full flex justify-center">
-                <ArtistItem type="detail" artist={selectedArtist} onSelect={filterArtist} />
+                <CoverItem type={type} item={selectedItem} onSelect={onSelect} />
               </div>
-              <div className="flex justify-center items-center gap-2 cursor-pointer" onClick={onlineSearch}>
+              <div
+                className="flex justify-center items-center gap-2 cursor-pointer"
+                onClick={onlineSearch}
+              >
                 <SearchIcon />
                 <span>在线搜索</span>
               </div>
-              <div className=" font-bold">{selectedArtist.name || "暂无歌手名"}</div>
-              <div>{selectedArtist.description || "暂无描述"}</div>
-            </div>)}
+              <div className="font-bold">
+                {selectedItem.name || "暂无专辑名"}
+              </div>
+              <div>{selectedItem.description || "暂无描述"}</div>
+            </div>
+          )}
         </div>
       </Drawer>
     </div>
   );
 };
 
-const ArtistItem = ({ artist, onSelect, type = 'thumnail' }: {
-  artist: Artist, type?: string, onSelect?: (item: Artist) => void
+const CoverItem = ({
+  item,
+  onSelect,
+  type = DrawerType.ARTIST,
+}: {
+  item: Artist | Album;
+  type?: DrawerType;
+  onSelect?: (item: Artist | Album) => void;
 }) => {
-  const iconSize = type == 'thumnail' ? 80 : 120;
-  const cutSize = type == 'thumnail' ? 4 : 8;
+  const { isSmallDevice } = useDevice();
+  const iconSize = isSmallDevice ? 80 : 120;
+  const cutSize = isSmallDevice ? 4 : 8;
   const handleClick = () => {
-    onSelect && onSelect(artist);
+    onSelect && onSelect(item);
   };
-  if (type == 'detail') console.log(artist);
+  const getSrc = () => {
+    if (type === DrawerType.ARTIST) {
+      return item.cover;
+    }
+    if (type === DrawerType.ALBUM) {
+      return getCoverSmallUrl(item.id);
+    }
+    return "";
+  };
+  const getClass = () => {
+    if (type === DrawerType.ALBUM) {
+      return "bg-muted rounded-md cursor-pointer group";
+    }
+    return "cursor-pointer group";
+  };
+  const fallback = () => (
+    <div className="group-hover:text-primary-hover">
+      {item.name.slice(0, Math.min(item.name.length, cutSize))}
+    </div>
+  );
   return (
-    <div className="cursor-pointer" onClick={handleClick} >
-      <Cover src={artist.cover} alt={artist.name} type="avatar" fallback={artist.name.slice(0, Math.min(artist.name.length, cutSize))} size={iconSize} />
+    <div className={getClass()} onClick={handleClick}>
+      <Cover
+        src={getSrc()}
+        alt={item.name}
+        roundType={type === DrawerType.ALBUM ? "round" : "circle"}
+        fallback={fallback()}
+        size={iconSize}
+      />
     </div>
   );
 };
