@@ -28,7 +28,7 @@ use dbservice::*;
 #[derive(Clone, Debug, Deserialize, Serialize, Default)]
 struct AppState {
     music_path: String,
-    music_map: HashMap<String, Metadata>, // 音乐 ID 到 Music 实例的映射表
+    music_map: HashMap<String, MetadataVo>, // 音乐 ID 到 Music 实例的映射表
     album_list: Vec<Album>,
 }
 
@@ -148,7 +148,7 @@ async fn main() -> io::Result<()> {
     .await
 }
 
-async fn init_music_map(music_dir: &str) -> (HashMap<String, Metadata>, Vec<Album>) {
+async fn init_music_map(music_dir: &str) -> (HashMap<String, MetadataVo>, Vec<Album>) {
     // 初始化数据库
     let res = get_metadata_list().await;
     // print!("db result: {:?}", res);
@@ -173,7 +173,7 @@ async fn init_music_map(music_dir: &str) -> (HashMap<String, Metadata>, Vec<Albu
                 println!("Metadata not found for {}", path);
                 continue;
             }
-            let mut metadata = metadata.unwrap().clone();
+            let mut metadata = MetadataVo::from(metadata.unwrap().clone());
 
             if metadata.album.is_empty() {
                 metadata.album = "未知专辑".to_string();
@@ -182,7 +182,10 @@ async fn init_music_map(music_dir: &str) -> (HashMap<String, Metadata>, Vec<Albu
 
             let url = metadata.file_url.replace("\\", "/");
             metadata.file_url = format!("/music{}", url);
-            music_map.insert(metadata.id.to_string(), metadata.clone());
+            if let Ok(Some(album_song)) = dbservice::album_song_by_song_id(&metadata.id).await {
+                metadata.album_id = album_song.album_id;
+            }
+            music_map.insert(metadata.id.to_string(), metadata);
         }
     }
     println!("Music count: {}", music_map.len());
@@ -191,11 +194,11 @@ async fn init_music_map(music_dir: &str) -> (HashMap<String, Metadata>, Vec<Albu
     (music_map, album_list)
 }
 
-fn pick_metadata(list: &Vec<Metadata>, music_map: &HashMap<String, Metadata>) -> Vec<Metadata> {
-    let musics: Vec<Metadata> = music_map.values().cloned().collect();
+fn pick_metadata(list: &Vec<Metadata>, music_map: &HashMap<String, MetadataVo>) -> Vec<MetadataVo> {
+    let musics: Vec<_> = music_map.values().cloned().collect();
 
     let ids: Vec<String> = list.into_iter().map(|s| s.id.clone()).collect();
-    let list: Vec<Metadata> = musics.into_iter().filter(|m| ids.contains(&m.id)).collect();
+    let list: Vec<_> = musics.into_iter().filter(|m| ids.contains(&m.id)).collect();
     list
 }
 

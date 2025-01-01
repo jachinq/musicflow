@@ -10,7 +10,7 @@ pub struct ListMusic {
     total: u32,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-struct MetadataVo {
+pub struct MetadataVo {
     pub id: String,
     pub file_name: String,
     pub file_path: String,
@@ -60,7 +60,7 @@ pub async fn handle_get_metadatas(
     query: web::Json<MusicListQuery>,
 ) -> impl Responder {
     // let music_path = data.music_path.clone();
-    let musics = data.music_map.values().cloned().collect::<Vec<Metadata>>();
+    let musics = data.music_map.values().cloned().collect::<Vec<_>>();
     let mut list = musics.clone();
 
     // 过滤
@@ -147,10 +147,7 @@ pub async fn handle_get_metadata(
         .get(&song_id.to_string())
         .cloned()
         .unwrap_or_default();
-    let mut metadata = MetadataVo::from(metadata);
-    if let Ok(Some(album_song)) =  dbservice::album_song_by_song_id(&metadata.id).await {
-        metadata.album_id = album_song.album_id;
-    }
+
     HttpResponse::Ok().json(JsonResult::success(metadata))
 }
 
