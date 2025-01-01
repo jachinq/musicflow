@@ -12,7 +12,7 @@ import {
   Loader2,
   PauseCircle,
   PlayCircle,
-  Star,
+  // Star,
   Volume1Icon,
   Volume2Icon,
   VolumeXIcon,
@@ -349,12 +349,12 @@ export const AudioPlayer = () => {
     pauseAudio();
   };
 
-  const groupSong = () => {
-    if (!currentSong) {
-      return;
-    }
-    // TODO: open group modal
-  };
+  // const groupSong = () => {
+  //   if (!currentSong) {
+  //     return;
+  //   }
+  //   // TODO: open group modal
+  // };
 
   const [showVolume, setShowVolume] = useState<boolean>(false);
   const changeVolume = (value: number) => {
@@ -407,12 +407,13 @@ export const AudioPlayer = () => {
               className={`play-controls flex gap-2 flex-row justify-center items-center`}
             >
               {isDetailPage && (
-                <div
-                  className="hover:text-primary-hover cursor-pointer"
-                  onClick={groupSong}
-                >
-                  <Star />
-                </div>
+                // <div
+                //   className="hover:text-primary-hover cursor-pointer"
+                //   onClick={groupSong}
+                // >
+                //   <Star />
+                // </div>
+                <></>
               )}
 
               <div
