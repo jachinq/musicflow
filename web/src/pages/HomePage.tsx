@@ -1,5 +1,4 @@
 // pages/HomePage.tsx
-import "../styles/HomePage.css";
 import { useEffect } from "react";
 import { MusicCard } from "../components/MusicCard";
 
@@ -96,7 +95,7 @@ export const HomePage = () => {
   //   setTotalCount,
   //   filter,
   // } = useMusicList();
-  const { error, loading} = useHomePageStore();
+  const { error, loading } = useHomePageStore();
 
   if (loading) {
     return (
@@ -121,7 +120,7 @@ export const HomePage = () => {
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 grid gap-2">
       <Control />
       <MusicList />
       <HomePagePagination />
@@ -215,7 +214,8 @@ const Control = () => {
 
 const MusicList = () => {
   const { allSongs, setAllSongs, setCurrentSong } = usePlaylist();
-  const { initialized, setInitialized, setLoading, fetchMusicList } = useHomePageStore();
+  const { initialized, setInitialized, setLoading, fetchMusicList } =
+    useHomePageStore();
   const { isSmallDevice } = useDevice();
   const pageSize = isSmallDevice ? 6 : 30;
   const {
@@ -235,12 +235,26 @@ const MusicList = () => {
       return;
     }
     setInitialized(true);
-    fetchMusicList(1, setTotalCount, pageSize, filter, filterTags, setMusicList);
+    fetchMusicList(
+      1,
+      setTotalCount,
+      pageSize,
+      filter,
+      filterTags,
+      setMusicList
+    );
   }, []);
 
   useEffect(() => {
     if (!needFilter) return;
-    fetchMusicList(1, setTotalCount, pageSize, filter, filterTags, setMusicList); // 标签切换时重新获取音乐列表
+    fetchMusicList(
+      1,
+      setTotalCount,
+      pageSize,
+      filter,
+      filterTags,
+      setMusicList
+    ); // 标签切换时重新获取音乐列表
     setNeedFilter(false);
   }, [filterTags]);
 
@@ -254,12 +268,10 @@ const MusicList = () => {
     setCurrentSong(music);
   };
   return (
-    <div className="flex justify-center items-center">
-      <div className="card-container grid gap-4 w-full">
-        {musicList.map((music: any) => (
-          <MusicCard key={music.id} music={music} onClick={handleMusicClick} />
-        ))}
-      </div>
+    <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
+      {musicList.map((music: any) => (
+        <MusicCard key={music.id} music={music} onClick={handleMusicClick} />
+      ))}
     </div>
   );
 };
@@ -268,19 +280,14 @@ const HomePagePagination = () => {
   const { isSmallDevice } = useDevice();
   const pageSize = isSmallDevice ? 6 : 30;
   const { totalCount } = useMusicList();
-  const { showPlaylist } = usePlaylist();
+  const { openPlaylist } = usePlaylist();
   const { currentPage, setCurrentPage, fetchMusicList } = useHomePageStore();
-  const {
-    filterTags,
-    setTotalCount,
-    filter,
-    setMusicList
-  } = useMusicList();
+  const { filterTags, setTotalCount, filter, setMusicList } = useMusicList();
 
   // 左右箭头控制翻页
   useKeyPress("ArrowRight", () => {
     if (
-      !showPlaylist &&
+      !openPlaylist &&
       totalCount > 0 &&
       currentPage < Math.ceil(totalCount / pageSize)
     ) {
@@ -288,13 +295,20 @@ const HomePagePagination = () => {
     }
   });
   useKeyPress("ArrowLeft", () => {
-    if (!showPlaylist && totalCount > 0 && currentPage > 1) {
+    if (!openPlaylist && totalCount > 0 && currentPage > 1) {
       onPageChange(currentPage - 1);
     }
   });
   const onPageChange = (page: number) => {
     setCurrentPage(page);
-    fetchMusicList(page, setTotalCount, pageSize, filter, filterTags, setMusicList);
+    fetchMusicList(
+      page,
+      setTotalCount,
+      pageSize,
+      filter,
+      filterTags,
+      setMusicList
+    );
   };
 
   if (totalCount <= 0) return null;

@@ -27,15 +27,18 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
     );
   }, [song]);
 
+  const gotoArtist = () => {
+    navigate(`/artists/${song.artist_id}`);
+  };
   const gotoAlbum = () => {
-    navigate(`/albums/${song.album}`);
+    navigate(`/albums/${song.album_id}`);
   };
 
   return (
     <div className="flex flex-col justify-center items-center px-8 py-4">
       <div className="flex flex-col gap-4">
         <ShowItem name="名称" value={song.title} />
-        <ShowItem name="歌手" value={JSON.parse(song.artists).join(" / ")} />
+        <ShowItem name="歌手" value={JSON.parse(song.artists).join(" / ")} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
         <ShowItem name="专辑" value={song.album} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoAlbum() }} />
         <ShowItem name="比特率" value={song.bitrate.toFixed(2)} />
         <ShowItem name="采样率" value={song.samplerate.toFixed(2)} />

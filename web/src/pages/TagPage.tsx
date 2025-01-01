@@ -119,7 +119,8 @@ const WithDrawerList = ({type}: {type: DrawerType}) => {
   const [filterText, setFilterText] = useState("");
   const { online_engine } = useSettingStore();
   const { id } = useParams();
-
+  const { isSmallDevice } = useDevice();
+  const iconSize = isSmallDevice ? 80 : 120;
   const fetchItems = (currentPage: number, pageSize?: number) => {
     setCurrentPage(currentPage);
     if (!pageSize) {
@@ -158,7 +159,7 @@ const WithDrawerList = ({type}: {type: DrawerType}) => {
   }, [filterText]);
   useEffect(() => {
     if (id) {
-      const item = items.find((item) => item.name === id);
+      const item = items.find((item) => item.id.toString() === id);
       if (item) {
         setSelectedItem(item);
         setShowDrawer(true);
@@ -180,7 +181,7 @@ const WithDrawerList = ({type}: {type: DrawerType}) => {
   const onlineSearch = () => {
     if (!selectedItem) return;
     window.open(
-      getOnlineEngineUrl(online_engine, selectedItem.name),
+      getOnlineEngineUrl(online_engine, `${type} ${selectedItem.name}`),
       "_blank"
     );
   };
@@ -207,9 +208,10 @@ const WithDrawerList = ({type}: {type: DrawerType}) => {
           onPageChange={fetchItems}
         />
       </div>
-      <div className="flex flex-wrap gap-10 mb-4">
+      <div className="gap-10 justify-center grid"
+      style={{gridTemplateColumns: `repeat(auto-fill, minmax(${iconSize}px, 1fr))`}}>
         {items.map((album, index) => (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col justify-center items-center gap-2 m-x-auto">
             <CoverItem
               key={album.name + index}
               item={album}

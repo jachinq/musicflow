@@ -29,6 +29,7 @@ export interface Music {
     artists: string;
     album: string;
     album_id: number;
+    artist_id: number;
     year: number;
     duration: number;
     bitrate: number;

@@ -51,11 +51,11 @@ export const AudioPlayer = () => {
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
 
   const {
-    showPlaylist,
+    openPlaylist,
     allSongs,
     currentSong,
     setCurrentSong,
-    setShowPlaylist,
+    togglePlaylist,
     setAllSongs,
   } = usePlaylist();
 
@@ -70,7 +70,7 @@ export const AudioPlayer = () => {
 
   // p 显示/隐藏播放列表
   useKeyPress("p", () => {
-    setShowPlaylist(!showPlaylist);
+    togglePlaylist();
   });
 
   // j 跳到上一首歌曲
@@ -104,11 +104,11 @@ export const AudioPlayer = () => {
   // 音量键调节音量 / 切歌
   useKeyPress("ArrowUp", () => {
     if (showVolume && volume < 1) changeVolume(Math.min(volume + 0.005, 1));
-    if (showPlaylist) nextSong(-1);
+    if (openPlaylist) nextSong(-1);
   });
   useKeyPress("ArrowDown", () => {
     if (showVolume && volume > 0) changeVolume(Math.max(volume - 0.005, 0));
-    if (showPlaylist) nextSong(1);
+    if (openPlaylist) nextSong(1);
   });
 
   useEffect(() => {
@@ -345,7 +345,7 @@ export const AudioPlayer = () => {
 
   const clearPlaylist = () => {
     setAllSongs([]);
-    setShowPlaylist(false);
+    togglePlaylist(false);
     pauseAudio();
   };
 
@@ -450,7 +450,7 @@ export const AudioPlayer = () => {
 
               <div
                 className="cursor-pointer hover:text-primary-hover"
-                onClick={() => setShowPlaylist(!showPlaylist)}
+                onClick={()=>togglePlaylist(true)}
               >
                 <ListMusic />
               </div>

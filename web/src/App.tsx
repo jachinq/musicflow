@@ -13,12 +13,17 @@ import { MoreInfoPage } from "./pages/TagPage";
 import { SongListPage } from "./pages/SongListPage";
 
 function App() {
-  const { currentSong } = usePlaylist();
+  const { currentSong, showPlaylist } = usePlaylist();
   return (
     <ThemeProvider defaultTheme="dark">
       <Router>
         <div className="min-w-[320px] min-h-screen ">
-          <nav className="p-4 bg-primary-foreground sticky top-0" style={{zIndex: 1}}>
+          <nav
+            className={
+              "p-4 bg-primary-foreground top-0 w-full sticky" +
+              (showPlaylist ? "" : " z-[1]")
+            }
+          >
             <div className="flex justify-between">
               <Link to="/" className="font-bold text-lg">
                 <div className="flex items-center justify-center gap-1">

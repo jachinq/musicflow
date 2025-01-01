@@ -66,7 +66,6 @@ export const Cover = ({
       maxWidth: sizePx,
       maxHeight: sizePx,
     };
-    console.log(roundType);
     if (roundType === "card_text") {
       style.borderRadius = "8px 8px 0 0"
     }
@@ -79,7 +78,7 @@ export const Cover = ({
   return (
     <div
       style={getStyle()}
-      className={"flex items-center justify-center bg-background shadow-md overflow-hidden " +
+      className={"flex items-center justify-center bg-muted shadow-md overflow-hidden " +
         className}
     >
       {!showFallback && (<img ref={imgRef} width={size} className="object-cover hidden" alt={alt} />)}

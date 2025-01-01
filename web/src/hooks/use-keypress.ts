@@ -23,9 +23,9 @@ export const useKeyPress = (
       event.shiftKey === shiftKey && // 检查 Shift 键
       event.altKey === altKey // 检查 Alt 键
     ) {
-      // 按键触发元素不是 body 的话，不执行 callback
-      // console.log('useKeyPress prevent default', key, event);
-      if (event.target !== document.body) {
+      // 按键触发元素是 表单元素 的话，不执行 callback
+      let target = event.target as HTMLElement;
+      if (target.localName === 'input' || target.localName === 'textarea' || target.isContentEditable) {
         return;
       }
       callbackRef.current(event);

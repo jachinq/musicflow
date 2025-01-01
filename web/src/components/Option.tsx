@@ -17,11 +17,11 @@ export const Option = ({
   const { defaultValue, setValue } = useContext(context);
   return (
     <div
-      className={`cursor-pointer 
-        ${className} 
-        ${value === defaultValue && "text-blue-500"} 
-        ${!isSmallDevice && "hover:text-primary-hover"} 
-        ${icon && "flex items-center gap-2"}`}
+      className={`cursor-pointer ${className || ""} ${
+        value === defaultValue && "text-blue-500"
+      } ${!isSmallDevice ? "hover:text-primary-hover" : ""} ${
+        icon ? "flex items-center gap-2" : ""
+      }`}
       {...props}
       onClick={() => setValue && setValue(value)}
     >
@@ -50,13 +50,16 @@ export const OptionGroup = ({
   return (
     <context.Provider value={{ defaultValue, setValue }}>
       <div
-      className={`flex items-center gap-2 w-full select-none ${
-        isSmallDevice ? between ? "justify-between" : "justify-evenly" : "gap-8"
-      } ${className} ${drirection === "column" ? "flex-col" : ""}` }
-    >
-      {children}
-    </div>
+        className={`flex items-center gap-2 w-full select-none ${
+          isSmallDevice
+            ? between
+              ? "justify-between"
+              : "justify-evenly"
+            : "gap-8"
+        } ${className} ${drirection === "column" ? "flex-col" : ""}`}
+      >
+        {children}
+      </div>
     </context.Provider>
-    
   );
 };

@@ -25,7 +25,11 @@ function MusicPlayPage() {
     windowWidth,
   } = useDevice();
   const gridCols = `${
-    isSmallDevice ? "1fr" : isMediumDevice || isLargeDevice ? "1fr 1fr" : "1fr 2fr"
+    isSmallDevice
+      ? "1fr"
+      : isMediumDevice || isLargeDevice
+      ? "1fr 1fr"
+      : "1fr 2fr"
   }`;
   // const album_size = isSmallDevice? 250 : isMediumDevice? 300 : 400;
   // const album_border_width = isSmallDevice? 60 : isMediumDevice? 70 : 80;
@@ -129,10 +133,8 @@ function MusicPlayPage() {
             <Option value={2}>信息</Option>
           </OptionGroup>
         </div>
-        <div className="mt-8">
-          {tabId === 1 && <Lyrics song_id={song_id} />}
-          {tabId === 2 && <DetailInfo song={detailSong} />}
-        </div>
+        {tabId === 1 && <Lyrics song_id={song_id} />}
+        {tabId === 2 && <DetailInfo song={detailSong} />}
       </div>
     </div>
   );
