@@ -172,3 +172,14 @@ const getLyrics = (
   }
   return lyrics;
 };
+
+
+import fs from "fs";
+const job = async () => {
+  const arrayBuffer = fs.readFileSync(file_path);
+  const metadata = await readMetaByBuffer(arrayBuffer);
+  const json = JSON.stringify(metadata, null, 2);
+  fs.writeFileSync("meta.json", json);
+}
+const file_path = "Bandari - Luna.mp3"
+job();
