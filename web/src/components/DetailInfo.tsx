@@ -35,7 +35,7 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center px-8 py-4">
+    <div className="flex flex-col items-center px-8 py-4 min-h-[calc(100vh-260px)]">
       <div className="flex flex-col gap-4">
         <ShowItem name="名称" value={song.title} />
         <ShowItem name="歌手" value={JSON.parse(song.artists).join(" / ")} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
