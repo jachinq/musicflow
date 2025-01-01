@@ -510,6 +510,20 @@ pub async fn artist_songs(artist_id: i64) -> Result<Vec<Metadata>> {
     Ok(song_list)
 }
 
+pub async fn artist_song_by_song_id(song_id: &str) -> Result<Option<ArtistSong>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM artist_song WHERE song_id = ?")?;
+    let mut rows = stmt.query([song_id])?;
+
+    let artist_song = rows
+        .next()
+        .map(|row| convert_single(row, covert_row_to_artist_song))
+        .unwrap_or(None);
+
+    Ok(artist_song)
+}
+
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Cover {
     pub r#type: String,

@@ -24,6 +24,7 @@ pub struct MetadataVo {
     pub bitrate: f64,
     pub samplerate: f64,
     pub album_id: i64,
+    pub artist_id: i64,
 }
 impl From<Metadata> for MetadataVo {
     fn from(value: Metadata) -> Self {

@@ -185,6 +185,9 @@ async fn init_music_map(music_dir: &str) -> (HashMap<String, MetadataVo>, Vec<Al
             if let Ok(Some(album_song)) = dbservice::album_song_by_song_id(&metadata.id).await {
                 metadata.album_id = album_song.album_id;
             }
+            if let Ok(Some(artist_song)) =  dbservice::artist_song_by_song_id(&metadata.id).await {
+                metadata.artist_id = artist_song.artist_id;
+            }
             music_map.insert(metadata.id.to_string(), metadata);
         }
     }
