@@ -48,6 +48,8 @@ pnpm dev
 
 # Build
 
+## Frontend and Backend
+
 Backend:
 
 ```shell
@@ -62,13 +64,14 @@ cd frontend
 pnpm build
 ```
 
+## Build All
+
 You can also combine the two.
 
 1. Prepare the build directory:
 
 ```shell
 mkdir build
-mkdir build/web
 mkdir build/conf
 mkdir build/music
 mkdir build/data
@@ -85,24 +88,27 @@ cd metadata
 pnpm install
 pnpm dev
 pnpm db_album
-cp musicflow.db build/data/
+cp musicflow.db ../build/data/
+cd ..
 ```
 
 3. Build the backend server:
 
 ```shell
 cd server
-cargo build
-cp target/release/musicflow build/
-cp conf/config.json build/conf/
+cargo build --release
+cp target/release/musicflow ../build/
+cp conf/config.json ../build/conf/
+cd ..
 ```
 
 4. Build the frontend:
 
 ```shell
-cd frontend
+cd web
 pnpm build
-cp -r dist build/web/
+cp -r dist ../build/
+cd ..
 ```
 
 5. Run the Application:
@@ -116,16 +122,10 @@ cd build
 
 The application will run on `http://127.0.0.1:9090`.
 
-# Run
-cd build
-./musicflow
-```
-
-
-
 # Log
 
 2024-12-24: Created the project structure, added the basic structure of the backend server.
+2025-01-02: First version.
 
 # License
 

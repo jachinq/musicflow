@@ -8,3 +8,5 @@
 
 /metadata/*.db
 /metadata/node_modules
+
+/build
