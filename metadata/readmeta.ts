@@ -12,38 +12,27 @@ export interface IMeta {
   bitrate: number | undefined;
   sampleRate: number | undefined;
   lyrics: { time: number; text: string }[];
-  cover: Cover | undefined;
 }
 
-// base64 encoded image data
-interface Cover {
-  format: string;
-  width: number;
-  height: number;
-  original: string;
-  small: string;
-  large: string;
-}
-
-export const readTitle = async (buffer: ArrayBuffer): Promise<string | undefined> => {
+export const readTitle = async (
+  buffer: ArrayBuffer
+): Promise<string | undefined> => {
   const util = await loadMusicMetadata();
   const array = new Uint8Array(buffer);
   const metadata: IAudioMetadata = await util.parseBuffer(array);
   return metadata.common.title;
-}
+};
 
 export const readMetaByBuffer = async (buffer: ArrayBuffer): Promise<IMeta> => {
   const util = await loadMusicMetadata();
   const array = new Uint8Array(buffer);
   const metadata: IAudioMetadata = await util.parseBuffer(array);
 
-
   const artists = metadata.common.artists || [];
   if (artists.length === 0) {
     artists.push(metadata.common.artist || "未知歌手");
   }
 
-  let cover = await getCover(metadata);
   const imeta = {
     title: metadata.common.title,
     artist: metadata.common.artist,
@@ -55,23 +44,16 @@ export const readMetaByBuffer = async (buffer: ArrayBuffer): Promise<IMeta> => {
     bitrate: metadata.format.bitrate,
     sampleRate: metadata.format.sampleRate,
     lyrics: getLyrics(metadata),
-    cover,
   };
   // console.log(metadata, imeta);
   return imeta;
 };
 
-const getCover = async (
-  metadata: IAudioMetadata
-): Promise<Cover | undefined> => {
-  const cover: Cover = {
-    format: "",
-    width: 0,
-    height: 0,
-    original: "",
-    small: "",
-    large: ""
-  };
+export const getCovers = async (buffer: ArrayBuffer): Promise<Cover[]> => {
+  const covers: Cover[] = [];
+  const util = await loadMusicMetadata();
+  const array = new Uint8Array(buffer);
+  const metadata: IAudioMetadata = await util.parseBuffer(array);
   if (
     metadata &&
     metadata.common &&
@@ -81,42 +63,53 @@ const getCover = async (
     const picture = metadata.common.picture[0];
     const type = picture.format;
     const data: Buffer = Buffer.from(picture.data); // 使用 Buffer 而不是 Uint8Array
-    
+
     // 将 Buffer 转换为 Base64 字符串
     const base64_origin = data.toString("base64");
-    const cover_metadata = await getPictureInfo(data);
-    cover.format = cover_metadata.format || type.replace("image/", "");
-    cover.width = cover_metadata.width || 0;
-    cover.height = cover_metadata.height || 0;
-
-    // const original = `data:${type};base64,${base64_origin}`;
 
     const small_size = 140;
+    const midium_size = 600;
     const base64_webp_small = await processImage(base64_origin, {
-      width: 140,
-      height: 140,
+      width: small_size,
+      height: small_size,
       quality: 50,
       format: "webp",
     });
     const base64_webp_large = await processImage(base64_origin, {
+      width: midium_size,
+      height: midium_size,
       quality: 10,
       format: "webp",
     });
     // const cover_small = `data:image/webp;base64,${base64_webp_small}`;
     // const cover_large = `data:image/webp;base64,${base64_webp_large}`;
-    cover.original = base64_origin;
-    cover.small = base64_webp_small;
-    cover.large = base64_webp_large;
-
     // const fs = require("fs");
-    // // fs.writeFileSync(`cover.${type.replace("image/", "")}"`, data);
     // fs.writeFileSync(`cover.jpg`, data);
     // fs.writeFileSync("cover_small.webp", cover_small);
     // fs.writeFileSync("cover_large.webp", cover_large);
 
-    // console.log("cover_small:@@@@", cover_small);
+    const small_cover: Cover = {
+      type: "album",
+      link_id: 0,
+      format: "webp",
+      width: small_size,
+      height: small_size,
+      base64: base64_webp_small,
+      size: "small",
+    };
+    const large_cover: Cover = {
+      type: "album",
+      link_id: 0,
+      format: "webp",
+      width: midium_size,
+      height: midium_size,
+      base64: base64_webp_large,
+      size: "medium",
+    };
+    covers.push(small_cover);
+    covers.push(large_cover);
   }
-  return cover;
+  return covers;
 };
 
 const getLyrics = (
@@ -173,13 +166,13 @@ const getLyrics = (
   return lyrics;
 };
 
-
 import fs from "fs";
+import { Cover } from "./sql";
 const job = async () => {
   const arrayBuffer = fs.readFileSync(file_path);
   const metadata = await readMetaByBuffer(arrayBuffer);
   const json = JSON.stringify(metadata, null, 2);
   fs.writeFileSync("meta.json", json);
-}
-const file_path = "Bandari - Luna.mp3"
+};
+const file_path = "Bandari - Luna.mp3";
 job();
