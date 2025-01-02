@@ -88,7 +88,7 @@ const Control = () => {
   const { filterTags, filter, totalCount } = useMusicList();
   const { setAllSongs, setCurrentSong } = usePlaylist();
   const { setError } = useHomePageStore();
-  const {isSmallDevice} = useDevice();
+  const { isSmallDevice } = useDevice();
   const newLineTag = isSmallDevice ? filterTags.length > 5 : filterTags.length > 10;
 
   const playAllSongs = () => {
@@ -180,8 +180,7 @@ const SelectTag = () => {
 
 const MusicList = () => {
   const { playSingleSong } = usePlaylist();
-  const { initialized, setInitialized, setLoading, setError } =
-    useHomePageStore();
+  const { setLoading, setError } = useHomePageStore();
   const { isSmallDevice } = useDevice();
   const pageSize = isSmallDevice ? 6 : 30;
   const {
@@ -192,16 +191,6 @@ const MusicList = () => {
     musicList,
     fetchMusicList,
   } = useMusicList();
-
-  useEffect(() => {
-    // 第一次加载页面时获取音乐列表
-    if (initialized) {
-      setLoading(false);
-      return;
-    }
-    setInitialized(true);
-    fetchMusicList(1, pageSize, setTotalCount, setLoading, setError);
-  }, []);
 
   useEffect(() => {
     if (!needFilter) return;

@@ -188,9 +188,6 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
     );
   };
   useEffect(() => {
-    fetchItems(currentPage);
-  }, []);
-  useEffect(() => {
     fetchItems(1, pageSize);
   }, [filterText]);
 

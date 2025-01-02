@@ -124,10 +124,10 @@ pub async fn handle_get_metadatas(
     if let Some(page_size1) = query.page_size {
         page_size = page_size1;
     }
-    println!(
-        "current_page: {}, page_size: {}, {:?}",
-        current_page, page_size, query
-    );
+    // println!(
+    //     "current_page: {}, page_size: {}, {:?}",
+    //     current_page, page_size, query
+    // );
     let total = list.len() as u32;
 
     let start = (current_page - 1) * page_size;
