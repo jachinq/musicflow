@@ -32,4 +32,10 @@ pnmp install
 pnpm dev
 ```
 
+3. Run the following command to generate the album cover images:
+
+```
+pnpm db_album
+```
+
 Then wait for the metadata util to fetch the metadata of the songs and store it in the database.
