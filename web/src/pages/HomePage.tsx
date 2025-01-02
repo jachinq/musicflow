@@ -180,7 +180,8 @@ const SelectTag = () => {
 
 const MusicList = () => {
   const { playSingleSong } = usePlaylist();
-  const { setLoading, setError } = useHomePageStore();
+  const { initialized, setInitialized, setLoading, setError } =
+  useHomePageStore();
   const { isSmallDevice } = useDevice();
   const pageSize = isSmallDevice ? 6 : 30;
   const {
@@ -191,6 +192,12 @@ const MusicList = () => {
     musicList,
     fetchMusicList,
   } = useMusicList();
+
+  useEffect(() => {
+    if (initialized) return;
+    fetchMusicList(1, pageSize, setTotalCount, setLoading, setError); // 标签切换时重新获取音乐列表
+    setInitialized(true);
+  }, []);
 
   useEffect(() => {
     if (!needFilter) return;
