@@ -28,7 +28,6 @@ CREATE TABLE
   IF NOT EXISTS cover (
     type TEXT NOT NULL,
     link_id INTEGER NOT NULL DEFAULT 0,
-    song_id TEXT NOT NULL DEFAULT '',
     format TEXT NOT NULL,
     size TEXT NOT NULL,
     width REAL,

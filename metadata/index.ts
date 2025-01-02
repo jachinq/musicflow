@@ -1,16 +1,14 @@
 import fs from "fs";
 import path from "path";
-import { IMeta, readMetaByBuffer, readTitle } from "./readmeta";
+import { IMeta, readMetaByBuffer, readTitleAndArtist } from "./readmeta";
 import {
   addArtist,
   addArtistSong,
-  addCover,
   addLyric,
   addMetadata,
   addSongTag,
   addTag,
   Artist,
-  Cover,
   existMetadataByPath,
   getMetadata,
   getMetadataById,
@@ -20,8 +18,9 @@ import {
   SongTag,
 } from "./sql";
 import { generateUUID, readFilesRecursively } from "./utils";
+import { concurrence } from "./task";
 
-const DIR = "./music";
+const DIR = "R:\\tmp\\jachin\\音乐";
 
 const convetIMetaToDbMeta = (iMeta: IMeta, file_name: string): Metadata => {
   // ad2548rv
@@ -43,7 +42,6 @@ const convetIMetaToDbMeta = (iMeta: IMeta, file_name: string): Metadata => {
 
 const singleTask = async (
   file_path: string,
-  music_count: number,
 ): Promise<{ msg: string; file_path: string }> => {
 
 
@@ -60,8 +58,8 @@ const singleTask = async (
   const arrayBuffer = fs.readFileSync(file_path);
 
   const start_read_title_time = new Date().getTime();
-  const title = (await readTitle(arrayBuffer)) || file_name;
-  const exist = getMetadata(title);
+  const {title="", artist=""} = (await readTitleAndArtist(arrayBuffer)) || {title: file_name, artist: "未知歌手"};
+  const exist = getMetadata(title, artist);
   if (exist) {
     exists.push({ file_path, title, exist });
     success++;
@@ -238,6 +236,8 @@ const logProgress = (count: number, success: number, failed: any[]) => {
 let exists: any[] = [];
 let faile: any[] = [];
 let success = 0;
+let  music_count = 0;
+
 const job = async () => {
   const job_start_time = new Date().getTime();
   console.log(new Date().toLocaleString(), "job start...");
@@ -260,7 +260,7 @@ const job = async () => {
     }
     return hit;
   });
-  const music_count = music_files.length;
+  music_count = music_files.length;
   console.log(
     "all files count:",
     all_files_count,
@@ -270,46 +270,8 @@ const job = async () => {
     all_files_count - music_count
   );
 
-
   // 把总列表拆分成每个 n 个并发执行
-  const task_unit = 100;
-  const tasks = [];
-  for (let i = 0; i < music_count; i += task_unit) {
-    const task = music_files.slice(i, i + task_unit);
-    tasks.push(task);
-  }
-
-  const task_count = tasks.length;
-  console.log("task count:", task_count);
-
-  for (let i = 0; i < task_count; i++) {
-    const task = tasks[i];
-    const task_start_time = new Date().getTime();
-    console.log(
-      new Date().toLocaleString(),
-      "task",
-      i + 1,
-      "start, count:",
-      task.length
-    );
-    await Promise.all(
-      task.map((file_path) => singleTask(file_path, music_count))
-    );
-    const task_end_time = new Date().getTime();
-    console.log(
-      new Date().toLocaleString(),
-      "task",
-      i + 1,
-      "end, cost time:",
-      (task_end_time - task_start_time) / 1000,
-      "s"
-    );
-  }
-
-  // for (let i = 0; i < music_count; i++) {
-  //   const file_path = music_files[i];
-  //   await singleTask(file_path, music_count);
-  // }
+  concurrence(50, music_files, singleTask);
 
   const internal_id = setInterval(() => {
     if (success + faile.length === music_count) {

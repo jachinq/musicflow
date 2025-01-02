@@ -121,7 +121,6 @@ CREATE TABLE
   IF NOT EXISTS cover (
     type TEXT NOT NULL,
     link_id INTEGER NOT NULL DEFAULT 0,
-    song_id TEXT NOT NULL DEFAULT '',
     format TEXT NOT NULL,
     size TEXT NOT NULL,
     width REAL,
@@ -215,11 +214,14 @@ CREATE TABLE
 COMMIT;
 `);
 
-export const getMetadata = (title: string) => {
+console.log(new Date().toLocaleString(), 'database created.');
+
+// title and artist 作为联合主键判断是否已存在metadata
+export const getMetadata = (title: string, artist: string) => {
   const select = db.prepare(`
-    SELECT * FROM metadata WHERE title = @title
+    SELECT * FROM metadata WHERE title = @title AND artist = @artist
   `);
-  return select.get({ title });
+  return select.get({ title, artist });
 };
 export const getMetadataById = (id: string) => {
   const select = db.prepare(`
@@ -388,38 +390,3 @@ export const getAllAlbumSongs = () => {
 export const closeDb = () => {
   db.close();
 };
-
-
-// // 插入数据
-// const insert = db.prepare(`
-//     INSERT INTO users (name, age) VALUES (@name, @age)
-// `);
-
-// // 使用参数化的插入语句
-// insert.run({ name: 'Alice', age: 30 });
-// insert.run({ name: 'Bob', age: 25 });
-
-// // 查询数据
-// const selectAll = db.prepare(`
-//     SELECT * FROM users
-// `);
-
-// const users = selectAll.all();
-// console.log('所有用户:', users);
-
-// // 查询单个用户
-// const selectOne = db.prepare(`
-//     SELECT * FROM users WHERE name = @name
-// `);
-
-// const user = selectOne.get({ name: 'Alice' });
-// console.log('用户 Alice:', user);
-
-// // 关闭数据库连接
-// db.close();
-
-console.log('数据库连接成功！');
-
-// const result = addArtist({ id: 0, name: "test", cover: "", description: "" });
-// console.log(result);
-// closeDb();

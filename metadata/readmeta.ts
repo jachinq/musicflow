@@ -1,5 +1,7 @@
 import { IAudioMetadata, loadMusicMetadata } from "music-metadata";
-import { getPictureInfo, processImage } from "./picture_proc";
+import { processImage } from "./picture_proc";
+import { Cover } from "./sql";
+import { title } from "process";
 
 export interface IMeta {
   title: string | undefined;
@@ -14,13 +16,16 @@ export interface IMeta {
   lyrics: { time: number; text: string }[];
 }
 
-export const readTitle = async (
+export const readTitleAndArtist = async (
   buffer: ArrayBuffer
-): Promise<string | undefined> => {
+): Promise<{ title: string | undefined; artist: string | undefined } | undefined> => {
   const util = await loadMusicMetadata();
   const array = new Uint8Array(buffer);
   const metadata: IAudioMetadata = await util.parseBuffer(array);
-  return metadata.common.title;
+  return {
+    title: metadata.common.title,
+    artist: metadata.common.artist,
+  };
 };
 
 export const readMetaByBuffer = async (buffer: ArrayBuffer): Promise<IMeta> => {
@@ -166,13 +171,12 @@ const getLyrics = (
   return lyrics;
 };
 
-import fs from "fs";
-import { Cover } from "./sql";
-const job = async () => {
-  const arrayBuffer = fs.readFileSync(file_path);
-  const metadata = await readMetaByBuffer(arrayBuffer);
-  const json = JSON.stringify(metadata, null, 2);
-  fs.writeFileSync("meta.json", json);
-};
-const file_path = "Bandari - Luna.mp3";
-job();
+// import fs from "fs";
+// const job = async () => {
+//   const arrayBuffer = fs.readFileSync(file_path);
+//   const metadata = await readMetaByBuffer(arrayBuffer);
+//   const json = JSON.stringify(metadata, null, 2);
+//   fs.writeFileSync("meta.json", json);
+// };
+// const file_path = "xxx.mp3";
+// job();

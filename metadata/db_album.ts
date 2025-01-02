@@ -4,16 +4,25 @@ import {
   addAlbumSong,
   Album,
   AlbumSong,
-  Cover,
   getAlbum,
   getAllAlbumSongs,
   getAllMetadata,
-  getAllCover,
-  db,
   addCover,
   getMetadataById,
 } from "./sql";
 import { getCovers } from "./readmeta";
+import { concurrence } from "./task";
+
+const logProgress = (count: number, success: number) => {
+  console.log(
+    "count",
+    count,
+    "success:",
+    success,
+    "progress:",
+    ((success / count) * 100).toFixed(2) + "%"
+  );
+};
 
 const build_album = () => {
   const metadatas = getAllMetadata();
@@ -80,8 +89,14 @@ const build_album_cover = () => {
   const existCoverMap: Record<number, boolean> = {}; // 定义为字符串到布尔值的映射
 
   let album_covers_cnt = 0;
-  album_songs.forEach(async (album_song) => {
+  let success = 0;
+  let exist_cnt = 0;
+
+  const singleTask = async (album_song: AlbumSong) => {
     if (existCoverMap[album_song.album_id]) {
+      success++;
+      exist_cnt++;
+      logProgress(album_songs.length, success);
       return;
     }
 
@@ -93,10 +108,15 @@ const build_album_cover = () => {
       album_covers_cnt++;
       addCover(c);
     });
+    success++;
+    logProgress(album_songs.length, success);
     existCoverMap[album_song.album_id] = true;
-  });
+  }
+
+  concurrence(50, album_songs, singleTask);
+
   console.log("album songs", album_songs.length);
-  console.log("final album covers", album_covers_cnt);
+  console.log("final album covers", album_covers_cnt, "exist", exist_cnt);
 };
 
 const start_time = new Date().getTime();
