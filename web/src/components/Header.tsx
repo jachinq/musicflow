@@ -4,19 +4,21 @@ import { Music2Icon, SearchIcon, SettingsIcon, TagIcon } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
 import { useHomePageStore } from "../pages/HomePage";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export const Header = () => {
   const { showPlaylist } = usePlaylist();
-  const { filter, setFilter, setTotalCount, fetchMusicList } = useMusicList();
+  const { setFilter, setTotalCount, fetchMusicList } = useMusicList();
   const { pageSize, setLoading, setError } = useHomePageStore();
   const [fitlerText, setFitlerText] = useState("");
-  useEffect(() => {
-    setFilter({ ...filter, any: fitlerText });
-    if (fitlerText==="") { // 如果搜索框为空，则显示全部
+  const changeFitlerText = (value: string) => {
+    setFitlerText(value);
+    setFilter({ any: value });
+    if (value === "") {
+      // 如果搜索框为空，则显示全部
       search();
     }
-  }, [fitlerText]);
+  };
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -36,7 +38,10 @@ export const Header = () => {
       }
     >
       <div className="flex justify-between gap-2">
-        <Link to="/" className="font-bold text-lg flex items-center justify-center ">
+        <Link
+          to="/"
+          className="font-bold text-lg flex items-center justify-center "
+        >
           <div className="flex items-center justify-center gap-1">
             <div className="rounded-full overflow-hidden">
               <img src="/favicon.ico" alt="" width={28} />
@@ -45,8 +50,16 @@ export const Header = () => {
           </div>
         </Link>
         <div className="w-1/2 flex justify-end items-center gap-2">
-          <Input value={fitlerText} onChange={setFitlerText} placeholder="搜索音乐/歌手/专辑/标签/年份" onEnter={search} />
-          <SearchIcon onClick={search} className="cursor-pointer hover:text-primary-hover" />
+          <Input
+            value={fitlerText}
+            onChange={changeFitlerText}
+            placeholder="搜索音乐/歌手/专辑/年份"
+            onEnter={search}
+          />
+          <SearchIcon
+            onClick={search}
+            className="cursor-pointer hover:text-primary-hover"
+          />
         </div>
         <div className="flex space-x-4 items-center">
           <Link to="/playlist" className="navigation">
