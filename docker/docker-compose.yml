@@ -1,0 +1,13 @@
+name: musicflow
+services:
+  myimage:
+    image: musicflow:latest
+    container_name: musicflow
+    ports:
+      - 9090:9090  # you can change the first port 9090 to any other port you want
+    volumes:
+      - ./conf:/home/myapp/conf
+      - ./data:/home/myapp/data
+      - ./music:/home/myapp/music  # you can change the path './music' to your music directory
+      - /etc/localtime:/etc/localtime
+    restart: unless-stopped

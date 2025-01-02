@@ -88,7 +88,6 @@ cd metadata
 pnpm install
 pnpm dev
 pnpm db_album
-cp musicflow.db ../build/data/
 cd ..
 ```
 
@@ -121,6 +120,17 @@ cd build
 ```
 
 The application will run on `http://127.0.0.1:9090`.
+
+## Docker
+
+You can also use Docker to build and run the application.
+
+```shell
+cd docker
+./build_docker.sh
+cd ../build
+docker-compose up -d
+```
 
 # Log
 

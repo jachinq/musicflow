@@ -1,5 +1,5 @@
 const Database = require('better-sqlite3');
-const db_path = 'musicflow.db';
+const db_path = '../build/data/musicflow.db';
 
 // 定义数据模型
 export interface Metadata {

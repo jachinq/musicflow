@@ -20,7 +20,7 @@ import {
 import { generateUUID, readFilesRecursively } from "./utils";
 import { concurrence } from "./task";
 
-const DIR = "R:\\tmp\\jachin\\音乐";
+const DIR = "../build/music";
 
 const convetIMetaToDbMeta = (iMeta: IMeta, file_name: string): Metadata => {
   // ad2548rv
