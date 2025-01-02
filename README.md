@@ -22,18 +22,106 @@ All the music data is from server side APIs.
 
 # Installation
 
+Database: more detail see [metadata](metadata/README.md)
+
+```shell
+cd metadata
+pnpm install
+# build the metadata database
+pnpm dev
+# generate the album cover images
+pnpm db_album
+```
+
 Backend:
 
-```
+```shell
 cargo run
 ```
 
 Frontend:
 
-```
+```shell
 cd frontend
 pnpm dev
 ```
+
+# Build
+
+Backend:
+
+```shell
+cd server
+cargo build
+```
+
+Frontend:
+
+```shell
+cd frontend
+pnpm build
+```
+
+You can also combine the two.
+
+1. Prepare the build directory:
+
+```shell
+mkdir build
+mkdir build/web
+mkdir build/conf
+mkdir build/music
+mkdir build/data
+```
+
+2. Build the metadata database:
+
+Put your music files in the `build/music` directory.
+
+ps: metadata will read from the file's metadata, so you need to put the music files in the right format.
+
+```shell
+cd metadata
+pnpm install
+pnpm dev
+pnpm db_album
+cp musicflow.db build/data/
+```
+
+3. Build the backend server:
+
+```shell
+cd server
+cargo build
+cp target/release/musicflow build/
+cp conf/config.json build/conf/
+```
+
+4. Build the frontend:
+
+```shell
+cd frontend
+pnpm build
+cp -r dist build/web/
+```
+
+5. Run the Application:
+
+You can change the configuration file `build/conf/config.json` to change the port and database path and etc.
+
+```shell
+cd build
+./musicflow
+```
+
+The application will run on `http://127.0.0.1:9090`.
+
+# Run
+cd build
+./musicflow
+```
+
+
 
 # Log
 
