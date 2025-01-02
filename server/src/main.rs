@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
 use actix_cors::Cors;
+use actix_files::NamedFile;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
+use std::path::Path;
 use walkdir::WalkDir; // 引入 CORS 中间件
 
 mod controller_album;
@@ -144,10 +146,17 @@ async fn main() -> io::Result<()> {
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", "./web/dist").index_file("index.html"))
+            .default_service(web::get().to(handle_all_others))
     })
     .bind(&format!("{}:{}", ip, port))?
     .run()
     .await
+}
+
+// 处理所有其他请求，重定向到 index.html
+async fn handle_all_others() -> Result<NamedFile, actix_web::Error> {
+    let path = Path::new("./web/dist/index.html");
+    NamedFile::open(path).map_err(|_| actix_web::error::ErrorNotFound("index.html not found"))
 }
 
 async fn init_music_map(music_dir: &str) -> (HashMap<String, MetadataVo>, Vec<Album>) {
