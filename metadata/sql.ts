@@ -248,6 +248,14 @@ export const addMetadata = (metadata: Metadata) => {
   insert.run({ id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, samplerate });
   return { id, file_name, file_path, file_url, title, artist, artists, album, year, duration, bitrate, samplerate };
 };
+export const updateMetadataPath = (metadata: { id: string; file_path: string; file_url: string }) => {
+  const { id, file_path, file_url } = metadata;
+  const update = db.prepare(`
+    UPDATE metadata SET file_path = @file_path, file_url = @file_url WHERE id = @id
+  `);
+  update.run({ id, file_path, file_url });
+  return { id, file_path, file_url };
+};
 
 export const addLyric = (data: Lyric) => {
   const { song_id, time, text } = data;
