@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 use walkdir::WalkDir; // 引入 CORS 中间件
+use env_logger::Env;
 
 mod controller_album;
 mod controller_artist;
@@ -29,6 +30,7 @@ use dbservice::*;
 // 应用状态
 #[derive(Clone, Debug, Deserialize, Serialize, Default)]
 struct AppState {
+    web_path: String,
     music_path: String,
     music_map: HashMap<String, MetadataVo>, // 音乐 ID 到 Music 实例的映射表
     album_list: Vec<Album>,
@@ -36,17 +38,20 @@ struct AppState {
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
+    // 初始化日志记录
+    env_logger::init_from_env(Env::default().default_filter_or("info"));
     // 从 conf/config.json 中读取配置信息，获取启动端口和音乐文件存放路径
     let config_path = "./conf/config.json";
     let config = std::fs::read_to_string(config_path).unwrap();
     let config: serde_json::Value = serde_json::from_str(&config).unwrap();
+    let web_dir = "./web/dist"; // config["web_dir"].as_str().unwrap() as &str;
     let ip = config["ip"].as_str().unwrap() as &str;
     let port = config["port"].as_u64().unwrap() as u16;
 
     // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
     let music_dir = config["music_dir"].as_str().unwrap().to_string();
     // let music_dir = music_dir.replace("\\", "/");
-    println!("Music dir: {}", music_dir);
+    println!("Music dir: {}, Web dir: {}", music_dir, web_dir);
 
     let (music_map, album_list) = init_music_map(&music_dir).await;
     // 映射音乐文件的静态路径
@@ -64,6 +69,7 @@ async fn main() -> io::Result<()> {
             )
             .wrap(Logger::default()) // 日志记录中间件
             .app_data(web::Data::new(AppState {
+                web_path: web_dir.to_string(),
                 music_path: music_path.to_string(),
                 music_map: music_map.clone(),
                 album_list: album_list.clone(),
@@ -145,7 +151,7 @@ async fn main() -> io::Result<()> {
             )
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
-            .service(actix_files::Files::new("/", "./web/dist").index_file("index.html"))
+            .service(actix_files::Files::new("/", web_dir).index_file("index.html"))
             .default_service(web::get().to(handle_all_others))
     })
     .bind(&format!("{}:{}", ip, port))?
@@ -154,8 +160,10 @@ async fn main() -> io::Result<()> {
 }
 
 // 处理所有其他请求，重定向到 index.html
-async fn handle_all_others() -> Result<NamedFile, actix_web::Error> {
-    let path = Path::new("./web/dist/index.html");
+async fn handle_all_others(app_data: web::Data<AppState>) -> Result<NamedFile, actix_web::Error> {
+    let web_path = app_data.web_path.clone();
+    let index_path = format!("{}/index.html", web_path);
+    let path = Path::new(&index_path);
     NamedFile::open(path).map_err(|_| actix_web::error::ErrorNotFound("index.html not found"))
 }
 
