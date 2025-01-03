@@ -125,6 +125,19 @@ The application will run on `http://127.0.0.1:9090`.
 
 You can also use Docker to build and run the application.
 
+1. change the [config.json](server/conf/config.json )file.
+
+```json
+{
+  "ip": "0.0.0.0",
+  "port": 9090,
+  "music_dir": "/home/myapp/music"
+}
+```
+
+2. Run the following command to build the Docker image:
+
+
 ```shell
 cd docker
 ./build_docker.sh
