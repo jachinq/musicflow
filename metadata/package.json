@@ -8,7 +8,8 @@
     "testsql": "npx ts-node sql.ts",
     "test": "npx ts-node utils.ts",
     "db_album": "npx ts-node db_album.ts",
-    "readmeta": "npx ts-node readmeta.ts"
+    "readmeta": "npx ts-node readmeta.ts",
+    "docker": "npx ts-node docker.ts"
   },
   "keywords": [],
   "author": "",
