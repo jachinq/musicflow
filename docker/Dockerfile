@@ -7,6 +7,6 @@
   RUN mkdir web
   RUN mkdir conf
   RUN mkdir music
-  COPY ../build/web ./web
-  COPY ../build/musicflow .
+  COPY web ./web
+  COPY musicflow .
   CMD ["./musicflow"]
