@@ -17,10 +17,8 @@ import {
   Metadata,
   SongTag,
 } from "./sql";
-import { generateUUID, readFilesRecursively } from "./utils";
+import { generateUUID, getConfig, readFilesRecursively } from "./utils";
 import { concurrence } from "./task";
-
-const DIR = "../build/music";
 
 const convetIMetaToDbMeta = (iMeta: IMeta, file_name: string): Metadata => {
   // ad2548rv
@@ -41,16 +39,14 @@ const convetIMetaToDbMeta = (iMeta: IMeta, file_name: string): Metadata => {
 };
 
 const singleTask = async (
-  file_path: string,
+  file_path: string
 ): Promise<{ msg: string; file_path: string }> => {
-
-
   const exist_path = existMetadataByPath(file_path);
   if (exist_path) {
     success++;
     exists.push({ file_path, title: "", exist: exist_path });
     logProgress(music_count, success, faile);
-    return {msg: "exist", file_path};
+    return { msg: "exist", file_path };
   }
 
   const file_name = path.basename(file_path);
@@ -58,7 +54,9 @@ const singleTask = async (
   const arrayBuffer = fs.readFileSync(file_path);
 
   const start_read_title_time = new Date().getTime();
-  const {title="", artist=""} = (await readTitleAndArtist(arrayBuffer)) || {title: file_name, artist: "未知歌手"};
+  const { title = "", artist = "" } = (await readTitleAndArtist(
+    arrayBuffer
+  )) || { title: file_name, artist: "未知歌手" };
   const exist = getMetadata(title, artist);
   if (exist) {
     exists.push({ file_path, title, exist });
@@ -66,7 +64,6 @@ const singleTask = async (
     logProgress(music_count, success, faile);
     return { msg: "exist", file_path };
   }
-  
 
   const start_read_meta_time = new Date().getTime();
   const metadata = await readMetaByBuffer(arrayBuffer);
@@ -109,8 +106,8 @@ const singleTask = async (
   let result = addMetadata(dbMeta);
   if (!result) {
     faile.push({ file_path, title, metadata });
-    return { msg: "failed to add metadata", file_path }
-  };
+    return { msg: "failed to add metadata", file_path };
+  }
   song_tags.forEach((song_tag) => {
     let result = addSongTag(song_tag);
     if (!result)
@@ -155,11 +152,16 @@ const singleTask = async (
   const read_meta_time = start_add_db_time - start_read_meta_time;
   const add_db_time = task_end_time - start_add_db_time;
   console.log(
-    "title:", title,
-    "read_file:", read_file_time,
-    "read_title:", read_title_time,
-    "read_meta:", read_meta_time,
-    "add_db:", add_db_time,
+    "title:",
+    title,
+    "read_file:",
+    read_file_time,
+    "read_title:",
+    read_title_time,
+    "read_meta:",
+    read_meta_time,
+    "add_db:",
+    add_db_time
   );
 
   success++;
@@ -219,7 +221,6 @@ const buildSongTags = (metadataId: string, file_path: string) => {
   return song_tag_list;
 };
 
-
 const logProgress = (count: number, success: number, failed: any[]) => {
   console.log(
     "count",
@@ -236,7 +237,7 @@ const logProgress = (count: number, success: number, failed: any[]) => {
 let exists: any[] = [];
 let faile: any[] = [];
 let success = 0;
-let  music_count = 0;
+let music_count = 0;
 
 const job = async () => {
   const job_start_time = new Date().getTime();
@@ -310,4 +311,12 @@ const job = async () => {
   }, 1000);
 };
 
+const config = getConfig();
+console.log("get config:", config);
+const { music_dir } = config;
+if (music_dir === "" || !fs.existsSync(music_dir)) {
+  console.error("music_dir not exist:", music_dir);
+  process.exit(1);
+}
+const DIR = music_dir;
 job();

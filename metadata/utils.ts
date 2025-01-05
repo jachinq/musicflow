@@ -36,3 +36,19 @@ export const readFilesRecursively = (dir: string) => {
   return results;
 }
 
+export interface Config {
+  ip: string;
+  port: number;
+  music_dir: string;
+  web_dir: string;
+}
+export const getConfig = (): Config => {
+  const configPath = path.join(__dirname, '..', '/conf', 'config.json');
+  // console.log(configPath);
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  return config;
+}
+
+// test config reading
+// const config = getConfig();
+// console.log(config);
