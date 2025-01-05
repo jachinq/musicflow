@@ -67,21 +67,29 @@ const build_album = () => {
       `${album_song.album_name}_${album_song.song_artist}_${album_song.song_title}_${album_song.song_id}`
     ] = true;
   });
-  console.log("already exist album songs", allAlbumSongs.length);
-  albums_songs.forEach((album_song) => {
+
+  const count = albums_songs.length;
+  console.log("already exist album songs", count);
+  let success = 0;
+  concurrence(50, albums_songs, (album_song) => {
     if (
       existAlbumSongMap[
         `${album_song.album_name}_${album_song.song_artist}_${album_song.song_title}_${album_song.song_id}`
       ]
-    )
+    ) {
+      success++;
+      logProgress(count, success);
       return;
+    }
     album_song.album_id = getAlbum(
       album_song.album_name,
       album_song.song_artist
     ).id;
     // console.log('album_id', album_song.album_id);
     addAlbumSong(album_song);
-  });
+    success++;
+    logProgress(count, success);
+  })
 };
 
 const build_album_cover = () => {
