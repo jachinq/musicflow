@@ -40,16 +40,14 @@ struct AppState {
 async fn main() -> io::Result<()> {
     // 初始化日志记录
     env_logger::init_from_env(Env::default().default_filter_or("info"));
-    // 从 conf/config.json 中读取配置信息，获取启动端口和音乐文件存放路径
-    let config_path = "./conf/config.json";
-    let config = std::fs::read_to_string(config_path).unwrap();
-    let config: serde_json::Value = serde_json::from_str(&config).unwrap();
-    let web_dir = "./web/dist"; // config["web_dir"].as_str().unwrap() as &str;
-    let ip = config["ip"].as_str().unwrap() as &str;
-    let port = config["port"].as_u64().unwrap() as u16;
+    // 读取配置文件信息
+    let config = get_config();
+    let web_dir = config.web_dir.clone();
+    let ip = config.ip.clone();
+    let port = config.port.clone();
 
     // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
-    let music_dir = config["music_dir"].as_str().unwrap().to_string();
+    let music_dir = config.music_dir.clone();
     // let music_dir = music_dir.replace("\\", "/");
     println!("Music dir: {}, Web dir: {}", music_dir, web_dir);
 
@@ -151,13 +149,38 @@ async fn main() -> io::Result<()> {
             )
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
-            .service(actix_files::Files::new("/", web_dir).index_file("index.html"))
+            .service(actix_files::Files::new("/", &web_dir).index_file("index.html"))
             .default_service(web::get().to(handle_all_others))
     })
     .bind(&format!("{}:{}", ip, port))?
     .run()
     .await
 }
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct Config {
+    ip: String, // 绑定的 IP 地址
+    port: u64, // 绑定的端口号
+    web_dir: String, // 前端静态文件目录
+    music_dir: String, // 音乐文件目录
+}
+
+// 获取 config.json 中的配置信息
+fn get_config() -> Config {
+    let mut config_path = "./conf/config.json";
+    // 判断配置文件是否存在
+    if!Path::new(config_path).exists() {
+        config_path = "../conf/config.json"; // 尝试从上级目录查找配置文件
+    }
+    if!Path::new(config_path).exists() {
+        println!("config.json not found, please check the file path: ./conf/config.json or ../conf/config.json");
+        std::process::exit(1);
+    }
+    let config = std::fs::read_to_string(config_path).expect("Failed to read config.json to string");
+    let config = serde_json::from_str::<Config>(&config).expect("Failed to parse config.json to json, please check the file content");
+    config
+}
+
 
 // 处理所有其他请求，重定向到 index.html
 async fn handle_all_others(app_data: web::Data<AppState>) -> Result<NamedFile, actix_web::Error> {
