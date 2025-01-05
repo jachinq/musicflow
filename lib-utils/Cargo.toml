@@ -1,0 +1,12 @@
+[package]
+name = "lib-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+symphonia = { workspace = true }
+symphonia-bundle-flac = { workspace = true }
+symphonia-bundle-mp3 = { workspace = true }
+symphonia-metadata = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
