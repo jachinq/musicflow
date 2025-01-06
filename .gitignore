@@ -1,3 +1,5 @@
+.vscode/
+
 /server/target
 /server/music
 /server/web
