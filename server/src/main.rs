@@ -4,6 +4,8 @@ use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use lib_utils::config::get_config;
+use lib_utils::database::service::{self, Album, Metadata};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
@@ -17,7 +19,6 @@ mod controller_song;
 mod controller_songlist;
 mod controller_tag;
 mod controller_user;
-mod dbservice;
 
 use controller_album::*;
 use controller_artist::*;
@@ -25,7 +26,6 @@ use controller_song::*;
 use controller_songlist::*;
 use controller_tag::*;
 use controller_user::*;
-use dbservice::*;
 
 // 应用状态
 #[derive(Clone, Debug, Deserialize, Serialize, Default)]
@@ -34,6 +34,12 @@ struct AppState {
     music_path: String,
     music_map: HashMap<String, MetadataVo>, // 音乐 ID 到 Music 实例的映射表
     album_list: Vec<Album>,
+}
+
+impl AppState {
+    fn set_music(&mut self, song_id: &str, metadata: MetadataVo) {
+        self.music_map.insert(song_id.to_string(), metadata);
+    }
 }
 
 #[actix_web::main]
@@ -55,7 +61,7 @@ async fn main() -> io::Result<()> {
     // 映射音乐文件的静态路径
     let music_path = "/music";
 
-    println!("Server started on {}:{}", ip, port);
+    println!("Server started on http://{}:{}", ip, port);
     // 启动 HTTP 服务
     HttpServer::new(move || {
         App::new()
@@ -157,31 +163,6 @@ async fn main() -> io::Result<()> {
     .await
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-struct Config {
-    ip: String, // 绑定的 IP 地址
-    port: u64, // 绑定的端口号
-    web_dir: String, // 前端静态文件目录
-    music_dir: String, // 音乐文件目录
-}
-
-// 获取 config.json 中的配置信息
-fn get_config() -> Config {
-    let mut config_path = "./conf/config.json";
-    // 判断配置文件是否存在
-    if!Path::new(config_path).exists() {
-        config_path = "../conf/config.json"; // 尝试从上级目录查找配置文件
-    }
-    if!Path::new(config_path).exists() {
-        println!("config.json not found, please check the file path: ./conf/config.json or ../conf/config.json");
-        std::process::exit(1);
-    }
-    let config = std::fs::read_to_string(config_path).expect("Failed to read config.json to string");
-    let config = serde_json::from_str::<Config>(&config).expect("Failed to parse config.json to json, please check the file content");
-    config
-}
-
-
 // 处理所有其他请求，重定向到 index.html
 async fn handle_all_others(app_data: web::Data<AppState>) -> Result<NamedFile, actix_web::Error> {
     let web_path = app_data.web_path.clone();
@@ -192,7 +173,7 @@ async fn handle_all_others(app_data: web::Data<AppState>) -> Result<NamedFile, a
 
 async fn init_music_map(music_dir: &str) -> (HashMap<String, MetadataVo>, Vec<Album>) {
     // 初始化数据库
-    let res = get_metadata_list().await;
+    let res = service::get_metadata_list();
     // print!("db result: {:?}", res);
     let metadata_list = res.unwrap_or_default();
     let mut path_metadata_map = HashMap::new();
@@ -204,38 +185,21 @@ async fn init_music_map(music_dir: &str) -> (HashMap<String, MetadataVo>, Vec<Al
     let mut album_list = Vec::new();
     for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
-            let ext = entry.path().extension().unwrap_or_default();
-            if ext == "ape" {
-                // 前端 audioContent 解码器不支持 ape 格式，所以过滤掉
-                continue;
-            }
-            let path = entry.path().display().to_string();
+            let path = entry.path().display().to_string().replace("\\", "/");
             let metadata = path_metadata_map.get(&path);
             if metadata.is_none() {
                 println!("Metadata not found for {}", path);
                 continue;
             }
-            let mut metadata = MetadataVo::from(metadata.unwrap().clone());
-
-            if metadata.album.is_empty() {
-                metadata.album = "未知专辑".to_string();
-            }
-            album_list.push(Album::new(metadata.album.clone()));
-
-            let url = metadata.file_url.replace("\\", "/");
-            metadata.file_url = format!("/music{}", url);
-            if let Ok(Some(album_song)) = dbservice::album_song_by_song_id(&metadata.id).await {
-                metadata.album_id = album_song.album_id;
-            }
-            if let Ok(Some(artist_song)) =  dbservice::artist_song_by_song_id(&metadata.id).await {
-                metadata.artist_id = artist_song.artist_id;
-            }
+            let metadata = metadata.unwrap().clone();
+            let metadata = MetadataVo::from(metadata);
             music_map.insert(metadata.id.to_string(), metadata);
         }
     }
+    if let Ok(list) = service::get_album_list() {
+        album_list = list.clone();
+    }
     println!("Music count: {}", music_map.len());
-    // album_list remove duplicates
-    album_list.dedup();
     (music_map, album_list)
 }
 

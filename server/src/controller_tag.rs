@@ -1,34 +1,54 @@
+use std::{collections::HashSet, sync::Mutex};
+
 use actix_web::{web, HttpResponse, Responder};
+use lib_utils::database::service;
 use serde::{Deserialize, Serialize};
 
-use crate::{dbservice, JsonResult, SongTag, Tag};
+use crate::{AppState, JsonResult, MetadataVo};
 
-pub async fn handle_get_tags() -> impl Responder {
-    let tags = crate::dbservice::get_tags().await;
-    if let Ok(tags) = tags {
-        HttpResponse::Ok().json(JsonResult::success(tags))
-    } else {
-        HttpResponse::Ok().json(JsonResult::<Vec<Tag>>::error("获取标签失败"))
-    }
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Genre {
+    id: i64,
+    name: String,
 }
 
-pub async fn handle_get_song_tags(song_id: web::Path<String>) -> impl Responder {
-    let tags = crate::dbservice::get_song_tags(&song_id).await;
-    if let Ok(tags) = tags {
-        HttpResponse::Ok().json(JsonResult::success(tags))
-    } else {
-        HttpResponse::Ok().json(JsonResult::<Vec<Tag>>::error("获取歌曲标签失败"))
-    }
+pub async fn handle_get_tags(app: web::Data<AppState>) -> impl Responder {
+    let music_map = app.music_map.clone();
+    let mut genres = Vec::new();
+
+    music_map.values().for_each(|m| {
+        m.genres.iter().for_each(|g| genres.push(g.to_string()));
+    });
+
+    let mut set = HashSet::new();
+    genres.iter().for_each(|g| {
+        set.insert(g);
+    });
+    let genres = set
+        .iter()
+        .enumerate()
+        .map(|(id, n)| Genre {
+            id: id as i64 + 1,
+            name: n.to_string(),
+        })
+        .collect::<Vec<_>>();
+
+    HttpResponse::Ok().json(JsonResult::success(genres))
 }
 
-// pub async fn tag_songs(tag_id: web::Path<i64>) -> impl Responder {
-//     let songs = crate::dbservice::get_tag_songs(*tag_id).await;
-//     if let Ok(songs) = songs {
-//         HttpResponse::Ok().json(JsonResult::success(songs))
-//     } else {
-//         HttpResponse::Ok().json(JsonResult::<Vec<SongTag>>::error("获取标签歌曲失败"))
-//     }
-// }
+pub async fn handle_get_song_tags(
+    song_id: web::Path<String>,
+    app: web::Data<AppState>,
+) -> impl Responder {
+    let music_map = app.music_map.clone();
+    let song_id = song_id.clone();
+    if let Some(m) = music_map.get(&song_id) {
+        let tags = m.genres.clone();
+        HttpResponse::Ok().json(JsonResult::success(tags))
+    } else {
+        HttpResponse::Ok().json(JsonResult::<Vec<String>>::error("歌曲不存在"))
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct QueryAddTagToMusic {
@@ -37,62 +57,79 @@ pub struct QueryAddTagToMusic {
 }
 
 /// 对音乐进行分组打标签
-pub async fn handle_add_song_tag(info: web::Json<QueryAddTagToMusic>) -> impl Responder {
+pub async fn handle_add_song_tag(
+    info: web::Json<QueryAddTagToMusic>,
+    app: web::Data<Mutex<AppState>>,
+) -> impl Responder {
     let song_id = info.song_id.clone();
     let tagname = info.tagname.clone();
 
-    let exist_song = dbservice::get_metadata_by_id(&song_id).await;
-    if exist_song.is_err() || exist_song.unwrap().is_none() {
-        return HttpResponse::Ok().json(JsonResult::<SongTag>::error("歌曲不存在"));
+    let app = app.as_ref().lock();
+    if app.is_err() {
+        return HttpResponse::Ok().json(JsonResult::<()>::error("服务器内部错误"));
+    }
+    let mut app = app.unwrap();
+
+    // 判断歌曲是否存在
+    let music_map = app.music_map.clone();
+    let song = music_map.get(&song_id);
+    if let None = song {
+        return HttpResponse::Ok().json(JsonResult::<()>::error("歌曲不存在"));
+    }
+    let song = song.unwrap();
+    let genres = song.genres.clone();
+    if genres.iter().find(|g| *g == &tagname).is_some() {
+        return HttpResponse::Ok().json(JsonResult::<()>::error("歌曲已有该标签"));
     }
 
+    let new_genres = genres.join(",");
     // 判断标签是否已存在
-    let exist_tags = dbservice::get_tags().await.unwrap_or_default();
-    let exist_tag = exist_tags.iter().find(|t| t.name == tagname);
-    let tag_id = match exist_tag {
-        Some(tag) => tag.id,
-        None => {
-            // 先添加标签
-            let new_tag = Tag {
-                name: tagname,
-                ..Default::default()
-            };
-            match dbservice::add_tag(&new_tag).await {
-                Ok(id) => id,
-                Err(_) => {
-                    return HttpResponse::Ok().json(JsonResult::<SongTag>::error("标签添加失败"))
-                }
-            }
+    let exist_tags = service::set_metadata_genre(&new_genres, &song_id);
+    if let Ok(_) = exist_tags {
+        // 操作完后，拿到新的歌曲标签
+        if let Ok(Some(m)) = service::get_metadata_by_id(&song_id) {
+            let vo = MetadataVo::from(m);
+            app.set_music(&song_id, vo.clone());
+            return HttpResponse::Ok().json(JsonResult::success(vo));
+        } else {
+            return HttpResponse::Ok().json(JsonResult::<MetadataVo>::error("标签添加失败"));
         }
-    };
-
-    // 再过滤掉当前歌曲已关联的标签
-    let exist_song_tags = dbservice::get_song_tags(&song_id).await.unwrap_or_default();
-    if exist_song_tags.iter().find(|t| t.id == tag_id).is_some() {
-        return HttpResponse::Ok().json(JsonResult::<SongTag>::error("歌曲已有该标签"));
-    }
-
-    let song_id_get = song_id.clone();
-    let list = vec![SongTag { song_id, tag_id }];
-
-    if let Ok(_) = dbservice::add_song_tag(list).await {
-        // 查新添加的标签
-        let new_song_tags = dbservice::get_song_tags(&song_id_get).await.unwrap();
-        HttpResponse::Ok().json(JsonResult::success(new_song_tags))
     } else {
-        HttpResponse::Ok().json(JsonResult::<SongTag>::error("标签添加失败"))
+        return HttpResponse::Ok().json(JsonResult::<MetadataVo>::error("标签添加失败"));
     }
 }
 
 // 删除歌曲标签
-pub async fn handle_delete_song_tag(path: web::Path<(String, i64)>) -> impl Responder {
+pub async fn handle_delete_song_tag(
+    path: web::Path<(String, i64)>,
+    app: web::Data<Mutex<AppState>>,
+) -> impl Responder {
     let (song_id, tag_id) = path.into_inner();
 
-    if let Ok(_) = dbservice::delete_song_tag(&song_id, tag_id).await {
-        // 操作完后，拿到新的歌曲标签
-        let new_song_tags = dbservice::get_song_tags(&song_id).await.unwrap();
-        HttpResponse::Ok().json(JsonResult::success(new_song_tags))
+    let app = app.as_ref().lock();
+    if app.is_err() {
+        return HttpResponse::Ok().json(JsonResult::<()>::error("服务器内部错误"));
+    }
+    let mut app = app.unwrap();
+
+    if let Some(m) = app.music_map.get(&song_id) {
+        let mut genres = m.genres.clone();
+        if let Some(index) = genres.iter().position(|g| *g == tag_id.to_string()) {
+            genres.remove(index);
+        }
+        let new_genres = genres.join(",");
+        if let Ok(_) = service::set_metadata_genre(&new_genres, &song_id) {
+            if let Ok(Some(m)) = service::get_metadata_by_id(&song_id) {
+                let vo = MetadataVo::from(m);
+                app.set_music(&song_id, vo.clone());
+                return HttpResponse::Ok().json(JsonResult::success(vo));
+            } else {
+                return HttpResponse::Ok().json(JsonResult::<MetadataVo>::error("标签删除失败"));
+            }
+        } else {
+            return HttpResponse::Ok().json(JsonResult::<MetadataVo>::error("标签删除失败"));
+        }
     } else {
-        HttpResponse::Ok().json(JsonResult::<SongTag>::error("标签删除失败"))
+        return HttpResponse::Ok().json(JsonResult::<MetadataVo>::error("歌曲不存在"));
     }
 }

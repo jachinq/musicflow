@@ -1,7 +1,8 @@
 use actix_web::{web, HttpResponse, Responder};
+use lib_utils::database::service::{self, Album};
 use serde::{Deserialize, Serialize};
 
-use crate::{dbservice, pick_metadata, Album, JsonResult};
+use crate::{pick_metadata, JsonResult};
 
 #[derive(Deserialize)]
 pub struct AlbumsBody {
@@ -69,7 +70,7 @@ pub async fn handle_get_album(body: web::Json<AlbumsBody>) -> impl Responder {
         page_size = page_size1;
     }
 
-    let albums = dbservice::get_album_list().await;
+    let albums = service::get_album_list();
     match albums {
         Ok(mut list) => {
             if let Some(filter) = &body.filter_text {
@@ -95,7 +96,7 @@ pub async fn handle_get_album_songs(
     album_id: web::Path<i64>,
     app_data: web::Data<crate::AppState>,
 ) -> impl Responder {
-    let songs = dbservice::album_songs(album_id.into_inner()).await;
+    let songs = service::album_songs(album_id.into_inner());
     match songs {
         Ok(list) => HttpResponse::Ok().json(JsonResult::success(pick_metadata(
             &list,
@@ -107,7 +108,7 @@ pub async fn handle_get_album_songs(
 }
 
 pub async fn handle_get_album_by_id(id: web::Path<i64>) -> impl Responder {
-    if let Ok(Some(album)) = dbservice::album_by_id(id.into_inner()).await {
+    if let Ok(Some(album)) = service::album_by_id(id.into_inner()) {
         HttpResponse::Ok().json(JsonResult::success(album))
     }
     else {

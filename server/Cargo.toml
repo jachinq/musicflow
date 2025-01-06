@@ -1,5 +1,5 @@
 [package]
-name = "musicflow"
+name = "server"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,8 +13,8 @@ actix-files = { workspace = true }
 actix-cors = { workspace = true }
 
 # music metadata
-music-metadata = { workspace = true }
+#music-metadata = { workspace = true }
 base64 = { workspace = true }
 
-rusqlite = { workspace = true }
 env_logger = { workspace = true }
+lib-utils = { path = "../lib-utils" }
