@@ -10,3 +10,10 @@ symphonia-bundle-mp3 = { workspace = true }
 symphonia-metadata = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+image = { workspace = true }
+webp = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+regex = { workspace = true }
+rusqlite = { workspace = true }
+rand = { workspace = true }

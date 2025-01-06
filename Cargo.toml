@@ -26,5 +26,10 @@ symphonia = { version = "0.5.4", features = ["flac", "mp3"] }
 symphonia-bundle-flac = "0.5.4"
 symphonia-bundle-mp3 = "0.5.4"
 symphonia-metadata = "0.5.4"
-
+anyhow = "1.0.95"
+webp = "0.3.0"
+image = "0.25.5"
+chrono = "0.4.39"
+regex = "1.11.1"
+rand = "0.8.5"
 lib-utils = { path = "lib-utils" }
