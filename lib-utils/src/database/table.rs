@@ -4,7 +4,6 @@ use super::connect_db;
 
 // use crate::connect_db;
 
-
 pub fn init() -> Result<()> {
     let conn = connect_db()?;
     let sql = sql();
@@ -24,12 +23,16 @@ fn sql() -> String {
       file_url TEXT NOT NULL,
       title TEXT NOT NULL DEFAULT '未知歌曲',
       artist TEXT NOT NULL DEFAULT '未知艺术家',
-      artists TEXT NOT NULL DEFAULT '["未知艺术家"]',
       album TEXT NOT NULL DEFAULT '未知专辑',
-      year INTEGER,
+      year TEXT NOT NULL DEFAULT '未知年份',
       duration REAL,
       bitrate REAL,
-      samplerate REAL
+      samplerate REAL,
+      language TEXT NOT NULL DEFAULT '未知语言',
+      genre TEXT NOT NULL DEFAULT '未知风格',
+      track TEXT NOT NULL DEFAULT '未知曲目',
+      disc TEXT NOT NULL DEFAULT '未知碟片',
+      comment TEXT NOT NULL DEFAULT ''
     );
   
   CREATE TABLE
@@ -37,7 +40,8 @@ fn sql() -> String {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       song_id TEXT NOT NULL,
       time REAL NOT NULL,
-      text TEXT NOT NULL
+      text TEXT NOT NULL,
+      language TEXT NOT NULL DEFAULT ''
     );
   
   CREATE TABLE
@@ -46,8 +50,9 @@ fn sql() -> String {
       link_id INTEGER NOT NULL DEFAULT 0,
       format TEXT NOT NULL,
       size TEXT NOT NULL,
-      width REAL,
-      height REAL,
+      length INTEGER,
+      width INTEGER,
+      height INTEGER,
       base64 TEXT NOT NULL
     );
   
@@ -95,17 +100,6 @@ fn sql() -> String {
     );
   
   CREATE TABLE
-    IF NOT EXISTS tag (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      color TEXT NOT NULL,
-      text_color TEXT NOT NULL
-    );
-  
-  CREATE TABLE
-    IF NOT EXISTS song_tag (song_id TEXT NOT NULL, tag_id INTEGER NOT NULL);
-  
-  CREATE TABLE
     IF NOT EXISTS artist (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -120,9 +114,9 @@ fn sql() -> String {
     IF NOT EXISTS album (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      description TEXT NOT NULL,
-      year INTEGER,
-      artist TEXT NOT NULL
+      description TEXT NOT NULL DEFAULT '',
+      year TEXT NOT NULL DEFAULT '',
+      artist TEXT NOT NULL DEFAULT ''
     );
   
   CREATE TABLE
@@ -131,7 +125,7 @@ fn sql() -> String {
       song_id TEXT NOT NULL,
       album_name TEXT NOT NULL,
       song_title TEXT NOT NULL,
-      song_artist TEXT NOT NULL
+      album_artist TEXT NOT NULL
     );
   
   COMMIT;  

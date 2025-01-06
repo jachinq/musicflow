@@ -1,12 +1,9 @@
 #![allow(dead_code)]
 
-use rusqlite::{Connection, Result, Row};
+use rusqlite::{Result, Row};
 use serde::{Deserialize, Serialize};
 
-fn connect_db() -> Result<Connection> {
-    let conn = Connection::open("data/musicflow.db")?;
-    Ok(conn)
-}
+use super::connect_db;
 
 fn convert_single<T>(row: Option<&Row>, f: fn(&Row) -> Result<T>) -> Option<T> {
     if row.is_none() {
@@ -37,6 +34,7 @@ fn covert_row_to_metadata(row: &rusqlite::Row) -> Result<Metadata> {
         genre: row.get(12)?,
         track: row.get(13)?,
         disc: row.get(14)?,
+        comment: row.get(15)?,
     })
 }
 
@@ -46,9 +44,10 @@ fn covert_row_to_cover(row: &rusqlite::Row) -> Result<Cover> {
         link_id: row.get(1)?,
         format: row.get(2)?,
         size: row.get(3)?,
-        width: row.get(4)?,
-        height: row.get(5)?,
-        base64: row.get(6)?,
+        length: row.get(4)?,
+        width: row.get(5)?,
+        height: row.get(6)?,
+        base64: row.get(7)?,
     })
 }
 
@@ -58,22 +57,7 @@ fn covert_row_to_lyric(row: &rusqlite::Row) -> Result<Lyric> {
         song_id: row.get(1)?,
         time: row.get(2)?,
         text: row.get(3)?,
-    })
-}
-
-fn covert_row_to_tag(row: &rusqlite::Row) -> Result<Tag> {
-    Ok(Tag {
-        id: row.get(0)?,
-        name: row.get(1)?,
-        color: row.get(2)?,
-        text_color: row.get(3)?,
-    })
-}
-
-fn covert_row_to_song_tag(row: &rusqlite::Row) -> Result<SongTag> {
-    Ok(SongTag {
-        song_id: row.get(0)?,
-        tag_id: row.get(1)?,
+        language: row.get(4)?,
     })
 }
 
@@ -147,6 +131,7 @@ fn covert_row_to_album(row: &rusqlite::Row) -> Result<Album> {
         name: row.get(1)?,
         description: row.get(2)?,
         year: row.get(3)?,
+        artist: row.get(4)?,
     })
 }
 
@@ -156,11 +141,11 @@ fn covert_row_to_album_song(row: &rusqlite::Row) -> Result<AlbumSong> {
         song_id: row.get(1)?,
         album_name: row.get(2)?,
         song_title: row.get(3)?,
-        song_artist: row.get(4)?,
+        album_artist: row.get(4)?,
     })
 }
 
-pub async fn get_metadata_by_id(id: &str) -> Result<Option<Metadata>> {
+pub fn get_metadata_by_id(id: &str) -> Result<Option<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM metadata WHERE id = ?")?;
     let mut rows = stmt.query([id])?;
@@ -173,7 +158,7 @@ pub async fn get_metadata_by_id(id: &str) -> Result<Option<Metadata>> {
     Ok(metadata)
 }
 
-pub async fn get_metadata_list() -> Result<Vec<Metadata>> {
+pub fn get_metadata_list() -> Result<Vec<Metadata>> {
     // 打开数据库连接（如果数据库文件不存在，会自动创建）
     let conn = connect_db()?;
 
@@ -193,7 +178,7 @@ pub async fn get_metadata_list() -> Result<Vec<Metadata>> {
     Ok(list)
 }
 
-pub async fn get_metadata_by_title_artist(title: &str, artist: &str) -> Result<Option<Metadata>> {
+pub fn get_metadata_by_title_artist(title: &str, artist: &str) -> Result<Option<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM metadata WHERE title = ? AND artist = ?")?;
     let mut rows = stmt.query([title, artist])?;
@@ -206,13 +191,46 @@ pub async fn get_metadata_by_title_artist(title: &str, artist: &str) -> Result<O
     Ok(metadata)
 }
 
-
-
-
-pub async fn get_cover(link_id: i64, cover_type: &str, size: &str) -> Result<Option<Cover>> {
+pub fn add_metadata(metadata: &Metadata) -> Result<()> {
     let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT * FROM cover WHERE link_id = ? AND type = ? AND size = ?")?;
-    let mut rows = stmt.query([link_id.to_string(), cover_type.to_string(), size.to_string()])?;
+    let mut stmt = conn.prepare("INSERT INTO metadata (id, file_name, file_path, file_url, title, artist, album, year, duration, bitrate, samplerate, language, genre, track, disc, comment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")?;
+    let _ = stmt.execute([
+        metadata.id.clone(),
+        metadata.file_name.clone(),
+        metadata.file_path.clone(),
+        metadata.file_url.clone(),
+        metadata.title.clone(),
+        metadata.artist.clone(),
+        metadata.album.clone(),
+        metadata.year.clone(),
+        metadata.duration.to_string(),
+        metadata.bitrate.to_string(),
+        metadata.samplerate.to_string(),
+        metadata.language.clone(),
+        metadata.genre.clone(),
+        metadata.track.to_string(),
+        metadata.disc.to_string(),
+        metadata.comment.clone(),
+    ])?;
+    Ok(())
+}
+
+pub fn set_metadata_genre(genre: &str, song_id: &str) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("UPDATE metadata SET genre = ? WHERE id = ?")?;
+    let size = stmt.execute([genre, song_id])?;
+    Ok(size)
+}
+
+pub fn get_cover(link_id: i64, cover_type: &str, size: &str) -> Result<Option<Cover>> {
+    let conn = connect_db()?;
+    let mut stmt =
+        conn.prepare("SELECT * FROM cover WHERE link_id = ? AND type = ? AND size = ?")?;
+    let mut rows = stmt.query([
+        link_id.to_string(),
+        cover_type.to_string(),
+        size.to_string(),
+    ])?;
 
     let cover = rows
         .next()
@@ -222,7 +240,29 @@ pub async fn get_cover(link_id: i64, cover_type: &str, size: &str) -> Result<Opt
     Ok(cover)
 }
 
-pub async fn get_lyric(song_id: &str) -> Result<Vec<Lyric>> {
+pub fn add_covers(cover_list: Vec<Cover>) -> Result<usize> {
+    let mut conn = connect_db()?;
+    let tx = conn.transaction()?;
+    let mut count = 0;
+    for cover in cover_list {
+        let mut stmt = tx.prepare("INSERT INTO cover (type, link_id, format, size, length, width, height, base64) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")?;
+        let _ = stmt.execute([
+            cover.r#type.clone(),
+            cover.link_id.to_string(),
+            cover.format.clone(),
+            cover.size.clone(),
+            cover.length.to_string(),
+            cover.width.to_string(),
+            cover.height.to_string(),
+            cover.base64.clone(),
+        ])?;
+        count += 1;
+    }
+    tx.commit()?;
+    Ok(count)
+}
+
+pub fn get_lyric(song_id: &str) -> Result<Vec<Lyric>> {
     // 打开数据库连接（如果数据库文件不存在，会自动创建）
     let conn = connect_db()?;
     // 查询数据
@@ -241,98 +281,26 @@ pub async fn get_lyric(song_id: &str) -> Result<Vec<Lyric>> {
     Ok(lyric_list)
 }
 
-// 标签相关接口
-pub async fn get_tags() -> Result<Vec<Tag>> {
-    let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT * FROM tag")?;
-    let rows = stmt.query_map([], |row| covert_row_to_tag(row))?;
-
-    let mut tag_list = Vec::new();
-    for tag in rows {
-        if let Ok(tag) = tag {
-            tag_list.push(tag);
-        } else {
-            println!("getTags Error: {}", tag.unwrap_err());
-        }
+pub fn add_lyrics(lyric_list: Vec<Lyric>) -> Result<usize> {
+    let mut conn = connect_db()?;
+    let tx = conn.transaction()?;
+    let mut count = 0;
+    for lyric in lyric_list {
+        let mut stmt = tx.prepare("INSERT INTO lyric (song_id, time, text, language) VALUES (?, ?, ?, ?)")?;
+        let _ = stmt.execute([
+            lyric.song_id.clone(),
+            lyric.time.to_string(),
+            lyric.text.clone(),
+            lyric.language.clone(),
+        ])?;
+        count += 1;
     }
-    Ok(tag_list)
-}
-
-pub async fn get_tags_by_like_name(name: &str) -> Result<Vec<Tag>> {
-    let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT * FROM tag WHERE name LIKE ?")?;
-    let rows = stmt.query_map([format!("%{}%", name)], |row| covert_row_to_tag(row))?;
-
-    let mut tag_list = Vec::new();
-    for tag in rows {
-        if let Ok(tag) = tag {
-            tag_list.push(tag);
-        } else {
-            println!("getTags Error: {}", tag.unwrap_err());
-        }
-    }
-    Ok(tag_list)
-}
-pub async fn get_song_tags(song_id: &str) -> Result<Vec<Tag>> {
-    let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT tag.id, tag.name, tag.color, tag.text_color FROM tag INNER JOIN song_tag ON tag.id = song_tag.tag_id WHERE song_tag.song_id = ?")?;
-    let rows = stmt.query_map([song_id], |row| covert_row_to_tag(row))?;
-
-    let mut tag_list = Vec::new();
-    for tag in rows {
-        if let Ok(tag) = tag {
-            tag_list.push(tag);
-        } else {
-            println!("getTags Error: {}", tag.unwrap_err());
-        }
-    }
-    Ok(tag_list)
-}
-
-pub async fn get_tag_songs(tag_id: i64) -> Result<Vec<Metadata>> {
-    let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.artists, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate, metadata.language, metadata.genre, metadata.track, metadata.disc FROM metadata INNER JOIN song_tag ON metadata.id = song_tag.song_id WHERE song_tag.tag_id = ?")?;
-    let rows = stmt.query_map([tag_id], |row| covert_row_to_metadata(row))?;
-
-    let mut song_list = Vec::new();
-    for song in rows {
-        if let Ok(song) = song {
-            song_list.push(song);
-        } else {
-            println!("getTags Error: {}", song.unwrap_err());
-        }
-    }
-    Ok(song_list)
-}
-pub async fn get_song_tag_by_tag_ids(tag_ids: Vec<i64>) -> Result<Vec<SongTag>> {
-    let conn = connect_db()?;
-    let ids = tag_ids.iter().map(|id| id.to_string()).collect::<Vec<String>>();
-    let ids = ids.join(",");
-    let mut stmt = conn.prepare("SELECT * from song_tag WHERE tag_id IN (?)")?;
-    let rows = stmt.query_map([&ids], |row| covert_row_to_song_tag(row))?;
-
-    let mut song_tag_list = Vec::new();
-    for song in rows {
-        if let Ok(song) = song {
-            song_tag_list.push(song);
-        } else {
-            println!("getTags Error: {}", song.unwrap_err());
-        }
-    }
-    Ok(song_tag_list)
-}
-
-pub async fn add_tag(tag: &Tag) -> Result<i64> {
-    let conn = connect_db()?;
-    let mut stmt = conn.prepare("INSERT INTO tag (name, color, text_color) VALUES (?, ?, ?)")?;
-    let _ = stmt.execute([tag.name.clone(), tag.color.clone(), tag.text_color.clone()])?;
-    // 拿到自增id
-    let id = conn.last_insert_rowid();
-    Ok(id)
+    tx.commit()?;
+    Ok(count)
 }
 
 // 歌单相关接口
-pub async fn get_song_list() -> Result<Vec<SongList>> {
+pub fn get_song_list() -> Result<Vec<SongList>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM song_list")?;
     let rows = stmt.query_map([], |row| covert_row_to_song_list(row))?;
@@ -348,25 +316,7 @@ pub async fn get_song_list() -> Result<Vec<SongList>> {
     Ok(song_list_list)
 }
 
-pub async fn add_song_tag(list: Vec<SongTag>) -> Result<usize> {
-    let mut conn = connect_db()?;
-    let tx = conn.transaction()?;
-
-    for song_tag in &list {
-        let mut stmt = tx.prepare("INSERT INTO song_tag (song_id, tag_id) VALUES (?, ?)")?;
-        stmt.execute([song_tag.song_id.to_string(), song_tag.tag_id.to_string()])?;
-    }
-    tx.commit()?;
-    Ok(list.len())
-}
-
-pub async fn delete_song_tag(song_id: &str, tag_id: i64) -> Result<usize> {
-    let conn = connect_db()?;
-    let mut stmt = conn.prepare("DELETE FROM song_tag WHERE song_id = ? AND tag_id = ?")?;
-    Ok(stmt.execute([song_id, &tag_id.to_string()])?)
-}
-
-pub async fn add_song_list(song_list: &SongList) -> Result<i64> {
+pub fn add_song_list(song_list: &SongList) -> Result<i64> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("INSERT INTO song_list (user_id, name, description, cover, created_at) VALUES (?, ?, ?, ?, ?)")?;
     let _ = stmt.execute([
@@ -381,7 +331,7 @@ pub async fn add_song_list(song_list: &SongList) -> Result<i64> {
     Ok(id)
 }
 
-pub async fn update_song_list(song_list: &SongList) -> Result<usize> {
+pub fn update_song_list(song_list: &SongList) -> Result<usize> {
     let conn = connect_db()?;
     let mut stmt =
         conn.prepare("UPDATE song_list SET name = ?, description = ?, cover = ? WHERE id = ?")?;
@@ -394,7 +344,7 @@ pub async fn update_song_list(song_list: &SongList) -> Result<usize> {
     Ok(size)
 }
 
-pub async fn delete_song_list(id: i64) -> Result<(usize, usize)> {
+pub fn delete_song_list(id: i64) -> Result<(usize, usize)> {
     let mut conn = connect_db()?;
     let tx = conn.transaction()?; // 事务
 
@@ -411,7 +361,7 @@ pub async fn delete_song_list(id: i64) -> Result<(usize, usize)> {
     Ok((list_size, song_size))
 }
 
-pub async fn add_song_list_song(song_list_id: i64, list: &Vec<SongListSong>) -> Result<usize> {
+pub fn add_song_list_song(song_list_id: i64, list: &Vec<SongListSong>) -> Result<usize> {
     let mut conn = connect_db()?;
     let tx = conn.transaction()?;
 
@@ -435,16 +385,16 @@ pub async fn add_song_list_song(song_list_id: i64, list: &Vec<SongListSong>) -> 
     Ok(list.len())
 }
 
-pub async fn delete_song_list_song(song_list_id: i64, song_id: &str) -> Result<usize> {
+pub fn delete_song_list_song(song_list_id: i64, song_id: &str) -> Result<usize> {
     let conn = connect_db()?;
     let mut stmt =
         conn.prepare("DELETE FROM song_list_song WHERE song_list_id = ? AND song_id = ?")?;
     Ok(stmt.execute([&song_list_id.to_string(), &song_id.to_string()])?)
 }
 
-pub async fn get_song_list_songs(song_list_id: i64) -> Result<Vec<Metadata>> {
+pub fn get_song_list_songs(song_list_id: i64) -> Result<Vec<Metadata>> {
     let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate, metadata.language, metadata.genre, metadata.track, metadata.disc FROM metadata INNER JOIN song_list_song ON metadata.id = song_list_song.song_id WHERE song_list_song.song_list_id = ?")?;
+    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate, metadata.language, metadata.genre, metadata.track, metadata.disc, metadata.comment FROM metadata INNER JOIN song_list_song ON metadata.id = song_list_song.song_id WHERE song_list_song.song_list_id = ?")?;
     let rows = stmt.query_map([&song_list_id.to_string()], |row| {
         covert_row_to_metadata(row)
     })?;
@@ -460,7 +410,7 @@ pub async fn get_song_list_songs(song_list_id: i64) -> Result<Vec<Metadata>> {
     Ok(song_list)
 }
 
-pub async fn get_song_song_list(song_id: &str) -> Result<Vec<SongList>> {
+pub fn get_song_song_list(song_id: &str) -> Result<Vec<SongList>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT song_list.id, song_list.user_id, song_list.name, song_list.description, song_list.cover, song_list.created_at FROM song_list INNER JOIN song_list_song ON song_list.id = song_list_song.song_list_id WHERE song_list_song.song_id = ?")?;
     let rows = stmt.query_map([song_id], |row| covert_row_to_song_list(row))?;
@@ -477,7 +427,22 @@ pub async fn get_song_song_list(song_id: &str) -> Result<Vec<SongList>> {
 }
 
 // 专辑相关接口
-pub async fn get_album_list() -> Result<Vec<Album>> {
+pub fn add_album(album: &Album) -> Result<i64> {
+    let conn = connect_db()?;
+    let mut stmt =
+        conn.prepare("INSERT INTO album (name, description, year, artist) VALUES (?, ?, ?, ?)")?;
+    let _ = stmt.execute([
+        &album.name.clone(),
+        &album.description.clone(),
+        &album.year.clone(),
+        &album.artist.clone(),
+    ])?;
+    // 拿到自增id
+    let id = conn.last_insert_rowid();
+    Ok(id)
+}
+
+pub fn get_album_list() -> Result<Vec<Album>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM album")?;
     let rows = stmt.query_map([], |row| covert_row_to_album(row))?;
@@ -493,7 +458,7 @@ pub async fn get_album_list() -> Result<Vec<Album>> {
     Ok(album_list)
 }
 
-pub async fn album_by_id(id: i64) -> Result<Option<Album>> {
+pub fn album_by_id(id: i64) -> Result<Option<Album>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM album WHERE id = ?")?;
     let mut rows = stmt.query([id])?;
@@ -506,9 +471,36 @@ pub async fn album_by_id(id: i64) -> Result<Option<Album>> {
     Ok(album)
 }
 
-pub async fn album_songs(album_id: i64) -> Result<Vec<Metadata>> {
+pub fn get_album_by_name(name: &str) -> Result<Option<Album>> {
     let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate, metadata.language, metadata.genre, metadata.track, metadata.disc FROM metadata INNER JOIN album_song ON metadata.id = album_song.song_id WHERE album_song.album_id = ?")?;
+    let mut stmt = conn.prepare("SELECT * FROM album WHERE name = ?")?;
+    let mut rows = stmt.query([name])?;
+
+    let album = rows    
+        .next()
+        .map(|row| convert_single(row, covert_row_to_album))
+        .unwrap_or(None);
+
+    Ok(album)
+}
+
+pub fn add_album_song(album_song: &AlbumSong) -> Result<usize> {
+    let conn = connect_db()?;
+
+    let mut stmt = conn.prepare("INSERT INTO album_song (album_id, song_id, album_name, song_title, album_artist) VALUES (?, ?, ?, ?, ?)")?;
+    let _ = stmt.execute([
+        &album_song.album_id.to_string(),
+        &album_song.song_id.clone(),
+        &album_song.album_name.clone(),
+        &album_song.song_title.clone(),
+        &album_song.album_artist.clone(),
+    ])?;
+    Ok(1)
+}
+
+pub fn album_songs(album_id: i64) -> Result<Vec<Metadata>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist, metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate, metadata.language, metadata.genre, metadata.track, metadata.disc, metadata.comment FROM metadata INNER JOIN album_song ON metadata.id = album_song.song_id WHERE album_song.album_id = ?")?;
     let rows = stmt.query_map([&album_id.to_string()], |row| covert_row_to_metadata(row))?;
 
     let mut song_list = Vec::new();
@@ -522,7 +514,7 @@ pub async fn album_songs(album_id: i64) -> Result<Vec<Metadata>> {
     Ok(song_list)
 }
 
-pub async fn album_song_by_song_id(song_id: &str) -> Result<Option<AlbumSong>> {
+pub fn album_song_by_song_id(song_id: &str) -> Result<Option<AlbumSong>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM album_song WHERE song_id = ?")?;
     let mut rows = stmt.query([song_id])?;
@@ -535,7 +527,7 @@ pub async fn album_song_by_song_id(song_id: &str) -> Result<Option<AlbumSong>> {
     Ok(album_song)
 }
 
-pub async fn album_song_by_album_id(album_id: i64) -> Result<Vec<AlbumSong>> {
+pub fn album_song_by_album_id(album_id: i64) -> Result<Vec<AlbumSong>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM album_song WHERE album_id = ?")?;
     let rows = stmt.query_map([&album_id.to_string()], |row| covert_row_to_album_song(row))?;
@@ -551,8 +543,47 @@ pub async fn album_song_by_album_id(album_id: i64) -> Result<Vec<AlbumSong>> {
     Ok(album_song_list)
 }
 
+pub fn album_song_by_id(song_id: &str, album_id: i64) -> Result<Option<AlbumSong>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM album_song WHERE song_id = ? AND album_id = ?")?;
+    let mut rows = stmt.query([song_id, &album_id.to_string()])?;
+
+    let album_song = rows
+        .next()
+        .map(|row| convert_single(row, covert_row_to_album_song))
+        .unwrap_or(None);
+
+    Ok(album_song)
+}
+
+
+
 // 艺术家相关接口
-pub async fn artist() -> Result<Vec<Artist>> {
+pub fn add_artists(artist: &Vec<Artist>) -> Result<Vec<i64>> {
+    let conn = connect_db()?;
+    let mut stmt =
+        conn.prepare("INSERT INTO artist (name, cover, description) VALUES (?, ?, ?)")?;
+    let mut ids = Vec::new();
+    for a in artist {
+        let _ = stmt.execute([&a.name.clone(), &a.cover.clone(), &a.description.clone()])?;
+        // 拿到自增id
+        let id = conn.last_insert_rowid();
+        ids.push(id);
+    }
+    Ok(ids)
+}
+
+pub fn add_artist(artist: &Artist) -> Result<i64> {
+    let conn = connect_db()?;
+    let mut stmt =
+        conn.prepare("INSERT INTO artist (name, cover, description) VALUES (?, ?, ?)")?;
+    let _ = stmt.execute([&artist.name.clone(), &artist.cover.clone(), &artist.description.clone()])?;
+    // 拿到自增id
+    let id = conn.last_insert_rowid();
+    Ok(id)
+}
+
+pub fn artist() -> Result<Vec<Artist>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM artist")?;
     let rows = stmt.query_map([], |row| covert_row_to_artist(row))?;
@@ -568,7 +599,7 @@ pub async fn artist() -> Result<Vec<Artist>> {
     Ok(artist_list)
 }
 
-pub async fn artist_by_id(id: i64) -> Result<Option<Artist>> {
+pub fn artist_by_id(id: i64) -> Result<Option<Artist>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM artist WHERE id = ?")?;
     let mut rows = stmt.query([id])?;
@@ -581,9 +612,37 @@ pub async fn artist_by_id(id: i64) -> Result<Option<Artist>> {
     Ok(artist)
 }
 
-pub async fn artist_songs(artist_id: i64) -> Result<Vec<Metadata>> {
+pub fn artist_by_name(name: &str) -> Result<Option<Artist>> {
     let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist,  metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate, metadata.language, metadata.genre, metadata.track, metadata.disc FROM metadata INNER JOIN artist_song ON metadata.id = artist_song.song_id WHERE artist_song.artist_id = ?")?;
+    let mut stmt = conn.prepare("SELECT * FROM artist WHERE name = ?")?;
+    let mut rows = stmt.query([name])?;
+
+    let artist = rows
+        .next()
+        .map(|row| convert_single(row, covert_row_to_artist))
+        .unwrap_or(None);
+
+    Ok(artist)
+}
+
+pub fn add_artist_songs(artist_songs: &Vec<ArtistSong>) -> Result<usize> {
+    let mut conn = connect_db()?;
+    let tx = conn.transaction()?;
+
+    for artist_song in artist_songs {
+        let mut stmt = tx.prepare("INSERT INTO artist_song (artist_id, song_id) VALUES (?, ?)")?;
+        stmt.execute([
+            &artist_song.artist_id.to_string(),
+            &artist_song.song_id.clone(),
+        ])?;
+    }
+    tx.commit()?;
+    Ok(artist_songs.len())
+}
+
+pub fn artist_songs(artist_id: i64) -> Result<Vec<Metadata>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT metadata.id, metadata.file_name, metadata.file_path, metadata.file_url, metadata.title, metadata.artist,  metadata.album, metadata.year, metadata.duration, metadata.bitrate, metadata.samplerate, metadata.language, metadata.genre, metadata.track, metadata.disc, metadata.comment FROM metadata INNER JOIN artist_song ON metadata.id = artist_song.song_id WHERE artist_song.artist_id = ?")?;
     let rows = stmt.query_map([&artist_id.to_string()], |row| covert_row_to_metadata(row))?;
 
     let mut song_list = Vec::new();
@@ -597,7 +656,7 @@ pub async fn artist_songs(artist_id: i64) -> Result<Vec<Metadata>> {
     Ok(song_list)
 }
 
-pub async fn artist_song_by_song_id(song_id: &str) -> Result<Option<ArtistSong>> {
+pub fn artist_song_by_song_id(song_id: &str) -> Result<Option<ArtistSong>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM artist_song WHERE song_id = ?")?;
     let mut rows = stmt.query([song_id])?;
@@ -610,15 +669,15 @@ pub async fn artist_song_by_song_id(song_id: &str) -> Result<Option<ArtistSong>>
     Ok(artist_song)
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Cover {
     pub r#type: String,
     pub link_id: i64,
     pub format: String,
     pub size: String,
-    pub width: f32,
-    pub height: f32,
+    pub length: usize,
+    pub width: u32,
+    pub height: u32,
     pub base64: String,
 }
 
@@ -628,6 +687,7 @@ pub struct Lyric {
     pub song_id: String,
     pub time: f64,
     pub text: String,
+    pub language: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -647,6 +707,7 @@ pub struct Metadata {
     pub genre: String,
     pub track: String,
     pub disc: String,
+    pub comment: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -693,20 +754,6 @@ pub struct UserFavorite {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
-pub struct Tag {
-    pub id: i64,
-    pub name: String,
-    pub color: String,
-    pub text_color: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
-pub struct SongTag {
-    pub song_id: String,
-    pub tag_id: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Artist {
     pub id: i64,
     pub name: String,
@@ -731,15 +778,17 @@ pub struct Album {
     pub id: i64,
     pub name: String,
     pub description: String,
-    pub year: i64,
+    pub year: String,
+    pub artist: String,
 }
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct AlbumSong {
     pub album_id: i64,
     pub song_id: String,
     pub album_name: String,
     pub song_title: String,
-    pub song_artist: String,
+    pub album_artist: String,
 }
 
 impl Album {

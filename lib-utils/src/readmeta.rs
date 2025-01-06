@@ -14,13 +14,15 @@ pub struct MyMetadata {
     pub title: String,
     pub artist: String,
     pub album: String,
+    pub album_artist: String,
     pub year: String,
     pub genre: String,
     pub duration: f64,
     pub track: String,
     pub language: String,
     pub disc: String,
-    pub cover: Vec<Cover>,
+    pub comment: String,
+    pub covers: Vec<Cover>,
     pub lyrics: Vec<Lyric>,
 }
 
@@ -83,13 +85,13 @@ pub fn print_metadata(file_path: &str) {
             println!("{:.3} - {}", lyric.time, lyric.text);
         }
         println!("Cover: ");
-        for cover in metadata.cover.iter() {
+        for cover in metadata.covers.iter() {
             let length = if cover.length > 1024 * 1024 {
                 format!("{:.2} MB", cover.length as f64 / 1024.0 / 1024.0)
             } else if cover.length > 1024 {
                 format!("{:.2} KB", cover.length as f64 / 1024.0)
             } else {
-              format!("{} Bytes", cover.length)
+                format!("{} Bytes", cover.length)
             };
             println!(
                 "{}: {} - {}x{} - {}",
@@ -171,13 +173,15 @@ fn get_metadata(probed: &mut ProbeResult) -> Option<MyMetadata> {
         let value = pair.value.clone();
         match key.as_str() {
             "album" => metadata.album = value,
+            "albumartist" => metadata.album_artist = value,
             "artist" => metadata.artist = value,
             "tracktitle" => metadata.title = value,
             "date" | "year" => metadata.year = value,
             "genre" => metadata.genre = value,
             "tracknumber" => metadata.track = value,
-            "disc" => metadata.disc = value,
+            "discnumber" => metadata.disc = value,
             "language" => metadata.language = value,
+            "comment" => metadata.comment = value,
             "lyrics" => metadata.lyrics = proc_lyrics(value),
             _ => {
                 if value.len() > 30 {
@@ -186,19 +190,20 @@ fn get_metadata(probed: &mut ProbeResult) -> Option<MyMetadata> {
                 } else {
                     println!("not matching tag key:{}:{}", pair.key, value);
                 }
-            },
+            }
         }
     }
 
     if let Some(cover) = cover {
-        metadata.cover = vec![cover.clone()];
+        metadata.covers = vec![];
+        // metadata.covers = vec![cover.clone()];
         let resized_cover = resize_cover(cover.clone(), 140, 80);
         if let Some(resized_cover) = resized_cover {
-            metadata.cover.push(resized_cover);
+            metadata.covers.push(resized_cover);
         }
         let resized_cover = resize_cover(cover, 600, 80);
         if let Some(resized_cover) = resized_cover {
-            metadata.cover.push(resized_cover);
+            metadata.covers.push(resized_cover);
         }
     }
 
@@ -264,6 +269,14 @@ fn proc_cover(visuals: &[Visual]) -> Option<Cover> {
             // println!("Dimensions: {} x {} ", dimensions.width, dimensions.height);
             cover.width = dimensions.width;
             cover.height = dimensions.height;
+        } else {
+            // let result = image::load_from_memory(&visual.data);
+            // if result.is_ok() {
+            //     let (w, h) = result.unwrap().dimensions();
+            //     cover.width = w;
+            //     cover.height = h;
+            // }
+            // println!("No dimensions found for cover image.");
         }
         // if let Some(bpp) = visual.bits_per_pixel {
         // println!("Bits/Pixel: {}", bpp);

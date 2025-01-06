@@ -1201,6 +1201,7 @@ dependencies = [
 name = "initdb"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "lib-utils",
  "rusqlite",
  "serde",
@@ -1287,6 +1288,7 @@ name = "lib-utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "chrono",
  "image",
  "rand",
@@ -1444,29 +1446,6 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "music-metadata"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c84d7c2faa94b83f7d1b998f099b50855c4dad7f5c293969b14bbf1c38eb48ec"
-
-[[package]]
-name = "musicflow"
-version = "0.1.0"
-dependencies = [
- "actix-cors",
- "actix-files",
- "actix-web",
- "base64",
- "env_logger",
- "music-metadata",
- "rusqlite",
- "serde",
- "serde_json",
- "tokio",
- "walkdir",
 ]
 
 [[package]]
@@ -1952,6 +1931,22 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "server"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-files",
+ "actix-web",
+ "base64",
+ "env_logger",
+ "lib-utils",
+ "serde",
+ "serde_json",
+ "tokio",
+ "walkdir",
 ]
 
 [[package]]

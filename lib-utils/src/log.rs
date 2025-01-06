@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{fs::{self, OpenOptions}, io::Write, path::Path, time::Instant};
 
 pub fn log(level: &str, info: &str) {
     let now = chrono::Local::now();
@@ -39,4 +39,33 @@ pub fn log_req(start: Instant, url: &str, ip: &str) {
     };
 
     println!("<{app_name}:{pid}>[{datetime}] {{{focus}t={duration:?};i={ip};u={url};}}");
+}
+
+pub fn log_file(file_path: &str, level: &str, info: &str) -> Result<(), std::io::Error> {
+    let now = chrono::Local::now();
+    let datetime = now.format("%Y-%m-%d %H:%M:%S");
+    let log_str = format!(
+        "<{}>[{}] {{{}}}\n",
+        level,
+        datetime,
+        info,
+    );
+    println!("{}", log_str);
+
+    
+    // 确保路径存在
+    let path = Path::new(file_path);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    // 以追加形式打开文件
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(file_path)?;
+
+    // 写入日志
+    file.write_all(log_str.as_bytes())?;
+    Ok(())
 }
