@@ -20,6 +20,8 @@ pub struct MyMetadata {
     pub duration: f64,
     pub track: String,
     pub language: String,
+    pub bitrate: String,
+    pub samplerate: String,
     pub disc: String,
     pub comment: String,
     pub covers: Vec<Cover>,
@@ -101,27 +103,41 @@ pub fn print_metadata(file_path: &str) {
     }
 }
 
-fn get_duration(probed: &mut ProbeResult) -> f64 {
+fn pack_meta_from_track_flow(probed: &mut ProbeResult, metadata: &mut MyMetadata) {
     let tracks = probed.format.tracks();
     if tracks.is_empty() {
         println!("No tracks found.");
-        return 0.0;
+        return;
     }
 
     // Get the selected track using the track ID.
     let track = tracks.get(0).unwrap();
+    let codec_params = track.codec_params.clone();
+
+    let lan = track.language.clone();
+    lan.map(|lang| metadata.language = lang.to_string());
+
+    codec_params
+        .bits_per_sample
+        .map(|bits| metadata.bitrate = bits.to_string());
+    codec_params
+        .sample_rate
+        .map(|sr| metadata.samplerate = sr.to_string());
+    // codec_params
+        // .bits_per_coded_sample
+        // .map(|bps| println!("压缩率: {} bits/sample", bps));
 
     // Get the selected track's timebase and duration.
-    let tb = track.codec_params.time_base;
+    let tb = codec_params.time_base;
     if tb.is_none() {
         println!("No timebase found.");
-        return 0.0;
+        return;
     }
     let tb = tb.unwrap();
     let dur = track
         .codec_params
         .n_frames
-        .map(|frames| track.codec_params.start_ts + frames);
+        .map(|frames| codec_params.start_ts + frames);
     // println!("Duration: {} ({:?} timebase)", dur.unwrap_or(0), tb);
     // println!("fmt time {}", fmt_time(dur.unwrap_or(0), tb.unwrap()));
     // fmt_time(dur.unwrap_or(0), tb.unwrap())
@@ -136,7 +152,7 @@ fn get_duration(probed: &mut ProbeResult) -> f64 {
     let secs = format!("{:.3}", secs);
     let secs = secs.parse().unwrap_or(0.0);
     // println!("Duration: {}", format!("{}:{:0>2}:{:0>6.3}", hours, mins, secs));
-    hours * 3600.0 + mins * 60.0 + secs
+    metadata.duration = hours * 3600.0 + mins * 60.0 + secs;
 }
 
 fn get_metadata(probed: &mut ProbeResult) -> Option<MyMetadata> {
@@ -184,12 +200,12 @@ fn get_metadata(probed: &mut ProbeResult) -> Option<MyMetadata> {
             "comment" => metadata.comment = value,
             "lyrics" => metadata.lyrics = proc_lyrics(value),
             _ => {
-                if value.len() > 30 {
-                    let value = value.chars().take(30).collect::<String>();
-                    println!("not matching tag key:{}:{}", pair.key, value);
-                } else {
-                    println!("not matching tag key:{}:{}", pair.key, value);
-                }
+                // if value.len() > 30 {
+                //     let value = value.chars().take(30).collect::<String>();
+                //     println!("not matching tag key:{}:{}", pair.key, value);
+                // } else {
+                //     println!("not matching tag key:{}:{}", pair.key, value);
+                // }
             }
         }
     }
@@ -207,7 +223,7 @@ fn get_metadata(probed: &mut ProbeResult) -> Option<MyMetadata> {
         }
     }
 
-    metadata.duration = get_duration(probed);
+    pack_meta_from_track_flow(probed, &mut metadata);
 
     Some(metadata)
 }
