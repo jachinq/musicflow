@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Music } from "../lib/defined";
-import { addTagToSong, getTagList, removeTagFromSong } from "../lib/api";
+import { Music, MyRoutes } from "../lib/defined";
+import { addGenreToSong, getGenreList, removeGenreFromSong } from "../lib/api";
 import { PlusIcon, X } from "lucide-react";
 import { Input } from "./Input";
-import { GenreElement } from "./Tag";
+import { GenreElement } from "./Genre";
 import { toast } from "sonner";
 import { useConfirm } from "./confirm";
 import { useNavigate } from "react-router-dom";
@@ -12,18 +12,18 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
   const navigate = useNavigate();
   if (!song) return <div>暂无数据</div>;
 
-  const [tags, setTags] = useState<string[]>([]);
+  const [genres, setGenres] = useState<string[]>([]);
   useEffect(() => {
     if (song) {
-      setTags(song.genres);
+      setGenres(song.genres);
     }
   }, [song]);
 
   const gotoArtist = () => {
-    navigate(`/artists/${song.artist_id}`);
+    navigate(`${MyRoutes.Artists}/${song.artist_id}`);
   };
   const gotoAlbum = () => {
-    navigate(`/albums/${song.album_id}`);
+    navigate(`${MyRoutes.Albums}/${song.album_id}`);
   };
 
   return (
@@ -38,7 +38,7 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
         <ShowItem name="时长" value={song.duration.toFixed(2)} />
         <ShowItem
           name="风格"
-          value={<Tags song={song} tags={tags} setTags={setTags} />}
+          value={<Genres song={song} genres={genres} setGenres={setGenres} />}
         />
         <ShowItem name="路径" value={song.file_path} />
         <ShowItem name="URL" value={song.file_url} />
@@ -47,21 +47,21 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
   );
 };
 
-const Tags = ({
+const Genres = ({
   song,
-  tags,
-  setTags,
+  genres,
+  setGenres,
 }: {
   song: Music;
-  tags: string[];
-  setTags: (tags: string[]) => void;
+  genres: string[];
+  setGenres: (genres: string[]) => void;
 }) => {
   const confirm = useConfirm();
   const [showNewTagForm, setShowNewTagForm] = useState(false);
   const handleAddTag = (tagname: string) => {
     tagname = (tagname || "").trim();
     if (tagname === "") return;
-    addTagToSong(
+    addGenreToSong(
       song.id,
       tagname,
       (result) => {
@@ -71,7 +71,7 @@ const Tags = ({
           });
           return;
         }
-        setTags(result.data);
+        setGenres(result.data);
         setShowNewTagForm(false);
         toast.success("添加风格成功");
       },
@@ -85,7 +85,7 @@ const Tags = ({
   const handleDeleteGenre = (evt: React.MouseEvent, genre: string) => {
     evt.stopPropagation();
     const confirmDeleteTag = () => {
-      removeTagFromSong(
+      removeGenreFromSong(
         song.id,
         genre,
         (result) => {
@@ -95,7 +95,7 @@ const Tags = ({
             });
             return;
           }
-          setTags(result.data);
+          setGenres(result.data);
           toast.success("删除风格成功");
         },
         (error) => {
@@ -109,20 +109,20 @@ const Tags = ({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {tags.map((tag, index) => (
-        <GenreElement key={tag + index} tag={tag} className="flex items-center gap-1">
+      {genres.map((genre, index) => (
+        <GenreElement key={genre + index} genre={genre} className="flex items-center gap-1">
           <X
-            onClick={(e) => handleDeleteGenre(e, tag)}
+            onClick={(e) => handleDeleteGenre(e, genre)}
             className="hover:text-red-500"
           />
         </GenreElement>
       ))}
-      <div className="tag" onClick={setShowNewTagForm.bind(null, true)}>
+      <div className="genre" onClick={setShowNewTagForm.bind(null, true)}>
         <PlusIcon strokeWidth={1} />
       </div>
       {showNewTagForm && (
         <NewTagForm
-          tags={tags}
+          genres={genres}
           onSubmit={handleAddTag}
           onCancel={setShowNewTagForm.bind(null, false)}
         />
@@ -149,11 +149,11 @@ const ShowItem = ({
 };
 
 const NewTagForm = ({
-  tags,
+  genres,
   onSubmit,
   onCancel,
 }: {
-  tags: string[];
+  genres: string[];
   onSubmit: (tagname: string) => void;
   onCancel?: () => void;
 }) => {
@@ -166,13 +166,13 @@ const NewTagForm = ({
   };
 
   useEffect(() => {
-    getTagList(
+    getGenreList(
       (result) => {
         if (result && result.success) {
           const tagList = result.data;
-          const filteredTagList = tagList.filter((tag: string) => {
-            return !tags.some((t) => {
-              return t === tag;
+          const filteredTagList = tagList.filter((genre: string) => {
+            return !genres.some((t) => {
+              return t === genre;
             });
           });
           setTagList(filteredTagList);
@@ -182,8 +182,8 @@ const NewTagForm = ({
     );
   }, []);
 
-  const selectTag = (tag: string) => {
-    onSubmit && onSubmit(tag);
+  const selectTag = (genre: string) => {
+    onSubmit && onSubmit(genre);
   };
   return (
     <>
@@ -197,8 +197,8 @@ const NewTagForm = ({
           placeholder="输入新风格"
         />
         <div className="flex flex-wrap gap-2 max-h-[calc(100vh-200px)] overflow-y-scroll">
-          {tagList.map((tag, index) => (
-            <GenreElement key={tag + index} tag={tag} onClick={() => selectTag(tag)} />
+          {tagList.map((genre, index) => (
+            <GenreElement key={genre + index} genre={genre} onClick={() => selectTag(genre)} />
           ))}
         </div>
         <div className="flex justify-end gap-2 items-center mt-4">

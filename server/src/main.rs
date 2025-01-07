@@ -90,15 +90,15 @@ async fn main() -> io::Result<()> {
             )
             .route("/api/lyrics/{song_id}", web::get().to(get_lyrics))
             // 标签相关接口
-            .route("/api/tags", web::get().to(handle_get_tags))
+            .route("/api/genres", web::get().to(handle_get_genres))
             .route(
-                "/api/song_tags/{song_id}",
-                web::get().to(handle_get_song_tags),
+                "/api/song_genres/{song_id}",
+                web::get().to(handle_get_song_genres),
             )
-            .route("/api/add_tag_to_song", web::post().to(handle_add_song_tag))
+            .route("/api/add_genre_to_song", web::post().to(handle_add_song_genre))
             .route(
-                "/api/delete_song_tag/{song_id}/{tag_id}",
-                web::delete().to(handle_delete_song_tag),
+                "/api/delete_song_genre/{song_id}/{genre}",
+                web::delete().to(handle_delete_song_genre),
             )
             // 歌单相关接口
             .route("/api/songlist", web::get().to(handle_song_list))

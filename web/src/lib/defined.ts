@@ -1,3 +1,31 @@
+import { Location } from "react-router-dom";
+
+export enum MyRoutes {
+    Home = "/",
+    Playlist = "/playlist",
+    Genres = "/genres",
+    Albums = "/albums",
+    Artists = "/artists",
+    AlbumDetail = "/albums/:id",
+    ArtistDetail = "/artists/:id",
+    Player = "/detail/:id",
+    Settings = "/settings",
+}
+export const checkRoute = (location: Location<any>, route: MyRoutes): boolean => {
+    const pathname = location.pathname;
+    if (pathname === route) {
+        return true;
+    }
+    const routeArr = pathname.split("/");
+    if (routeArr.length > 1) {
+        const first = routeArr[1];
+        if (route.startsWith("/" + first)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export interface JsonResult<T> {
     code: number;
     success: boolean;

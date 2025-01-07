@@ -93,7 +93,6 @@ pub async fn handle_get_metadatas(
     if let Some(filter) = &query.any {
         let filter = filter.to_lowercase();
         list.retain(|m| {
-            // m.tags.iter().any(|t| t.to_lowercase().contains(&filter)) ||
             m.title.to_lowercase().contains(&filter)
                 || m.artist.to_lowercase().contains(&filter)
                 || m.album.to_lowercase().contains(&filter)

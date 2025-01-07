@@ -8,13 +8,14 @@ import SettingsPage from "./pages/SettingsPage";
 import { usePlaylist } from "./store/playlist";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { ThemeProvider } from "./components/theme-provider";
-import { MoreInfoPage } from "./pages/TagPage";
+import { MoreInfoPage } from "./pages/MoreInfoPage";
 import { SongListPage } from "./pages/SongListPage";
 import { Header } from "./components/Header";
+import { MyRoutes } from "./lib/defined";
 
 function App() {
   const { currentSong } = usePlaylist();
- 
+
   return (
     <ThemeProvider defaultTheme="dark">
       <Router>
@@ -22,21 +23,20 @@ function App() {
           <Header />
 
           <div
-            className={`${
-              currentSong && "mb-[90px]"
-            } flex justify-center items-center w-full h-full `}
+            className={`${currentSong && "mb-[90px]"
+              } flex justify-center items-center w-full h-full `}
           >
             <div className="max-w-[1560px] w-full">
               <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/playlist" element={<SongListPage />} />
-                <Route path="/tags" element={<MoreInfoPage />} />
-                <Route path="/albums" element={<MoreInfoPage />} />
-                <Route path="/artists" element={<MoreInfoPage />} />
-                <Route path="/albums/:id" element={<MoreInfoPage />} />
-                <Route path="/artists/:id" element={<MoreInfoPage />} />
-                <Route path="/detail/:id" element={<MusicPlayPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
+                <Route path={MyRoutes.Home} element={<HomePage />} />
+                <Route path={MyRoutes.Playlist} element={<SongListPage />} />
+                <Route path={MyRoutes.Genres} element={<MoreInfoPage />} />
+                <Route path={MyRoutes.Albums} element={<MoreInfoPage />} />
+                <Route path={MyRoutes.Artists} element={<MoreInfoPage />} />
+                <Route path={MyRoutes.AlbumDetail} element={<MoreInfoPage />} />
+                <Route path={MyRoutes.ArtistDetail} element={<MoreInfoPage />} />
+                <Route path={MyRoutes.Player} element={<MusicPlayPage />} />
+                <Route path={MyRoutes.Settings} element={<SettingsPage />} />
               </Routes>
             </div>
           </div>

@@ -106,68 +106,53 @@ export const sendLogToServer = (
 // ----- tag 相关接口 -----//
 
 /**
- * 获取所有标签列表
+ * 获取所有风格列表
  * @param onSuccess 成功回调
  * @param onError 失败回调
  */
-export const getTagList = (
+export const getGenreList = (
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/tags`;
+  const url = `${API_URL}/api/genres`;
   fetchUtils(url, onSuccess, onError);
 };
 
 /**
- * 获取歌曲标签列表
+ * 获取歌曲风格列表
  * @param song_id 歌曲id
  * @param onSuccess 成功回调
  * @param onError 失败回调
  */
-export const getSongTags = (
+export const getSongGenres = (
   song_id: string,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/song_tags/${song_id}`;
+  const url = `${API_URL}/api/song_genres/${song_id}`;
   fetchUtils(url, onSuccess, onError);
 };
 
-/**
- * 获取标签歌曲列表
- * @param tag_id 标签id
- * @param onSuccess 成功回调
- * @param onError 失败回调
- */
-export const getTagSongs = (
-  tag_id: string,
-  onSuccess: (data: any) => void,
-  onError: (error: any) => void
-) => {
-  const url = `${API_URL}/api/tag_songs/${tag_id}`;
-  fetchUtils(url, onSuccess, onError);
-};
-
-export const addTagToSong = (
+export const addGenreToSong = (
   song_id: string,
   tagname: string,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/add_tag_to_song`;
+  const url = `${API_URL}/api/add_genre_to_song`;
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
     body: JSON.stringify({ song_id, tagname }),
   });
 };
 
-export const removeTagFromSong = (
+export const removeGenreFromSong = (
   song_id: string,
   genre: string,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/delete_song_tag/${song_id}/${genre}`;
+  const url = `${API_URL}/api/delete_song_genre/${song_id}/${genre}`;
   fetchUtils(url, onSuccess, onError, {
     method: "DELETE",
   });

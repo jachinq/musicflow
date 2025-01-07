@@ -17,7 +17,7 @@ import {
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
-import { Music } from "../lib/defined";
+import { checkRoute, Music, MyRoutes } from "../lib/defined";
 import { useKeyPress } from "../hooks/use-keypress";
 import { toast } from "sonner";
 
@@ -31,7 +31,7 @@ export const AudioPlayer = () => {
   const location = useLocation();
   const [loadStatus, setLoadStatus] = useState<string>("");
 
-  const isDetailPage = location.pathname.startsWith("/detail");
+  const isDetailPage = checkRoute(location, MyRoutes.Player);
 
   const {
     audioContext,
@@ -340,7 +340,7 @@ export const AudioPlayer = () => {
       navigate(-1);
       return;
     }
-    navigate("/detail/" + currentSong.id);
+    navigate(MyRoutes.Player + currentSong.id);
   };
 
   const clearPlaylist = () => {

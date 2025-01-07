@@ -69,7 +69,6 @@ function MusicPlayPage() {
         const music = result.data;
         setDetailSong(music);
         if (!isPlaying) {
-          // navigate(`/detail/${musicId}`);
           const index = allSongs.findIndex((song) => song.id === music.id);
           if (index === -1) {
             setAllSongs([...allSongs, music]);

@@ -5,6 +5,7 @@ import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
 import { useHomePageStore } from "../pages/HomePage";
 import { useState } from "react";
+import { MyRoutes } from "../lib/defined";
 
 export const Header = () => {
   const { showPlaylist } = usePlaylist();
@@ -26,7 +27,7 @@ export const Header = () => {
     fetchMusicList(1, pageSize, setTotalCount, setLoading, setError);
     // 如果不是首页，则跳转到首页
     if (location.pathname !== "/") {
-      navigate("/");
+      navigate(MyRoutes.Home);
     }
   };
 
@@ -65,7 +66,7 @@ export const Header = () => {
           <Link to="/playlist" className="navigation">
             <Music2Icon />
           </Link>
-          <Link to="/tags" className="navigation">
+          <Link to="/genres" className="navigation">
             <TagIcon />
           </Link>
           <Link to="/settings" className="navigation">

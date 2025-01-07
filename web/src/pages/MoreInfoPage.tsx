@@ -8,10 +8,10 @@ import {
   getArtistSongs,
   getCoverMediumUrl,
   getCoverSmallUrl,
-  getTagList,
+  getGenreList,
 } from "../lib/api";
-import { Album, Artist, Music } from "../lib/defined";
-import { GenreElement } from "../components/Tag";
+import { Album, Artist, Music, MyRoutes } from "../lib/defined";
+import { GenreElement } from "../components/Genre";
 import { toast } from "sonner";
 import { Pagination } from "../components/Pagination";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -32,7 +32,7 @@ import { useSettingStore } from "../store/setting";
 import { formatTime, getOnlineEngineUrl } from "../lib/utils";
 import { usePlaylist } from "../store/playlist";
 
-type TabId = "tags" | "albums" | "artists";
+type TabId = "genres" | "albums" | "artists";
 interface TagPageState {
   type: DrawerType;
   setType: (type: DrawerType) => void;
@@ -96,8 +96,8 @@ export const MoreInfoPage = () => {
         drirection={isSmallDevice ? "row" : "column"}
         between
       >
-        <Option value={"tags"} icon={<TagIcon />}>
-          标签
+        <Option value={"genres"} icon={<TagIcon />}>
+          风格
         </Option>
         <Option value={"albums"} icon={<AlbumIcon />}>
           专辑
@@ -106,25 +106,25 @@ export const MoreInfoPage = () => {
           歌手
         </Option>
       </OptionGroup>
-      {tabId == "tags" && <TagList />}
+      {tabId == "genres" && <GenreList />}
       {tabId == "albums" && <WithDrawerList type={DrawerType.ALBUM} />}
       {tabId == "artists" && <WithDrawerList type={DrawerType.ARTIST} />}
     </div>
   );
 };
 
-const TagList = () => {
-  const [tags, setTags] = useState<string[]>([]);
+const GenreList = () => {
+  const [genres, setGenres] = useState<string[]>([]);
 
   useEffect(() => {
-    getTagList(
+    getGenreList(
       (result) => {
         if (!result || !result.data || result.data.length === 0) {
-          console.log("No tags found");
+          console.log("No genres found");
           return;
         }
         // console.log(result.data);
-        setTags(result.data);
+        setGenres(result.data);
       },
       (error) => {
         console.error(error);
@@ -133,8 +133,8 @@ const TagList = () => {
   }, []);
   return (
     <div className="flex flex-wrap gap-4">
-      {tags.map((tag) => (
-        <GenreElement key={tag} tag={tag} />
+      {genres.map((genre) => (
+        <GenreElement key={genre} genre={genre} />
       ))}
     </div>
   );
@@ -489,7 +489,7 @@ const DetaialDrawer = () => {
                       if (type === DrawerType.ARTIST && item.artist_id === selectedItem.id) return;
                       setShowDrawer(false);
                       setSelectedItem(null);
-                      navigate(`/artists/${item.artist_id}`);
+                      navigate(`${MyRoutes.Artists}/${item.artist_id}`);
                     }}>
                       {item.artist}
                     </span>

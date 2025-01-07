@@ -12,7 +12,7 @@ pub struct Genre {
     name: String,
 }
 
-pub async fn handle_get_tags(app: web::Data<AppState>) -> impl Responder {
+pub async fn handle_get_genres(app: web::Data<AppState>) -> impl Responder {
     let music_map = app.music_map.clone();
     let mut genres = Vec::new();
 
@@ -32,15 +32,15 @@ pub async fn handle_get_tags(app: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(JsonResult::success(genres))
 }
 
-pub async fn handle_get_song_tags(
+pub async fn handle_get_song_genres(
     song_id: web::Path<String>,
     app: web::Data<AppState>,
 ) -> impl Responder {
     let music_map = app.music_map.clone();
     let song_id = song_id.clone();
     if let Some(m) = music_map.get(&song_id) {
-        let tags = m.genres.clone();
-        HttpResponse::Ok().json(JsonResult::success(tags))
+        let genres = m.genres.clone();
+        HttpResponse::Ok().json(JsonResult::success(genres))
     } else {
         HttpResponse::Ok().json(JsonResult::<Vec<String>>::error("歌曲不存在"))
     }
@@ -49,16 +49,16 @@ pub async fn handle_get_song_tags(
 #[derive(Serialize, Deserialize)]
 pub struct QueryAddTagToMusic {
     song_id: String,
-    tagname: String,
+    genre: String,
 }
 
 /// 对音乐进行分组打标签
-pub async fn handle_add_song_tag(
+pub async fn handle_add_song_genre(
     info: web::Json<QueryAddTagToMusic>,
     app: web::Data<Mutex<AppState>>,
 ) -> impl Responder {
     let song_id = info.song_id.clone();
-    let tagname = info.tagname.clone();
+    let genre = info.genre.clone();
 
     let app = app.as_ref().lock();
     if app.is_err() {
@@ -74,7 +74,7 @@ pub async fn handle_add_song_tag(
     }
     let song = song.unwrap();
     let genres = song.genres.clone();
-    if genres.iter().find(|g| *g == &tagname).is_some() {
+    if genres.iter().find(|g| *g == &genre).is_some() {
         return HttpResponse::Ok().json(JsonResult::<()>::error("歌曲已有该标签"));
     }
 
@@ -96,7 +96,7 @@ pub async fn handle_add_song_tag(
 }
 
 // 删除歌曲标签
-pub async fn handle_delete_song_tag(
+pub async fn handle_delete_song_genre(
     path: web::Path<(String, String)>,
     app: web::Data<Mutex<AppState>>,
 ) -> impl Responder {
