@@ -8,18 +8,20 @@ export enum MyRoutes {
     Artists = "/artists",
     AlbumDetail = "/albums/:id",
     ArtistDetail = "/artists/:id",
-    Player = "/detail/:id",
+    Player = "/player/:id",
     Settings = "/settings",
 }
 export const checkRoute = (location: Location<any>, route: MyRoutes): boolean => {
     const pathname = location.pathname;
+    // console.log(pathname, route);
     if (pathname === route) {
         return true;
     }
     const routeArr = pathname.split("/");
+    // console.log(routeArr);
     if (routeArr.length > 1) {
         const first = routeArr[1];
-        if (route.startsWith("/" + first)) {
+        if (first !== "" && route.startsWith("/" + first)) {
             return true;
         }
     }

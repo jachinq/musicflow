@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
 import { getCoverSmallUrl, getMusicUrl } from "../lib/api";
 import { usePlaylist } from "../store/playlist";
@@ -31,7 +31,7 @@ export const AudioPlayer = () => {
   const location = useLocation();
   const [loadStatus, setLoadStatus] = useState<string>("");
 
-  const isDetailPage = checkRoute(location, MyRoutes.Player);
+  const isDetailPage = useMemo(() => (checkRoute(location, MyRoutes.Player)), [location]);
 
   const {
     audioContext,
@@ -336,11 +336,12 @@ export const AudioPlayer = () => {
     if (!currentSong) {
       return;
     }
+    // console.log(isDetailPage, MyRoutes.Player.replace(":id", currentSong.id))
     if (isDetailPage) {
       navigate(-1);
       return;
     }
-    navigate(MyRoutes.Player + currentSong.id);
+    navigate(MyRoutes.Player.replace(":id", currentSong.id));
   };
 
   const clearPlaylist = () => {
