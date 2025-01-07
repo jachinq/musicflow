@@ -1,9 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { Tag } from "../lib/defined";
 import { useMusicList } from "../store/musicList";
 
-export const TagElement = ({ tag, onClick, children, className }: { tag: Tag, onClick?: (tag: Tag) => void } & React.HTMLAttributes<HTMLDivElement>) => {
-  const { filterTags, setFilterTags, filter, setNeedFilter, setFilter } = useMusicList();
+export const GenreElement = ({ tag, onClick, children, className }: { tag: string, onClick?: (tag: string) => void } & React.HTMLAttributes<HTMLDivElement>) => {
+  const { filter, setNeedFilter, setFilter } = useMusicList();
   const navigate = useNavigate();
   const selectTag = () => {
     if (!tag) return;
@@ -12,20 +11,18 @@ export const TagElement = ({ tag, onClick, children, className }: { tag: Tag, on
       return;
     }
     // console.log("select tag", tagId);
-    if (!filter.tags) filter.tags = [];
-    const index = filter.tags.findIndex((t) => t === tag.id);
+    if (!filter.genres) filter.genres = [];
+    const index = filter.genres.findIndex((t) => t === tag);
     if (index === -1) {
-      filterTags.push(tag);
-      setFilterTags([...filterTags]);
-      filter.tags = filterTags.map((t) => t.id);
+      filter.genres = [...filter.genres, tag];
       setFilter({...filter });
       setNeedFilter(true);
     }
     navigate("/");
   }
   return (
-    <div className={"tag " + className} key={tag.id} onClick={selectTag}>
-      {tag.name}
+    <div className={"tag " + className} key={tag} onClick={selectTag}>
+      {tag}
       {children}
     </div>
   );

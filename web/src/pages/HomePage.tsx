@@ -4,7 +4,7 @@ import { MusicCard } from "../components/MusicCard";
 
 import { getMusicList } from "../lib/api";
 import { Pagination } from "../components/Pagination";
-import { Music, Tag } from "../lib/defined";
+import { Music } from "../lib/defined";
 import { FlameKindling, Loader, Play, Rabbit, X } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
@@ -40,16 +40,6 @@ export const useHomePageStore = create<ContextProps>((set) => ({
     set((state) => ({ ...state, musicList })),
 }));
 export const HomePage = () => {
-  // const { isSmallDevice } = useDevice();
-  // const pageSize = isSmallDevice ? 6 : 30;
-  // const {
-  //   filterTags,
-  //   needFilter,
-  //   setNeedFilter,
-  //   setMusicList,
-  //   setTotalCount,
-  //   filter,
-  // } = useMusicList();
   const { error, loading } = useHomePageStore();
 
   if (loading) {
@@ -85,11 +75,11 @@ export const HomePage = () => {
 };
 
 const Control = () => {
-  const { filterTags, filter, totalCount } = useMusicList();
+  const { filter, totalCount } = useMusicList();
   const { setAllSongs, setCurrentSong } = usePlaylist();
   const { setError } = useHomePageStore();
   const { isSmallDevice } = useDevice();
-  const newLineTag = isSmallDevice ? filterTags.length > 5 : filterTags.length > 10;
+  const newLineTag = isSmallDevice && filter.genres ? filter.genres.length > 5 : filter.genres && filter.genres.length > 10;
 
   const playAllSongs = () => {
     getMusicList(
@@ -139,28 +129,29 @@ const Control = () => {
 };
 
 const SelectTag = () => {
-  const { filterTags, filter, setFilterTags, setFilter, setNeedFilter } =
+  const { filter, setFilter, setNeedFilter } =
     useMusicList();
-  const removeSelectedTag = (tag: Tag) => {
-    const newFilterTags = filterTags.filter((t) => t.id !== tag.id);
-    setFilterTags(newFilterTags);
-    filter.tags = newFilterTags.map((t) => t.id);
+  const removeSelectedTag = (tag: string) => {
+    if (!filter.genres) {
+      return;
+    }
+    filter.genres = filter.genres.filter((t) => t !== tag);
     setFilter({ ...filter });
     setNeedFilter(true);
   };
   return (
     <div>
-      {filterTags.length > 0 && (
+      {filter.genres && filter.genres.length > 0 && (
         <div>
           <div className="flex flex-row gap-2 justify-center items-center w-full">
             {/* <div className="text-sm break-keep">标签</div> */}
             <div className="flex gap-2 flex-wrap">
-              {filterTags.map((tag) => (
+              {filter.genres && filter.genres.map((tag) => (
                 <div
-                  key={tag.id}
+                  key={tag}
                   className="flex items-center gap-1 p-1 rounded-md bg-muted text-muted-foreground transition-all duration-300"
                 >
-                  {tag.name}
+                  {tag}
                   <div
                     onClick={() => removeSelectedTag(tag)}
                     className="hover:text-primary-hover cursor-pointer"
@@ -185,7 +176,7 @@ const MusicList = () => {
   const { isSmallDevice } = useDevice();
   const pageSize = isSmallDevice ? 6 : 30;
   const {
-    filterTags,
+    filter,
     needFilter,
     setNeedFilter,
     setTotalCount,
@@ -201,9 +192,10 @@ const MusicList = () => {
 
   useEffect(() => {
     if (!needFilter) return;
+    if (!filter.genres) return;
     fetchMusicList(1, pageSize, setTotalCount, setLoading, setError); // 标签切换时重新获取音乐列表
     setNeedFilter(false);
-  }, [filterTags]);
+  }, [filter.genres]);
 
   return (
     <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">

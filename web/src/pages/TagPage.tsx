@@ -10,8 +10,8 @@ import {
   getCoverSmallUrl,
   getTagList,
 } from "../lib/api";
-import { Album, Artist, Music, Tag } from "../lib/defined";
-import { TagElement } from "../components/Tag";
+import { Album, Artist, Music } from "../lib/defined";
+import { GenreElement } from "../components/Tag";
 import { toast } from "sonner";
 import { Pagination } from "../components/Pagination";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -114,7 +114,7 @@ export const MoreInfoPage = () => {
 };
 
 const TagList = () => {
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
     getTagList(
@@ -134,7 +134,7 @@ const TagList = () => {
   return (
     <div className="flex flex-wrap gap-4">
       {tags.map((tag) => (
-        <TagElement key={tag.id} tag={tag} />
+        <GenreElement key={tag} tag={tag} />
       ))}
     </div>
   );

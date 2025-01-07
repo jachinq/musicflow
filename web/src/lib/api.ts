@@ -163,11 +163,11 @@ export const addTagToSong = (
 
 export const removeTagFromSong = (
   song_id: string,
-  tag_id: number,
+  genre: string,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/delete_song_tag/${song_id}/${tag_id}`;
+  const url = `${API_URL}/api/delete_song_tag/${song_id}/${genre}`;
   fetchUtils(url, onSuccess, onError, {
     method: "DELETE",
   });

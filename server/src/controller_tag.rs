@@ -26,11 +26,7 @@ pub async fn handle_get_tags(app: web::Data<AppState>) -> impl Responder {
     });
     let genres = set
         .iter()
-        .enumerate()
-        .map(|(id, n)| Genre {
-            id: id as i64 + 1,
-            name: n.to_string(),
-        })
+        .map(|n| n.to_string() )
         .collect::<Vec<_>>();
 
     HttpResponse::Ok().json(JsonResult::success(genres))
@@ -101,10 +97,10 @@ pub async fn handle_add_song_tag(
 
 // 删除歌曲标签
 pub async fn handle_delete_song_tag(
-    path: web::Path<(String, i64)>,
+    path: web::Path<(String, String)>,
     app: web::Data<Mutex<AppState>>,
 ) -> impl Responder {
-    let (song_id, tag_id) = path.into_inner();
+    let (song_id, genre) = path.into_inner();
 
     let app = app.as_ref().lock();
     if app.is_err() {
@@ -114,7 +110,7 @@ pub async fn handle_delete_song_tag(
 
     if let Some(m) = app.music_map.get(&song_id) {
         let mut genres = m.genres.clone();
-        if let Some(index) = genres.iter().position(|g| *g == tag_id.to_string()) {
+        if let Some(index) = genres.iter().position(|g| *g == genre.to_string()) {
             genres.remove(index);
         }
         let new_genres = genres.join(",");

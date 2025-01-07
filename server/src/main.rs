@@ -45,6 +45,7 @@ impl AppState {
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     // 初始化日志记录
+    std::env::set_var("RUST_LOG", "debug");
     env_logger::init_from_env(Env::default().default_filter_or("info"));
     // 读取配置文件信息
     let config = get_config();

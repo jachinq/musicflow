@@ -26,7 +26,7 @@ export interface Music {
     file_url: string;
     title: string;
     artist: string;
-    artists: string;
+    artists: string[];
     album: string;
     album_id: number;
     artist_id: number;
@@ -34,6 +34,12 @@ export interface Music {
     duration: number;
     bitrate: number;
     samplerate: number;
+    genre: string;
+    genres: string[];
+    languange: string;
+    track: string;
+    disc: string;
+    comment: string;
     fileArrayBuffer?: ArrayBuffer; // array buffer of the file
     decodedAudioBuffer?: AudioBuffer; // decoded audio buffer of the file
 }
@@ -45,20 +51,13 @@ export interface lyric {
     text: string;
 }
 
-export interface Tag {
-    id: number;
-    name: string;
-    color: string;
-    text_color: string;
-}
-
 export interface MusicFilter {
     any?: string;
     title?: string;
     artist?: number[];
     album?: number[];
     year?: number;
-    tags?: number[];
+    genres?: string[];
 }
 
 export interface SongList {
