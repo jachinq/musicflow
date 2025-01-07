@@ -8,5 +8,5 @@
   RUN mkdir conf
   RUN mkdir music
   COPY web ./web
-  COPY musicflow .
-  CMD ["./musicflow"]
+  COPY server .
+  CMD ["./server"]

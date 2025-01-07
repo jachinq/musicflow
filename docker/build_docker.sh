@@ -1,24 +1,18 @@
 cd ..
-mkdir build # create build directory
-mkdir build/web
-mkdir build/conf
-mkdir build/data
 
+echo "Building initial database"
 # start processing the database. read metadata from music files and store it in the database.
+cargo build --release --target x86_64-unknown-linux-musl -p initdb
+cp target/x86_64-unknown-linux-musl/release/initdb .
+echo "Starting read metadata from music files and store it in the database"
+./initdb
 
-cd metadata
-pnpm install
-pnpm dev
-pnpm db_album
-cd ..
-
+echo "Building the backend"
 # start building the backend
-cd server
-cargo build --release --target x86_64-unknown-linux-musl
-cp target/x86_64-unknown-linux-musl/release/musicflow .
-cp conf/config.json ../build/conf
-cd ..
+cargo build --release --target x86_64-unknown-linux-musl -p server
+cp target/x86_64-unknown-linux-musl/release/server ./docker
 
+echo "Building the frontend"
 # start building the frontend
 cd web
 pnpm install
@@ -29,4 +23,3 @@ cd ..
 # build the docker image
 cd docker
 sudo docker build -t musicflow:latest .
-cp docker-compose.yml ../build/
