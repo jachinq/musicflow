@@ -7,6 +7,7 @@ pub struct Config {
     pub port: u64,         // 绑定的端口号
     pub web_dir: String,   // 前端静态文件目录
     pub music_dir: String, // 音乐文件目录
+    pub db_path: String,   // 数据库文件路径
 }
 
 // 获取 config.json 中的配置信息
