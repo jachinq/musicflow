@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use lib_utils::database::service::{self, Album};
 use serde::{Deserialize, Serialize};
 
-use crate::{pick_metadata, JsonResult};
+use crate::{IntoVec, JsonResult};
 
 #[derive(Deserialize)]
 pub struct AlbumsBody {
@@ -91,27 +91,21 @@ pub async fn handle_get_album(body: web::Json<AlbumsBody>) -> impl Responder {
     }
 }
 
-
-pub async fn handle_get_album_songs(
-    album_id: web::Path<i64>,
-    app_data: web::Data<crate::AppState>,
-) -> impl Responder {
+pub async fn handle_get_album_songs(album_id: web::Path<i64>) -> impl Responder {
     let songs = service::album_songs(album_id.into_inner());
-    match songs {
-        Ok(list) => HttpResponse::Ok().json(JsonResult::success(pick_metadata(
-            &list,
-            &app_data.music_map,
-        ))),
-        Err(e) => HttpResponse::InternalServerError()
-            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
+    if songs.is_err() {
+        return HttpResponse::InternalServerError().json(JsonResult::<()>::error(&format!(
+            "Error: {}",
+            songs.err().unwrap()
+        )));
     }
+    HttpResponse::Ok().json(JsonResult::success(songs.unwrap().into_vec()))
 }
 
 pub async fn handle_get_album_by_id(id: web::Path<i64>) -> impl Responder {
     if let Ok(Some(album)) = service::album_by_id(id.into_inner()) {
         HttpResponse::Ok().json(JsonResult::success(album))
-    }
-    else {
+    } else {
         HttpResponse::NotFound().json(JsonResult::<()>::error("Album not found"))
     }
 }

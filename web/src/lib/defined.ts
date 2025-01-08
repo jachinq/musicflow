@@ -56,7 +56,7 @@ export interface Music {
     file_url: string;
     title: string;
     artist: string;
-    artists: string[];
+    artists?: string[];
     album: string;
     album_id: number;
     artist_id: number;

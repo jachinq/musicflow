@@ -30,7 +30,7 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
     <div className="flex flex-col items-center px-8 py-4 min-h-[calc(100vh-260px)]">
       <div className="flex flex-col gap-4">
         <ShowItem name="名称" value={song.title} />
-        <ShowItem name="歌手" value={song.artists.join(" / ")} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
+        <ShowItem name="歌手" value={song.artists && song.artists.join(" / ")} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
         <ShowItem name="专辑" value={song.album} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoAlbum() }} />
         {song.bitrate && <ShowItem name="比特率" value={song.bitrate} />}
         {song.samplerate && <ShowItem name="采样率" value={song.samplerate} />}
@@ -71,7 +71,7 @@ const Genres = ({
           });
           return;
         }
-        setGenres(result.data);
+        setGenres(result.data.genres || []);
         setShowNewTagForm(false);
         toast.success("添加风格成功");
       },
@@ -95,7 +95,7 @@ const Genres = ({
             });
             return;
           }
-          setGenres(result.data);
+          setGenres(result.data.genres || []);
           toast.success("删除风格成功");
         },
         (error) => {
@@ -113,7 +113,7 @@ const Genres = ({
         <GenreElement key={genre + index} genre={genre} className="flex items-center gap-1">
           <X
             onClick={(e) => handleDeleteGenre(e, genre)}
-            className="hover:text-red-500"
+            className="hover:text-destructive"
           />
         </GenreElement>
       ))}

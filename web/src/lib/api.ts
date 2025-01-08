@@ -135,14 +135,14 @@ export const getSongGenres = (
 
 export const addGenreToSong = (
   song_id: string,
-  tagname: string,
+  genre: string,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
   const url = `${API_URL}/api/add_genre_to_song`;
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
-    body: JSON.stringify({ song_id, tagname }),
+    body: JSON.stringify({ song_id, genre }),
   });
 };
 

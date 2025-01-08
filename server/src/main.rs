@@ -4,27 +4,27 @@ use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use env_logger::Env;
 use lib_utils::config::get_config;
-use lib_utils::database::service::{self, Album, Metadata};
+use lib_utils::readmeta::read_metadata_into_db;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 use walkdir::WalkDir; // 引入 CORS 中间件
-use env_logger::Env;
 
 mod controller_album;
 mod controller_artist;
+mod controller_genre;
 mod controller_song;
 mod controller_songlist;
-mod controller_tag;
 mod controller_user;
 
 use controller_album::*;
 use controller_artist::*;
+use controller_genre::*;
 use controller_song::*;
 use controller_songlist::*;
-use controller_tag::*;
 use controller_user::*;
 
 // 应用状态
@@ -32,14 +32,6 @@ use controller_user::*;
 struct AppState {
     web_path: String,
     music_path: String,
-    music_map: HashMap<String, MetadataVo>, // 音乐 ID 到 Music 实例的映射表
-    album_list: Vec<Album>,
-}
-
-impl AppState {
-    fn set_music(&mut self, song_id: &str, metadata: MetadataVo) {
-        self.music_map.insert(song_id.to_string(), metadata);
-    }
 }
 
 #[actix_web::main]
@@ -55,10 +47,10 @@ async fn main() -> io::Result<()> {
 
     // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
     let music_dir = config.music_dir.clone();
-    // let music_dir = music_dir.replace("\\", "/");
+    let music_dir = music_dir.replace("\\", "/");
     println!("Music dir: {}, Web dir: {}", music_dir, web_dir);
 
-    let (music_map, album_list) = init_music_map(&music_dir).await;
+    check_lost_file(&music_dir).await;
     // 映射音乐文件的静态路径
     let music_path = "/music";
 
@@ -73,11 +65,10 @@ async fn main() -> io::Result<()> {
                     .allow_any_header(), // 允许所有请求头，你可以根据需要更改为特定的请求头
             )
             .wrap(Logger::default()) // 日志记录中间件
+            .app_data(web::JsonConfig::default().error_handler(handle_server_error)) //
             .app_data(web::Data::new(AppState {
                 web_path: web_dir.to_string(),
                 music_path: music_path.to_string(),
-                music_map: music_map.clone(),
-                album_list: album_list.clone(),
             }))
             .route("/api/log", web::post().to(frontend_log))
             // 歌曲相关接口
@@ -95,7 +86,10 @@ async fn main() -> io::Result<()> {
                 "/api/song_genres/{song_id}",
                 web::get().to(handle_get_song_genres),
             )
-            .route("/api/add_genre_to_song", web::post().to(handle_add_song_genre))
+            .route(
+                "/api/add_genre_to_song",
+                web::post().to(handle_add_song_genre),
+            )
             .route(
                 "/api/delete_song_genre/{song_id}/{genre}",
                 web::delete().to(handle_delete_song_genre),
@@ -132,14 +126,20 @@ async fn main() -> io::Result<()> {
             )
             // 专辑相关接口
             .route("/api/album", web::post().to(handle_get_album))
-            .route("/api/album_by_id/{id}", web::get().to(handle_get_album_by_id))
+            .route(
+                "/api/album_by_id/{id}",
+                web::get().to(handle_get_album_by_id),
+            )
             .route(
                 "/api/album_songs/{album_name}",
                 web::get().to(handle_get_album_songs),
             )
             // 艺术家相关接口
             .route("/api/artist", web::post().to(handle_get_artist))
-            .route("/api/artist_by_id/{id}", web::get().to(handle_get_artist_by_id))
+            .route(
+                "/api/artist_by_id/{id}",
+                web::get().to(handle_get_artist_by_id),
+            )
             .route(
                 "/api/artist_songs/{artist_id}",
                 web::get().to(handle_get_artist_songs),
@@ -172,44 +172,61 @@ async fn handle_all_others(app_data: web::Data<AppState>) -> Result<NamedFile, a
     NamedFile::open(path).map_err(|_| actix_web::error::ErrorNotFound("index.html not found"))
 }
 
-async fn init_music_map(music_dir: &str) -> (HashMap<String, MetadataVo>, Vec<Album>) {
-    // 初始化数据库
-    let res = service::get_metadata_list();
-    // print!("db result: {:?}", res);
-    let metadata_list = res.unwrap_or_default();
+fn handle_server_error(err: actix_web::error::JsonPayloadError, _req: &actix_web::HttpRequest) -> actix_web::Error {
+    let err2 = JsonResult::<()>::error(&err.to_string());
+    let err2 = serde_json::to_string(&err2).unwrap_or_default();
+    
+    actix_web::error::ErrorInternalServerError(err2)
+}
+// 检查音乐文件是否缺失metadata，如果有缺失文件，启动后台线程重新扫描
+async fn check_lost_file(music_dir: &str) {
+    let metas = lib_utils::database::service::get_metadata_list();
+    let metas = metas.unwrap_or_default();
+    if metas.len() == 0 {
+        return;
+    }
     let mut path_metadata_map = HashMap::new();
-    for metadata in metadata_list {
+    for metadata in &metas {
         path_metadata_map.insert(metadata.file_path.to_string(), metadata);
     }
 
-    let mut music_map = HashMap::new();
-    let mut album_list = Vec::new();
+    let mut lost_files = Vec::new();
     for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let path = entry.path().display().to_string().replace("\\", "/");
             let metadata = path_metadata_map.get(&path);
             if metadata.is_none() {
-                println!("Metadata not found for {}", path);
+                lost_files.push(path);
                 continue;
             }
-            let metadata = metadata.unwrap().clone();
-            let metadata = MetadataVo::from(metadata);
-            music_map.insert(metadata.id.to_string(), metadata);
         }
     }
-    if let Ok(list) = service::get_album_list() {
-        album_list = list.clone();
+    
+    println!(
+        "Music count: {}, Lost files count: {}",
+        metas.len(),
+        lost_files.len()
+    );
+
+    if lost_files.len() > 0 {
+        // 后台线程把缺失metadata的文件重新扫描到数据库中
+        let music_dir = music_dir.to_string();
+        let _ = std::thread::spawn(move || {
+            let start = std::time::Instant::now();
+            println!("Start scan lost files...");
+            for file_path in lost_files {
+                // println!("Lost file: {}", file_path);
+                if let Err(e) = read_metadata_into_db(file_path.clone(), music_dir.to_owned()) {
+                    println!("path: {}, read_metadata_into_db error: {}", file_path, e);
+                } else {
+                    println!("path: {}, read_metadata_into_db ok", file_path);
+                }
+            }
+            let elapsed = start.elapsed();
+            println!("Scan lost files done. Elapsed: {:.2?}", elapsed);
+        });
     }
-    println!("Music count: {}", music_map.len());
-    (music_map, album_list)
-}
 
-fn pick_metadata(list: &Vec<Metadata>, music_map: &HashMap<String, MetadataVo>) -> Vec<MetadataVo> {
-    let musics: Vec<_> = music_map.values().cloned().collect();
-
-    let ids: Vec<String> = list.into_iter().map(|s| s.id.clone()).collect();
-    let list: Vec<_> = musics.into_iter().filter(|m| ids.contains(&m.id)).collect();
-    list
 }
 
 // 前端日志记录

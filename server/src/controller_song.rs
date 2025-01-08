@@ -1,9 +1,13 @@
 use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
-use lib_utils::database::service::{self, Metadata};
+use lib_utils::{
+    database::service::{self, Metadata},
+    log::log,
+};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use crate::{AppState, JsonResult};
+use crate::JsonResult;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListMusic {
@@ -32,8 +36,64 @@ pub struct MetadataVo {
     pub album_id: i64,
     pub artist_id: i64,
 }
-impl From<Metadata> for MetadataVo {
-    fn from(value: Metadata) -> Self {
+
+pub trait IntoVec<T> {
+    fn into_vec(&self) -> Vec<T>;
+}
+impl IntoVec<MetadataVo> for Vec<Metadata> {
+    fn into_vec(&self) -> Vec<MetadataVo> {
+        let ids = self.iter().map(|m| m.id.clone()).collect::<Vec<_>>();
+
+        let album_songs = service::album_song_by_song_ids(&ids);
+        let artist_songs = service::artist_song_by_song_ids(&ids);
+
+        let mut id_album_id_map = HashMap::new();
+        let mut id_artist_id_map = HashMap::new();
+
+        if let Ok(album_songs) = album_songs {
+            for album_song in album_songs {
+                id_album_id_map.insert(album_song.song_id.clone(), album_song.album_id);
+            }
+        } else {
+            log(
+                "error",
+                &format!("album_songs error: {}", album_songs.unwrap_err()),
+            );
+        }
+
+        if let Ok(artist_songs) = artist_songs {
+            for artist_song in artist_songs {
+                id_artist_id_map.insert(artist_song.song_id.clone(), artist_song.artist_id);
+            }
+        } else {
+            log(
+                "error",
+                &format!("artist_songs error: {}", artist_songs.unwrap_err()),
+            );
+        }
+
+        self.iter()
+            .map(|m| {
+                let mut vo = MetadataVo::convert(m);
+                vo.album_id = id_album_id_map.get(&vo.id).cloned().unwrap_or(0);
+                vo.artist_id = id_artist_id_map.get(&vo.id).cloned().unwrap_or(0);
+                vo
+            })
+            .collect::<Vec<_>>()
+    }
+}
+
+impl MetadataVo {
+    pub fn from(value: &Metadata) -> Self {
+        let list = vec![value.clone()];
+        let list = list.into_vec();
+        if list.len() == 0 {
+            return Self::default();
+        }
+        list.first().unwrap().clone()
+    }
+
+    pub fn convert(value: &Metadata) -> Self {
         let mut vo = MetadataVo::default();
         vo.id = value.id.to_string();
         vo.file_name = value.file_name.clone();
@@ -52,20 +112,8 @@ impl From<Metadata> for MetadataVo {
         vo.track = value.track.clone();
         vo.disc = value.disc.clone();
         vo.comment = value.comment.clone();
-
-        if vo.album.is_empty() {
-            vo.album = "未知专辑".to_string();
-        }
-
         let url = vo.file_url.replace("\\", "/");
         vo.file_url = format!("/music{}", url);
-        if let Ok(Some(album_song)) = service::album_song_by_song_id(&vo.id) {
-            vo.album_id = album_song.album_id;
-        }
-        if let Ok(Some(artist_song)) =  service::artist_song_by_song_id(&vo.id) {
-            vo.artist_id = artist_song.artist_id;
-        }
-
         vo
     }
 }
@@ -81,13 +129,14 @@ pub struct MusicListQuery {
 }
 
 /// 获取服务器上所有音乐文件
-pub async fn handle_get_metadatas(
-    data: web::Data<AppState>,
-    query: web::Json<MusicListQuery>,
-) -> impl Responder {
-    // let music_path = data.music_path.clone();
-    let musics = data.music_map.values().cloned().collect::<Vec<_>>();
-    let mut list = musics.clone();
+pub async fn handle_get_metadatas(query: web::Json<MusicListQuery>) -> impl Responder {
+    let result = service::get_metadata_list();
+    if let Err(e) = result {
+        return HttpResponse::InternalServerError()
+            .json(JsonResult::<ListMusic>::error(&e.to_string()));
+    }
+
+    let mut list = result.unwrap();
 
     // 过滤
     if let Some(filter) = &query.any {
@@ -103,7 +152,7 @@ pub async fn handle_get_metadatas(
 
     if let Some(genres) = &query.genres {
         if genres.len() > 0 {
-            list.retain(|m| genres.iter().any(|g| m.genres.contains(g)));
+            list.retain(|m| genres.iter().any(|g| m.split_genre().contains(g)));
         }
     }
 
@@ -144,30 +193,23 @@ pub async fn handle_get_metadatas(
         .unwrap_or(&[])
         .to_vec();
 
-    let mut list = list
-        .iter()
-        .map(|m| MetadataVo::from(m.clone()))
-        .collect::<Vec<MetadataVo>>();
-    for m in &mut list {
-        if let Ok(Some(album_song)) = service::album_song_by_song_id(&m.id) {
-            m.album_id = album_song.album_id;
-        }
-    }
-
+    let list = list.into_vec();
     HttpResponse::Ok().json(JsonResult::success(ListMusic { list, total }))
 }
 
-pub async fn handle_get_metadata(
-    song_id: web::Path<String>,
-    data: web::Data<AppState>,
-) -> impl Responder {
-    let metadata = data
-        .music_map
-        .get(&song_id.to_string())
-        .cloned()
-        .unwrap_or_default();
-
-    HttpResponse::Ok().json(JsonResult::success(metadata))
+pub async fn handle_get_metadata(song_id: web::Path<String>) -> impl Responder {
+    let metadata = service::get_metadata_by_id(&song_id);
+    match metadata {
+        Ok(metadata) => {
+            if let Some(metadata) = metadata {
+                let vo = MetadataVo::from(&metadata);
+                HttpResponse::Ok().json(JsonResult::success(vo))
+            } else {
+                HttpResponse::Ok().json(JsonResult::<()>::error("not found"))
+            }
+        }
+        Err(e) => HttpResponse::InternalServerError().json(JsonResult::<()>::error(&e.to_string())),
+    }
 }
 
 pub async fn get_cover_small(album_id: web::Path<i64>) -> impl Responder {

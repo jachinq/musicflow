@@ -5,7 +5,7 @@ use actix_web::{web, HttpResponse, Responder};
 use lib_utils::database::service::{self, SongList, SongListSong};
 use serde::Deserialize;
 
-use crate::{pick_metadata, JsonResult};
+use crate::{IntoVec, JsonResult};
 
 pub async fn handle_song_list() -> impl Responder {
     let result = service::get_song_list();
@@ -21,14 +21,14 @@ pub async fn handle_song_list_songs(
     app_data: web::Data<crate::AppState>,
 ) -> impl Responder {
     let result = service::get_song_list_songs(song_list_id.into_inner());
-    match result {
-        Ok(list) => HttpResponse::Ok().json(JsonResult::success(pick_metadata(
-            &list,
-            &app_data.music_map,
-        ))),
-        Err(e) => HttpResponse::InternalServerError()
-            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
+    if result.is_err() {
+        println!(
+            "<handle_song_list_songs>get_song_list_songs error: {}",
+            result.err().unwrap()
+        );
+        return HttpResponse::InternalServerError().json(JsonResult::<()>::error("检查歌单失败"));
     }
+    HttpResponse::Ok().json(JsonResult::success(result.unwrap().into_vec()))
 }
 
 pub async fn handle_song_song_list(song_id: web::Path<String>) -> impl Responder {
