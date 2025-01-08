@@ -425,6 +425,15 @@ pub fn read_metadata_into_db(file_path: String, music_dir: String) -> Result<(),
     }
 
     let mut mymetadata = metadata.unwrap();
+    if mymetadata.title.is_empty() {
+        let _ = log_file(
+            LOG_PATH,
+            "error",
+            &format!("title is empty: {}", file_path),
+        );
+        return Err(Error::msg("title is empty"));
+    }
+
     mymetadata.build_genre(file_path, &music_dir);
     let mut metadata = mymetadata.build_metadata();
     metadata.file_name = file_name.clone().replace("\\", "/");
@@ -440,7 +449,7 @@ pub fn read_metadata_into_db(file_path: String, music_dir: String) -> Result<(),
         metadata.id = exist.id.clone();
         if exist.file_path != metadata.file_path {
             let size = set_metadata_by_id(&metadata)?;
-            println!("Already exist, but file path is different, {} -> {}, update rows: {}", exist.file_path, metadata.file_path, size);
+            let _ = log_file(LOG_PATH, "info", &format!("Already exist, but file path is different, {} -> {}, update rows: {}", exist.file_path, metadata.file_path, size));
         }
         exist.id
     };
