@@ -124,8 +124,8 @@ fn pack_meta_from_track_flow(probed: &mut ProbeResult, metadata: &mut MyMetadata
         .sample_rate
         .map(|sr| metadata.samplerate = sr.to_string());
     // codec_params
-        // .bits_per_coded_sample
-        // .map(|bps| println!("压缩率: {} bits/sample", bps));
+    // .bits_per_coded_sample
+    // .map(|bps| println!("压缩率: {} bits/sample", bps));
 
     // Get the selected track's timebase and duration.
     let tb = codec_params.time_base;
@@ -385,4 +385,130 @@ fn parse_line(line: &str) -> Option<Lyric> {
             text: line.to_string(),
         })
     }
+}
+
+const LOG_PATH: &str = "./initdb.log";
+pub fn read_metadata_into_db(file_path: String, music_dir: String) -> Result<(), Error> {
+    use crate::database::service::*;
+    use crate::log::log_file;
+    use std::path::Path;
+
+    let match_ext = file_path.ends_with(".flac") || file_path.ends_with(".mp3");
+    if !match_ext {
+        // let _ = log_file(LOG_PATH, "info", &format!("ignore file: {}", file_path));
+        return Err(Error::msg("ignore file"));
+    }
+
+    let file_path = &file_path;
+    let music_dir = &music_dir;
+    let path = Path::new(&file_path);
+    let file_name = path.file_name();
+    if file_name.is_none() {
+        let _ = log_file(
+            LOG_PATH,
+            "error",
+            &format!("file_name is none: {}", file_path),
+        );
+        return Err(Error::msg("file_name is none"));
+    }
+    let file_name = file_name.unwrap().to_str().unwrap().to_string();
+
+    // print_metadata(f);
+    let metadata = read_metadata(file_path);
+    if metadata.is_err() {
+        let _ = log_file(
+            LOG_PATH,
+            "error",
+            &format!("No metadata found: {}", file_path),
+        );
+        return Err(Error::msg("No metadata found"));
+    }
+
+    let mut mymetadata = metadata.unwrap();
+    mymetadata.build_genre(file_path, &music_dir);
+    let mut metadata = mymetadata.build_metadata();
+    metadata.file_name = file_name.clone().replace("\\", "/");
+    metadata.file_path = file_path.replace("\\", "/");
+    metadata.file_url = file_path.replace(music_dir, "").replace("\\", "/");
+
+    let exist = get_metadata_by_title_artist(&metadata.title, &metadata.artist)?;
+    let song_id = if exist.is_none() {
+        let _ = add_metadata(&metadata)?;
+        metadata.id.clone()
+    } else {
+        let exist = exist.unwrap();
+        metadata.id = exist.id.clone();
+        if exist.file_path != metadata.file_path {
+            let size = set_metadata_by_id(&metadata)?;
+            println!("Already exist, but file path is different, {} -> {}, update rows: {}", exist.file_path, metadata.file_path, size);
+        }
+        exist.id
+    };
+
+    let album = mymetadata.build_album();
+    let album_id = if let Some(exist) = get_album_by_name(&album.name)? {
+        exist.id
+    } else {
+        add_album(&album)?
+    };
+
+    let album_song = mymetadata.build_album_song(&song_id, album_id);
+    let album_song_size = if let Some(_) = album_song_by_id(&song_id, album_id)? {
+        0
+    } else {
+        add_album_song(&album_song)?
+    };
+
+    let artists = mymetadata.build_artist();
+    let mut artist_ids = Vec::new();
+    for artist in artists {
+        if let Some(exist) = artist_by_name(&artist.name)? {
+            if exist.id > 0 && !artist_ids.contains(&exist.id) {
+                artist_ids.push(exist.id);
+            }
+        } else {
+            artist_ids.push(add_artist(&artist)?);
+        }
+    }
+
+    let mut artist_songs = mymetadata.build_artist_songs(&song_id, &artist_ids);
+    if let Some(exist) = artist_song_by_song_id(&song_id)? {
+        artist_songs.retain(|a| exist.artist_id != a.artist_id && exist.song_id != a.song_id);
+    };
+    let artist_song_size = add_artist_songs(&artist_songs)?;
+
+    let mut covers = mymetadata.build_covers(album_id, "album");
+    let mut exist_cover = vec![];
+    for cover in &covers {
+        if let Some(exist) = get_cover(album_id, "", &cover.size)? {
+            exist_cover.push(exist.size);
+        }
+    }
+    covers.retain(|c| !exist_cover.contains(&c.size));
+    let cover_size = add_covers(covers)?;
+
+    let lyrics = mymetadata.build_lyrics(&metadata.id);
+    let exist = get_lyric(&song_id)?;
+    let lyric_size = if exist.len() > 0 {
+        exist.len()
+    } else {
+        add_lyrics(lyrics)?
+    };
+
+    let _ = log_file(
+        LOG_PATH,
+        "info",
+        &format!(
+            "title: {}, album: {}-{}({}), artists: {}({}), covers: {}, lyrics: {}",
+            metadata.title,
+            album.name,
+            album_id,
+            album_song_size,
+            artist_ids.len(),
+            artist_song_size,
+            cover_size,
+            lyric_size
+        ),
+    );
+    Ok(())
 }

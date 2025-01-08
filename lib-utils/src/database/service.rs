@@ -1,9 +1,17 @@
 #![allow(dead_code)]
 
-use rusqlite::{Result, Row};
+use rusqlite::{params_from_iter, Result, Row};
 use serde::{Deserialize, Serialize};
 
 use super::connect_db;
+
+fn repeat_vars(count: usize) -> String {
+    assert_ne!(count, 0);
+    let mut s = "?,".repeat(count);
+    // Remove trailing comma
+    s.pop();
+    s
+}
 
 fn convert_single<T>(row: Option<&Row>, f: fn(&Row) -> Result<T>) -> Option<T> {
     if row.is_none() {
@@ -222,6 +230,30 @@ pub fn set_metadata_genre(genre: &str, song_id: &str) -> Result<usize> {
     Ok(size)
 }
 
+pub fn set_metadata_by_id(metadata: &Metadata) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("UPDATE metadata SET file_name = ?, file_path = ?, file_url = ?, title = ?, artist = ?, album = ?, year = ?, duration = ?, bitrate = ?, samplerate = ?, language = ?, genre = ?, track = ?, disc = ?, comment = ? WHERE id = ?")?;
+    let size = stmt.execute([
+        metadata.file_name.clone(),
+        metadata.file_path.clone(),
+        metadata.file_url.clone(),
+        metadata.title.clone(),
+        metadata.artist.clone(),
+        metadata.album.clone(),
+        metadata.year.clone(),
+        metadata.duration.to_string(),
+        metadata.bitrate.to_string(),
+        metadata.samplerate.to_string(),
+        metadata.language.clone(),
+        metadata.genre.clone(),
+        metadata.track.to_string(),
+        metadata.disc.to_string(),
+        metadata.comment.clone(),
+        metadata.id.clone(),
+    ])?;
+    Ok(size)
+}
+
 pub fn get_cover(link_id: i64, cover_type: &str, size: &str) -> Result<Option<Cover>> {
     let conn = connect_db()?;
     let mut stmt =
@@ -286,7 +318,8 @@ pub fn add_lyrics(lyric_list: Vec<Lyric>) -> Result<usize> {
     let tx = conn.transaction()?;
     let mut count = 0;
     for lyric in lyric_list {
-        let mut stmt = tx.prepare("INSERT INTO lyric (song_id, time, text, language) VALUES (?, ?, ?, ?)")?;
+        let mut stmt =
+            tx.prepare("INSERT INTO lyric (song_id, time, text, language) VALUES (?, ?, ?, ?)")?;
         let _ = stmt.execute([
             lyric.song_id.clone(),
             lyric.time.to_string(),
@@ -476,7 +509,7 @@ pub fn get_album_by_name(name: &str) -> Result<Option<Album>> {
     let mut stmt = conn.prepare("SELECT * FROM album WHERE name = ?")?;
     let mut rows = stmt.query([name])?;
 
-    let album = rows    
+    let album = rows
         .next()
         .map(|row| convert_single(row, covert_row_to_album))
         .unwrap_or(None);
@@ -527,10 +560,30 @@ pub fn album_song_by_song_id(song_id: &str) -> Result<Option<AlbumSong>> {
     Ok(album_song)
 }
 
+pub fn album_song_by_song_ids(song_ids: &Vec<String>) -> Result<Vec<AlbumSong>> {
+    let conn = connect_db()?;
+    let sql = format!(
+        "SELECT * FROM album_song WHERE song_id IN ({})",
+        repeat_vars(song_ids.len())
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(params_from_iter(song_ids), covert_row_to_album_song)?;
+
+    let mut album_list = Vec::new();
+    for album in rows {
+        if let Ok(album) = album {
+            album_list.push(album);
+        } else {
+            println!("getAlbumSongByIds Error: {}", album.unwrap_err());
+        }
+    }
+    Ok(album_list)
+}
+
 pub fn album_song_by_album_id(album_id: i64) -> Result<Vec<AlbumSong>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM album_song WHERE album_id = ?")?;
-    let rows = stmt.query_map([&album_id.to_string()], |row| covert_row_to_album_song(row))?;
+    let rows = stmt.query_map([&album_id.to_string()], covert_row_to_album_song)?;
 
     let mut album_song_list = Vec::new();
     for album_song in rows {
@@ -556,8 +609,6 @@ pub fn album_song_by_id(song_id: &str, album_id: i64) -> Result<Option<AlbumSong
     Ok(album_song)
 }
 
-
-
 // 艺术家相关接口
 pub fn add_artists(artist: &Vec<Artist>) -> Result<Vec<i64>> {
     let conn = connect_db()?;
@@ -577,13 +628,17 @@ pub fn add_artist(artist: &Artist) -> Result<i64> {
     let conn = connect_db()?;
     let mut stmt =
         conn.prepare("INSERT INTO artist (name, cover, description) VALUES (?, ?, ?)")?;
-    let _ = stmt.execute([&artist.name.clone(), &artist.cover.clone(), &artist.description.clone()])?;
+    let _ = stmt.execute([
+        &artist.name.clone(),
+        &artist.cover.clone(),
+        &artist.description.clone(),
+    ])?;
     // 拿到自增id
     let id = conn.last_insert_rowid();
     Ok(id)
 }
 
-pub fn artist() -> Result<Vec<Artist>> {
+pub fn artists() -> Result<Vec<Artist>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM artist")?;
     let rows = stmt.query_map([], |row| covert_row_to_artist(row))?;
@@ -667,6 +722,26 @@ pub fn artist_song_by_song_id(song_id: &str) -> Result<Option<ArtistSong>> {
         .unwrap_or(None);
 
     Ok(artist_song)
+}
+
+pub fn artist_song_by_song_ids(song_ids: &Vec<String>) -> Result<Vec<ArtistSong>> {
+    let conn = connect_db()?;
+    let sql = format!(
+        "SELECT * FROM artist_song WHERE song_id IN ({})",
+        repeat_vars(song_ids.len())
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(params_from_iter(song_ids), covert_row_to_artist_song)?;
+
+    let mut artist_list = Vec::new();
+    for artist_song in rows {
+        if let Ok(artist_song) = artist_song {
+            artist_list.push(artist_song);
+        } else {
+            println!("getArtistSongByIds Error: {}", artist_song.unwrap_err());
+        }
+    }
+    Ok(artist_list)
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
