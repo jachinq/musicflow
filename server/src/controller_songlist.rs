@@ -16,10 +16,7 @@ pub async fn handle_song_list() -> impl Responder {
     }
 }
 
-pub async fn handle_song_list_songs(
-    song_list_id: web::Path<i64>,
-    app_data: web::Data<crate::AppState>,
-) -> impl Responder {
+pub async fn handle_song_list_songs(song_list_id: web::Path<i64>) -> impl Responder {
     let result = service::get_song_list_songs(song_list_id.into_inner());
     if result.is_err() {
         println!(

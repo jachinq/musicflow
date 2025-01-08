@@ -1,8 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use lib_utils::{
-    database::service::{self, Metadata},
-    log::log,
+    config::get_config, database::service::{self, Metadata}, log::log
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -42,6 +41,9 @@ pub trait IntoVec<T> {
 }
 impl IntoVec<MetadataVo> for Vec<Metadata> {
     fn into_vec(&self) -> Vec<MetadataVo> {
+        if self.len() == 0 {
+            return vec![];
+        }
         let ids = self.iter().map(|m| m.id.clone()).collect::<Vec<_>>();
 
         let album_songs = service::album_song_by_song_ids(&ids);
@@ -112,8 +114,11 @@ impl MetadataVo {
         vo.track = value.track.clone();
         vo.disc = value.disc.clone();
         vo.comment = value.comment.clone();
-        let url = vo.file_url.replace("\\", "/");
-        vo.file_url = format!("/music{}", url);
+        // let url = vo.file_url.replace("\\", "/");
+
+        let config = get_config();
+        let music_dir = config.music_dir.replace("\\", "/").clone();
+        vo.file_url = format!("/music{}", vo.file_path.replace(&music_dir, ""));
         vo
     }
 }
