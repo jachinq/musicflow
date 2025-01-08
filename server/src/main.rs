@@ -6,11 +6,13 @@ use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use env_logger::Env;
 use lib_utils::config::get_config;
-use lib_utils::readmeta::read_metadata_into_db;
+use lib_utils::readmeta;
+use lib_utils::thread_pool::ThreadPool;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use walkdir::WalkDir; // 引入 CORS 中间件
 
 mod controller_album;
@@ -172,10 +174,13 @@ async fn handle_all_others(app_data: web::Data<AppState>) -> Result<NamedFile, a
     NamedFile::open(path).map_err(|_| actix_web::error::ErrorNotFound("index.html not found"))
 }
 
-fn handle_server_error(err: actix_web::error::JsonPayloadError, _req: &actix_web::HttpRequest) -> actix_web::Error {
+fn handle_server_error(
+    err: actix_web::error::JsonPayloadError,
+    _req: &actix_web::HttpRequest,
+) -> actix_web::Error {
     let err2 = JsonResult::<()>::error(&err.to_string());
     let err2 = serde_json::to_string(&err2).unwrap_or_default();
-    
+
     actix_web::error::ErrorInternalServerError(err2)
 }
 // 检查音乐文件是否缺失metadata，如果有缺失文件，启动后台线程重新扫描
@@ -201,32 +206,53 @@ async fn check_lost_file(music_dir: &str) {
             }
         }
     }
-    
+
+    let lost_cnt = lost_files.len();
     println!(
         "Music count: {}, Lost files count: {}",
         metas.len(),
-        lost_files.len()
+        lost_cnt
     );
 
-    if lost_files.len() > 0 {
+    if lost_cnt > 0 {
         // 后台线程把缺失metadata的文件重新扫描到数据库中
-        let music_dir = music_dir.to_string();
         let _ = std::thread::spawn(move || {
             let start = std::time::Instant::now();
             println!("Start scan lost files...");
+            let count = Arc::new(Mutex::new(0.0));
+            let pool = ThreadPool::new(12);
             for file_path in lost_files {
-                // println!("Lost file: {}", file_path);
-                if let Err(e) = read_metadata_into_db(file_path.clone(), music_dir.to_owned()) {
-                    println!("path: {}, read_metadata_into_db error: {}", file_path, e);
-                } else {
-                    println!("path: {}, read_metadata_into_db ok", file_path);
-                }
+                let count = count.clone();
+
+                pool.execute(move || {
+                    let config = get_config();
+                    let music_dir = config.music_dir.clone();
+                    let start = std::time::Instant::now();
+                    if let Err(e) =
+                        readmeta::read_metadata_into_db(file_path.clone(), music_dir.clone())
+                    {
+                        println!("path: {}, read_metadata_into_db error: {:?}", file_path, e);
+                    } else {
+                        println!("path: {}, read_metadata_into_db ok", file_path);
+                    }
+
+                    let mut count = count.lock().unwrap();
+                    *count += 1.0;
+                    let count = *count;
+                    let elapsed = start.elapsed();
+                    println!(
+                        "------ {}/{} done, progress: {:.2}%, cost: {:.2?} ------",
+                        count,
+                        lost_cnt,
+                        count / lost_cnt as f64 * 100.0,
+                        elapsed
+                    );
+                });
             }
             let elapsed = start.elapsed();
             println!("Scan lost files done. Elapsed: {:.2?}", elapsed);
         });
     }
-
 }
 
 // 前端日志记录
