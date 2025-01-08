@@ -49,8 +49,8 @@ The application will run on `http://127.0.0.1:9090`.
 
 ```shell
 cargo build --release -p initdb
-cp target/release/initdb .
-./initdb
+cp target/release/initdb ./run_initdb
+./run_initdb
 cargo build --release -p server
 cp target/release/server ./build
 cd web

@@ -3,9 +3,9 @@ cd ..
 echo "Building initial database"
 # start processing the database. read metadata from music files and store it in the database.
 cargo build --release --target x86_64-unknown-linux-musl -p initdb
-cp target/x86_64-unknown-linux-musl/release/initdb .
+cp target/x86_64-unknown-linux-musl/release/initdb ./run_initdb
 echo "Starting read metadata from music files and store it in the database"
-./initdb
+./run_initdb
 
 echo "Building the backend"
 # start building the backend
