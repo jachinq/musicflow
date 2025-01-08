@@ -47,8 +47,8 @@ interface SongListState {
   setMusicList: (musicList: Music[]) => void;
   currentPage: number;
   setCurrentPage: (page: number) => void;
-  tabId: "songlist" | "music",
-  setTabId: (tabId: "songlist" | "music") => void
+  tabId: "songlist" | "music";
+  setTabId: (tabId: "songlist" | "music") => void;
   handleOperateSongList: () => void;
   fetchSongList: (autoSelect?: boolean) => void;
   fetchSongListSongs: () => void;
@@ -56,7 +56,8 @@ interface SongListState {
 
 const useSongListStore = create<SongListState>((set, get) => ({
   selectSongList: null,
-  setSelectSongList: (songList: SongList | null) => set(() => ({ selectSongList: songList })),
+  setSelectSongList: (songList: SongList | null) =>
+    set(() => ({ selectSongList: songList })),
   songLists: [],
   setSongLists: (songLists: SongList[]) => set(() => ({ songLists })),
   formValues: buildSongList(""),
@@ -128,18 +129,13 @@ const useSongListStore = create<SongListState>((set, get) => ({
         });
       }
     );
-  }
+  },
 }));
 
 export const SongListPage = () => {
   const { isSmallDevice } = useDevice();
-  const {
-    selectSongList,
-    fetchSongListSongs,
-    fetchSongList,
-    tabId,
-    setTabId
-  } = useSongListStore();
+  const { selectSongList, fetchSongListSongs, fetchSongList, tabId, setTabId } =
+    useSongListStore();
 
   useEffect(() => {
     fetchSongList(true);
@@ -154,19 +150,26 @@ export const SongListPage = () => {
       <div className="p-4">
         <div className="flex flex-col items-center justify-center h-full gap-4">
           <div className="w-full px-4">
-            <OptionGroup defaultValue={tabId} setValue={setTabId} className="font-bold text-2xl" between>
+            <OptionGroup
+              defaultValue={tabId}
+              setValue={setTabId}
+              className="font-bold text-2xl"
+              between
+            >
               <Option value="songlist">歌单</Option>
               <Option value="music">详情</Option>
             </OptionGroup>
           </div>
           {tabId === "songlist" && <SongListSelector />}
-          {tabId === "music" && <>
-            <SongListHeader />
-            <SongListContent />
-          </>}
+          {tabId === "music" && (
+            <>
+              <SongListHeader />
+              <SongListContent />
+            </>
+          )}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -185,7 +188,6 @@ export const SongListPage = () => {
 
 // 歌单选择器
 const SongListSelector = () => {
-
   const {
     songLists,
     setSelectSongList,
@@ -195,7 +197,7 @@ const SongListSelector = () => {
     setShowForm,
     handleOperateSongList,
     setTabId,
-    fetchSongList
+    fetchSongList,
   } = useSongListStore();
 
   const confirm = useConfirm();
@@ -209,7 +211,9 @@ const SongListSelector = () => {
           if (result && result.success) {
             let [listSize, songSize] = result.data || [];
             toast.success("删除歌单成功", {
-              description: `删除歌单数量：${listSize} 歌单关联的歌曲数量：${songSize}` || "",
+              description:
+                `删除歌单数量：${listSize} 歌单关联的歌曲数量：${songSize}` ||
+                "",
             });
             fetchSongList(true);
           } else {
@@ -223,16 +227,18 @@ const SongListSelector = () => {
             description: "删除歌单失败" + error.message || "未知错误",
           });
         }
-      )
+      );
     };
     confirm({
-      message: <div>
-        确定删除当前歌单吗？
-        <div className="text-sm">注意：此操作不可恢复</div>
-      </div>,
-      onConfirm
-    })
-  }
+      message: (
+        <div>
+          确定删除当前歌单吗？
+          <div className="text-sm">注意：此操作不可恢复</div>
+        </div>
+      ),
+      onConfirm,
+    });
+  };
 
   return (
     <>
@@ -242,19 +248,23 @@ const SongListSelector = () => {
             key={item.id}
             songList={item}
             onClick={() => {
-              setSelectSongList(item)
-              setTabId("music")
+              setSelectSongList(item);
+              setTabId("music");
             }}
             className="group"
           >
-            <X size={22} className="hidden hover:text-destructive text-destructive-foreground group-hover:block" onClick={(e) => handleDelSongList(e, item)} />
+            <X
+              size={22}
+              className="hidden hover:text-destructive text-destructive-foreground group-hover:block"
+              onClick={(e) => handleDelSongList(e, item)}
+            />
           </SongListItem>
         ))}
         <SongListItem
           songList={buildSongList("创建歌单")}
           onClick={() => {
             setFormValues(buildSongList(""));
-            setShowForm(true)
+            setShowForm(true);
           }}
         >
           <PlusCircle size={16} />
@@ -316,7 +326,6 @@ const SongListHeader = () => {
         toast.error("添加歌曲失败");
       }
     );
-
   };
   const { setAllSongs, setCurrentSong } = usePlaylist();
 
@@ -338,7 +347,7 @@ const SongListHeader = () => {
       }
     );
   };
-  const handleImportSong = () => { };
+  const handleImportSong = () => {};
 
   if (!selectSongList) return null;
   return (
@@ -346,15 +355,16 @@ const SongListHeader = () => {
       <div className="px-4 w-full flex flex-col gap-4">
         <div className="grid grid-cols-[auto,1fr] gap-4">
           {selectSongList.cover ? (
-            <Cover src={selectSongList.cover}
-              alt={selectSongList.name}
-            />) : (<div></div>)}
+            <Cover src={selectSongList.cover} alt={selectSongList.name} />
+          ) : (
+            <div></div>
+          )}
           <div className="flex flex-col justify-center">
-            <div className="text-4xl font-bold mb-4">
-              {selectSongList.name}
-            </div>
+            <div className="text-4xl font-bold mb-4">{selectSongList.name}</div>
             <div className="flex gap-2 flex-wrap items-center">
-              <div className="max-h-[60px] text-sm text-muted-foreground break-all overflow-scroll hide-scrollbar">{selectSongList.description}</div>
+              <div className="max-h-[60px] text-sm text-muted-foreground break-all overflow-scroll hide-scrollbar">
+                {selectSongList.description}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {selectSongList.created_at}
               </div>
@@ -362,7 +372,11 @@ const SongListHeader = () => {
           </div>
         </div>
 
-        <div className={`${isSmallDevice ? "grid grid-cols-2 grid-rows-2" : "flex"} gap-4`}>
+        <div
+          className={`${
+            isSmallDevice ? "grid grid-cols-2 grid-rows-2" : "flex"
+          } gap-4`}
+        >
           <div className="button" onClick={handlePlayAll}>
             播放全部
           </div>
@@ -393,32 +407,24 @@ const SongListHeader = () => {
         />
       )}
     </>
-  )
-}
+  );
+};
 
 // 歌单内容
 const SongListContent = () => {
-  const {
-    musicList,
-  } = useSongListStore();
+  const { musicList } = useSongListStore();
   const { playSingleSong } = usePlaylist();
   return (
     <div className="flex flex-wrap gap-4 w-full px-4">
       {musicList.map((item) => (
-        <MusicCard
-          key={item.id}
-          music={item}
-          onClick={playSingleSong}
-        />
+        <MusicCard key={item.id} music={item} onClick={playSingleSong} />
       ))}
       {musicList.length === 0 && (
-        <div className="text-center py-4">
-          还没有歌曲，快去添加吧！
-        </div>
+        <div className="text-center py-4">还没有歌曲，快去添加吧！</div>
       )}
     </div>
-  )
-}
+  );
+};
 
 // 歌单列表项
 const SongListItem = ({
@@ -427,10 +433,8 @@ const SongListItem = ({
   children,
   className,
 }: { songList: SongList } & React.HTMLAttributes<HTMLDivElement>) => {
-  const {
-    selectSongList,
-  } = useSongListStore();
-  if (!selectSongList) return null;
+  // const { selectSongList } = useSongListStore();
+  // if (!selectSongList) return null;
   return (
     <div
       key={songList.id}
@@ -520,14 +524,8 @@ const SongListForm = ({
 };
 
 // 添加歌曲对话框
-interface AddSongDialogProps extends DialogProps {
-
-}
-const AddSongDialog = ({
-  show,
-  setShow,
-  onSubmit
-}: AddSongDialogProps) => {
+interface AddSongDialogProps extends DialogProps {}
+const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
   if (!show) return null;
   const { isSmallDevice } = useDevice();
   const [fmusicList, setfmusicList] = useState<Music[]>([]);
@@ -559,13 +557,13 @@ const AddSongDialog = ({
         any: searchText,
       }
     );
-  }
+  };
   useEffect(() => {
     filterMusicList(1);
   }, [searchText]);
   useEffect(() => {
     setSelectMusics([...musicList]);
-  }, [])
+  }, []);
 
   const onSelectSong = (music: Music) => {
     if (selectMusics.includes(music)) {
@@ -573,20 +571,22 @@ const AddSongDialog = ({
     } else {
       setSelectMusics([...selectMusics, music]);
     }
-  }
+  };
   const isSelected = (music: Music) => {
     return selectMusics.findIndex((item) => item.id === music.id) !== -1;
-  }
+  };
   const getGripCols = () => {
-    return isSmallDevice ? "grid-cols-[auto,48px,2fr,1fr]" : "grid-cols-[auto,48px,1fr,1fr]"
-  }
+    return isSmallDevice
+      ? "grid-cols-[auto,48px,2fr,1fr]"
+      : "grid-cols-[auto,48px,1fr,1fr]";
+  };
   const selectAll = (checked: boolean) => {
     if (checked) {
       setSelectMusics([...selectMusics, ...fmusicList]);
     } else {
       setSelectMusics([]);
     }
-  }
+  };
 
   return (
     <Form
@@ -602,11 +602,25 @@ const AddSongDialog = ({
           onChange={(e) => setSearchText(e)}
         />
         <div>
-          <Pagination total={total} currentPage={currentPage} onPageChange={filterMusicList} />
+          <Pagination
+            total={total}
+            currentPage={currentPage}
+            onPageChange={filterMusicList}
+          />
         </div>
         <div className="overflow-scroll hide-scrollbar flex gap-2 justify-center flex-col overflow-y-scroll max-h-[calc(100vh-200px)]">
-          <div className={"text-sm grid items-center justify-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted " + getGripCols()}>
-            <span><input type="checkbox" onChange={(e) => selectAll(e.target.checked)} /></span>
+          <div
+            className={
+              "text-sm grid items-center justify-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted " +
+              getGripCols()
+            }
+          >
+            <span>
+              <input
+                type="checkbox"
+                onChange={(e) => selectAll(e.target.checked)}
+              />
+            </span>
             <span>封面</span>
             <span>歌曲名/歌手</span>
             <span>专辑</span>
@@ -615,9 +629,16 @@ const AddSongDialog = ({
             <div
               key={item.id}
               onClick={() => onSelectSong(item)}
-              className={"grid items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted " + getGripCols()}
+              className={
+                "grid items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted " +
+                getGripCols()
+              }
             >
-              <input type="checkbox" checked={isSelected(item)} onChange={() => { }} />
+              <input
+                type="checkbox"
+                checked={isSelected(item)}
+                onChange={() => {}}
+              />
               <Cover
                 src={getCoverSmallUrl(item.album_id)}
                 alt={item.title}
@@ -625,7 +646,9 @@ const AddSongDialog = ({
               />
               <div className="flex gap-1 flex-col">
                 <span>{item.title}</span>
-                <span className="text-sm text-muted-foreground">{item.artist}</span>
+                <span className="text-sm text-muted-foreground">
+                  {item.artist}
+                </span>
               </div>
               <span>{item.album}</span>
             </div>
