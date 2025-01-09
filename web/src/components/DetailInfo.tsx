@@ -41,7 +41,6 @@ export const DetailInfo = ({ song, contentH = false }: { song?: Music, contentH?
           value={<Genres song={song} genres={genres} setGenres={setGenres} />}
         />
         <ShowItem name="路径" value={song.file_path} />
-        <ShowItem name="URL" value={song.file_url} />
       </div>
     </div>
   );
