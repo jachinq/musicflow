@@ -5,7 +5,7 @@ import { usePlaylist } from "../store/playlist";
 import { getLyrics } from "../lib/api";
 import { lyric } from "../lib/defined";
 
-function Lyrics({song_id}: {song_id?: string}) {
+function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean}) {
   const { currentLyric, lyrics, setLyrics } = useCurrentPlay();
   const { currentSong } = usePlaylist();
   const lyricsRef = useRef<HTMLDivElement | null>(null);
@@ -31,7 +31,12 @@ function Lyrics({song_id}: {song_id?: string}) {
         for (let i = 0; i < limit; i++) {
           lastList.push(emptyLast);
         }
-        setLyrics([...firstList, ...lyrics, ...lastList]);
+        if (filterEmpty) {
+          lyrics = lyrics.filter((line) => line.text !== "");
+          setLyrics([...lyrics]);
+        } else {
+          setLyrics([...firstList, ...lyrics, ...lastList]);
+        }
       },
       (error) => {
         console.error(error);

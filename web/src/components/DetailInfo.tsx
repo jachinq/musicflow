@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useConfirm } from "./confirm";
 import { useNavigate } from "react-router-dom";
 
-export const DetailInfo = ({ song }: { song?: Music }) => {
+export const DetailInfo = ({ song, contentH = false }: { song?: Music, contentH?: boolean }) => {
   const navigate = useNavigate();
   if (!song) return <div>暂无数据</div>;
 
@@ -27,7 +27,7 @@ export const DetailInfo = ({ song }: { song?: Music }) => {
   };
 
   return (
-    <div className="flex flex-col items-center px-8 py-4 min-h-[calc(100vh-260px)]">
+    <div className={`flex flex-col items-center px-8 py-4 ${contentH? "h-full" : "min-h-[calc(100vh-260px)]"}`}>
       <div className="flex flex-col gap-4">
         <ShowItem name="名称" value={song.title} />
         <ShowItem name="歌手" value={song.artists && song.artists.join(" / ")} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
@@ -114,11 +114,12 @@ const Genres = ({
           <X
             onClick={(e) => handleDeleteGenre(e, genre)}
             className="hover:text-destructive"
+            size={16}
           />
         </GenreElement>
       ))}
       <div className="genre" onClick={setShowNewTagForm.bind(null, true)}>
-        <PlusIcon strokeWidth={1} />
+        <PlusIcon size={16} />
       </div>
       {showNewTagForm && (
         <NewTagForm
