@@ -11,7 +11,7 @@ function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean
   const lyricsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const id = currentSong?.id || song_id;
+    const id = song_id;
     if (!id) return;
     getLyrics(
       id,
@@ -42,9 +42,10 @@ function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean
         console.error(error);
       }
     );
-  }, [currentSong, song_id]);
+  }, [song_id]);
 
   useEffect(() => {
+    if (currentSong?.id !== song_id) return;
     if (!lyricsRef.current) return;
     const currentLyricIndex = lyrics.findIndex(
       (line) => line.time === currentLyric?.time
@@ -80,7 +81,8 @@ function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean
     return lyricNameFocus().split(" ").join(" hover:");
   };
   const lyricName = (line: { time: number; text: string }) => {
-    const focus = currentLyric?.time === line.time ? lyricNameFocus() : "";
+    let focus = currentLyric?.time === line.time ? lyricNameFocus() : "";
+    if (currentSong?.id !== song_id) focus = "";
     return `${focus} min-h-10 flex items-center transition-all duration-300 justify-center`;
   };
 
