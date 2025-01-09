@@ -8,6 +8,8 @@ interface CoverProps {
   roundType?: string;
   size?: number;
   fallback?: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
 }
 
 export const Cover = ({
@@ -18,6 +20,7 @@ export const Cover = ({
   roundType,
   size = 140,
   fallback = <ImageIcon />,
+  onClick,
 }: CoverProps & React.HTMLAttributes<HTMLDivElement>) => {
   const [loaded, setLoaded] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
@@ -77,6 +80,7 @@ export const Cover = ({
 
   return (
     <div
+      onClick={onClick}
       style={getStyle()}
       className={"flex items-center justify-center bg-muted shadow-md overflow-hidden " +
         className}
