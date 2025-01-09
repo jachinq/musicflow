@@ -389,8 +389,9 @@ export const AudioPlayer = () => {
               <img
                 src={getCoverSmallUrl(currentSong.album_id)}
                 alt=""
-                width={42}
+                // width={42}
                 className={isPlaying ? "album-spin" : ""}
+                style={{width: 42, height: 42}}
               />
             </div>
           </div>

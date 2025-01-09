@@ -110,9 +110,8 @@ function MusicPlayPage() {
           <img
             src={getCoverMediumUrl(currentSong?.album_id || 0)}
             alt=""
-            width={album_size}
-            height={album_size}
-            className={`${isPlaying ? "album-spin" : ""} object-cover`}
+            className={`${isPlaying ? "album-spin" : ""} object-cover object-ce`}
+            style={{ height: album_size + "px", width: album_size + "px" }} 
           />
         </div>
       </div>

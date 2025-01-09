@@ -85,7 +85,8 @@ export const Cover = ({
       className={"flex items-center justify-center bg-muted shadow-md overflow-hidden " +
         className}
     >
-      {!showFallback && (<img ref={imgRef} width={size} className="object-cover hidden" alt={alt} />)}
+      {!showFallback && (<img ref={imgRef} className="object-cover hidden" alt={alt} style={{width: size + "px", height: size + "px"}} />)
+      }
       {showFallback && <div className="bg-muted flex justify-center items-center overflow-hidden break-keep text-center p-4" style={getStyle()}>{fallback}</div>}
       {!loaded && <Loader className="animate-spin" size={32} />}
     </div>
