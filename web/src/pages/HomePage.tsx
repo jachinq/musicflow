@@ -79,7 +79,10 @@ const Control = () => {
   const { setAllSongs, setCurrentSong } = usePlaylist();
   const { setError } = useHomePageStore();
   const { isSmallDevice } = useDevice();
-  const newLineTag = isSmallDevice && filter.genres ? filter.genres.length > 5 : filter.genres && filter.genres.length > 10;
+  const newLineTag =
+    isSmallDevice && filter.genres
+      ? filter.genres.length > 5
+      : filter.genres && filter.genres.length > 10;
 
   const playAllSongs = () => {
     getMusicList(
@@ -129,8 +132,7 @@ const Control = () => {
 };
 
 const SelectTag = () => {
-  const { filter, setFilter, setNeedFilter } =
-    useMusicList();
+  const { filter, setFilter, setNeedFilter } = useMusicList();
   const removeSelectedTag = (tag: string) => {
     if (!filter.genres) {
       return;
@@ -146,21 +148,22 @@ const SelectTag = () => {
           <div className="flex flex-row gap-2 justify-center items-center w-full">
             {/* <div className="text-sm break-keep">标签</div> */}
             <div className="flex gap-2 flex-wrap">
-              {filter.genres && filter.genres.map((tag) => (
-                <div
-                  key={tag}
-                  className="flex items-center gap-1 p-1 rounded-md bg-muted text-muted-foreground transition-all duration-300"
-                >
-                  {tag}
+              {filter.genres &&
+                filter.genres.map((tag) => (
                   <div
-                    onClick={() => removeSelectedTag(tag)}
-                    className="hover:text-primary-hover cursor-pointer"
+                    key={tag}
+                    className="flex items-center gap-1 p-1 rounded-md bg-muted text-muted-foreground transition-all duration-300"
                   >
-                    <X />
+                    {tag}
+                    <div
+                      onClick={() => removeSelectedTag(tag)}
+                      className="hover:text-primary-hover cursor-pointer"
+                    >
+                      <X />
+                    </div>
+                    {/* <span className="text-xs text-gray-500">({tag.count})</span> */}
                   </div>
-                  {/* <span className="text-xs text-gray-500">({tag.count})</span> */}
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         </div>
@@ -172,7 +175,7 @@ const SelectTag = () => {
 const MusicList = () => {
   const { playSingleSong } = usePlaylist();
   const { initialized, setInitialized, setLoading, setError } =
-  useHomePageStore();
+    useHomePageStore();
   const { isSmallDevice } = useDevice();
   const pageSize = isSmallDevice ? 6 : 30;
   const {
@@ -200,7 +203,7 @@ const MusicList = () => {
   return (
     <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
       {musicList.map((music: any) => (
-        <MusicCard key={music.id} music={music} onClick={playSingleSong} />
+        <MusicCard key={music.id} music={music} onPlay={playSingleSong} />
       ))}
     </div>
   );

@@ -417,7 +417,7 @@ const SongListContent = () => {
   return (
     <div className="flex flex-wrap gap-4 w-full px-4">
       {musicList.map((item) => (
-        <MusicCard key={item.id} music={item} onClick={playSingleSong} />
+        <MusicCard key={item.id} music={item} onPlay={playSingleSong} />
       ))}
       {musicList.length === 0 && (
         <div className="text-center py-4">还没有歌曲，快去添加吧！</div>
