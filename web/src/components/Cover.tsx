@@ -27,6 +27,7 @@ export const Cover = ({
   const imgRef = useRef<HTMLImageElement>(null);
   useEffect(() => {
     setShowFallback(false);
+    setLoaded(false);
     if (!src) {
       setLoaded(true);
       setShowFallback(true);
