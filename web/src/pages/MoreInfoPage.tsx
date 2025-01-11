@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getAlbumById,
   getAlbumList,
@@ -9,6 +9,7 @@ import {
   getCoverMediumUrl,
   getCoverSmallUrl,
   getGenreList,
+  setArtistCover,
 } from "../lib/api";
 import { Album, Artist, Music, MyRoutes } from "../lib/defined";
 import { GenreElement } from "../components/Genre";
@@ -31,6 +32,7 @@ import { Drawer } from "../components/Drawer";
 import { useSettingStore } from "../store/setting";
 import { formatTime, getOnlineEngineUrl } from "../lib/utils";
 import { usePlaylist } from "../store/playlist";
+import { Form } from "../components/Form";
 
 type TabId = "genres" | "albums" | "artists";
 interface TagPageState {
@@ -44,6 +46,8 @@ interface TagPageState {
   setTabId: (tabId: TabId) => void;
   filterText: string;
   setFilterText: (filterText: string) => void;
+  showEditForm: boolean;
+  setShowEditForm: (show: boolean) => void;
 }
 const useTagPageStore = create<TagPageState>((set) => ({
   type: DrawerType.ALBUM,
@@ -56,6 +60,8 @@ const useTagPageStore = create<TagPageState>((set) => ({
   setTabId: (tabId) => set(() => ({ tabId })),
   filterText: "",
   setFilterText: (filterText) => set(() => ({ filterText })),
+  showEditForm: false,
+  setShowEditForm: (show) => set(() => ({ showEditForm: show })),
 }));
 
 export const MoreInfoPage = () => {
@@ -243,6 +249,7 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
         ))}
       </div>
       <DetaialDrawer />
+      <EditForm onSussess={() => fetchItems(currentPage)} />
     </div>
   );
 };
@@ -262,7 +269,7 @@ const CoverItem = ({
   const handleClick = () => {
     onSelect && onSelect(item);
   };
-  const getSrc = () => {
+  const getSrc = useCallback(() => {
     if (type === DrawerType.ARTIST) {
       return item.cover;
     }
@@ -272,7 +279,7 @@ const CoverItem = ({
         : getCoverSmallUrl(item.id);
     }
     return "";
-  };
+  }, [item.cover, type]);
   const getClass = () => {
     if (type === DrawerType.ALBUM) {
       return "bg-muted rounded-md cursor-pointer group";
@@ -298,7 +305,7 @@ const CoverItem = ({
 };
 
 const DetaialDrawer = () => {
-  const { showDrawer, setShowDrawer, selectedItem, type, setSelectedItem } =
+  const { showDrawer, setShowDrawer, selectedItem, type, setSelectedItem, setShowEditForm } =
     useTagPageStore();
   const { online_engine } = useSettingStore();
   const { playSingleSong } = usePlaylist();
@@ -404,6 +411,12 @@ const DetaialDrawer = () => {
     setCurrentSong(musicList[0]);
   };
 
+  const handleCoverClick = () => {
+    if (type !== DrawerType.ARTIST) return;
+    setShowDrawer(false);
+    setShowEditForm(true);
+  };
+
   if (!selectedItem) return null;
   return (
     <Drawer
@@ -419,7 +432,7 @@ const DetaialDrawer = () => {
       <div className="px-4 py-2">
         <div className="flex flex-col gap-4 justify-center text-center">
           <div className="meta-info flex gap-4 items-end">
-            <div className="flex justify-center">
+            <div className="flex justify-center" onClick={handleCoverClick}>
               <CoverItem type={type} item={selectedItem} onSelect={onSelect} />
             </div>
             <div className="flex flex-col gap-2 justify-start text-start">
@@ -480,7 +493,7 @@ const DetaialDrawer = () => {
                       {index + 1}
                     </span>
                     <span className="hidden group-hover:flex hover:text-primary-hover hover:scale-110 transition-all duration-300">
-                      <PlayIcon size={16} onClick={()=>playSingleSong(item)} />
+                      <PlayIcon size={16} onClick={() => playSingleSong(item)} />
                     </span>
                   </div>
                   <div className="flex gap-2 flex-col justify-center items-start">
@@ -506,3 +519,56 @@ const DetaialDrawer = () => {
     </Drawer>
   );
 };
+
+
+const EditForm = ({ onSussess }: { onSussess: () => void }) => {
+  const { showEditForm, setShowEditForm, selectedItem } = useTagPageStore();
+  const [cover, setCover] = useState<string>("");
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!selectedItem) return;
+    setCover(selectedItem.cover);
+  }, [selectedItem]);
+
+  const handleSubmit = () => {
+    if (!selectedItem) return;
+    // console.log("values", selectedItem);
+
+    setArtistCover(selectedItem.id, cover, (result) => {
+      if (result && result.success) {
+        toast.success("修改成功");
+        setShowEditForm(false);
+        onSussess && onSussess();
+        // setSelectedItem(null);
+      } else {
+        toast.error("修改失败", {
+          description: result.message,
+        });
+      }
+    }, (error) => {
+      console.error(error);
+      toast.error(error.message);
+    });
+  };
+
+  const handleCancel = () => {
+    setShowEditForm(false);
+  };
+
+  useEffect(() => {
+    // console.log("ref", ref);
+    if (!ref.current) return;
+    ref.current.focus();
+  }, [showEditForm]);
+
+  if (!showEditForm || !selectedItem) return null;
+
+  return (<>
+    <Form title={"修改图片"} onSubmit={handleSubmit} onCancel={handleCancel}>
+      <div>
+        <Input ref={ref} value={cover} onChange={setCover} onEnter={handleSubmit} />
+      </div>
+    </Form>
+  </>)
+}

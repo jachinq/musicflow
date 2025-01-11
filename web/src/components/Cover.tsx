@@ -13,7 +13,7 @@ interface CoverProps {
 }
 
 export const Cover = ({
-  src: url,
+  src,
   defaultSrc,
   alt,
   className,
@@ -26,13 +26,14 @@ export const Cover = ({
   const [showFallback, setShowFallback] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   useEffect(() => {
-    if (!url) {
+    setShowFallback(false);
+    if (!src) {
       setLoaded(true);
       setShowFallback(true);
       return;
     }
     const img = new Image();
-    img.src = url;
+    img.src = src;
     img.onload = () => {
       setLoaded(true);
       // console.log(imgRef.current);
@@ -45,7 +46,7 @@ export const Cover = ({
       setLoaded(true);
       if (imgRef.current) {
         if (fallback) {
-          console.log(fallback);
+          // console.log(fallback);
           setShowFallback(true);
         } else {
           imgRef.current.src =
@@ -58,7 +59,7 @@ export const Cover = ({
     return () => {
       img.onload = null;
     };
-  }, [url, defaultSrc]);
+  }, [src, defaultSrc, showFallback]);
 
   const getStyle = () => {
     let sizePx = size + "px";

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 
 // 定义Input组件的Props类型
 interface InputProps {
@@ -11,8 +11,12 @@ interface InputProps {
   onEnter?: (value: string, name: string) => void; // 可选的onEnter回调函数
 }
 
+// const a = forwardRef<HTMLInputElement, InputProps>({}, {
+
+// }) ;
+
 // 自定义Input组件
-export const Input = ({ type = 'text', placeholder, value, name, className, onChange, onEnter }: InputProps) => {
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ type = 'text', placeholder, value, name, className, onChange, onEnter }, ref) => {
   // 使用useState来管理输入框的值
   const [inputValue, setInputValue] = useState(value || '');
 
@@ -27,6 +31,7 @@ export const Input = ({ type = 'text', placeholder, value, name, className, onCh
 
   return (
     <input
+      ref={ref}
       type={type}
       placeholder={placeholder}
       value={inputValue}
@@ -40,4 +45,4 @@ export const Input = ({ type = 'text', placeholder, value, name, className, onCh
       className={`${className || ''} outline-none bg-muted px-4 py-2 rounded-sm w-full`}
     />
   );
-};
+});

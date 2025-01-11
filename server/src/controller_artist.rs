@@ -66,3 +66,23 @@ pub async fn handle_get_artist_by_id(id: web::Path<i64>) -> impl Responder {
         HttpResponse::NotFound().json(JsonResult::<()>::error("Artist not found"))
     }
 }
+
+#[derive(Deserialize)]
+pub struct SetArtistCoverBody {
+    pub cover: String,
+}
+pub async fn handle_set_artist_cover(
+    id: web::Path<i64>,
+    body: web::Json<SetArtistCoverBody>,
+) -> impl Responder {
+    let cover = body.cover.clone();
+    // if cover.is_empty() {
+    //     return HttpResponse::BadRequest().json(JsonResult::<()>::error("图片不能为空，可以是链接或者base64编码字符串"));
+    // }
+    // 实现上传图片并保存到数据库
+    if let Ok(size) = service::set_artist_cover(*id, &cover) {
+        HttpResponse::Ok().json(JsonResult::success(format!("{}个歌手封面保存成功", size)))
+    } else {
+        HttpResponse::NotFound().json(JsonResult::<()>::error("找不到该歌手"))
+    }
+}
