@@ -7,12 +7,10 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use env_logger::Env;
 use lib_utils::config::get_config;
 use lib_utils::readmeta;
-use lib_utils::thread_pool::ThreadPool;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 use walkdir::WalkDir; // 引入 CORS 中间件
 
 mod controller_album;
@@ -223,35 +221,29 @@ async fn check_lost_file(music_dir: &str) {
         let _ = std::thread::spawn(move || {
             let start = std::time::Instant::now();
             println!("Start scan lost files...");
-            let count = Arc::new(Mutex::new(0.0));
-            let pool = ThreadPool::new(12);
+            let mut count = 0.0;
             for file_path in lost_files {
-                let count = count.clone();
 
-                pool.execute(move || {
-                    let config = get_config();
-                    let music_dir = config.music_dir.clone();
-                    let start = std::time::Instant::now();
-                    if let Err(e) =
-                        readmeta::read_metadata_into_db(file_path.clone(), music_dir.clone())
-                    {
-                        println!("path: {}, read_metadata_into_db error: {:?}", file_path, e);
-                    } else {
-                        println!("path: {}, read_metadata_into_db ok", file_path);
-                    }
+                let config = get_config();
+                let music_dir = config.music_dir.clone();
+                let start = std::time::Instant::now();
+                if let Err(e) =
+                    readmeta::read_metadata_into_db(file_path.clone(), music_dir.clone())
+                {
+                    println!("path: {}, read_metadata_into_db error: {:?}", file_path, e);
+                } else {
+                    println!("path: {}, read_metadata_into_db ok", file_path);
+                }
 
-                    let mut count = count.lock().unwrap();
-                    *count += 1.0;
-                    let count = *count;
-                    let elapsed = start.elapsed();
-                    println!(
-                        "------ {}/{} done, progress: {:.2}%, cost: {:.2?} ------",
-                        count,
-                        lost_cnt,
-                        count / lost_cnt as f64 * 100.0,
-                        elapsed
-                    );
-                });
+                count += 1.0;
+                let elapsed = start.elapsed();
+                println!(
+                    "------ {}/{} done, progress: {:.2}%, cost: {:.2?} ------",
+                    count,
+                    lost_cnt,
+                    count / lost_cnt as f64 * 100.0,
+                    elapsed
+                );
             }
             let elapsed = start.elapsed();
             println!("Scan lost files done. Elapsed: {:.2?}", elapsed);
