@@ -70,7 +70,6 @@ export interface Music {
     track: string;
     disc: string;
     comment: string;
-    fileArrayBuffer?: ArrayBuffer; // array buffer of the file
     decodedAudioBuffer?: AudioBuffer; // decoded audio buffer of the file
 }
 

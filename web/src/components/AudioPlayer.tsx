@@ -278,8 +278,7 @@ export const AudioPlayer = () => {
   };
 
   const decodeAudioBuffer = async (song: Music, actuallyDecode: boolean) => {
-    await loadFileArrayBuffer(song);
-    let fileArrayBuffer = song.fileArrayBuffer;
+    let fileArrayBuffer = await loadFileArrayBuffer(song);
     if (!fileArrayBuffer) return;
 
     if (song.decodedAudioBuffer) {
@@ -287,13 +286,15 @@ export const AudioPlayer = () => {
       actuallyDecode && setAudioBuffer(song.decodedAudioBuffer);
       actuallyDecode && setDuration(song.decodedAudioBuffer.duration);
       actuallyDecode && setLoadStatus("");
+      song.samplerate = song.decodedAudioBuffer.sampleRate;
+      song.decodedAudioBuffer = undefined; // 清空缓存，释放内存
     } else {
       // 克隆一个新的ArrayBuffer，避免影响到原数组
-      let copyBuffer = fileArrayBuffer.slice(0);
+      // let copyBuffer = fileArrayBuffer.slice(0);
       // console.log("start decode audio data", song.name);
       actuallyDecode && setLoadStatus("解码音频数据...");
       new AudioContext()
-        .decodeAudioData(copyBuffer)
+        .decodeAudioData(fileArrayBuffer)
         .then((audioBuffer) => {
           actuallyDecode && setAudioBuffer(audioBuffer);
           actuallyDecode && setDuration(audioBuffer.duration);
@@ -301,6 +302,7 @@ export const AudioPlayer = () => {
           actuallyDecode && setLoadStatus("");
         })
         .catch((_error) => {
+          console.log("decode audio data error", _error);
           setLoadStatus("解码音频数据失败...");
         });
     }
@@ -323,13 +325,9 @@ export const AudioPlayer = () => {
   };
 
   const loadFileArrayBuffer = async (song: Music) => {
-    if (song.fileArrayBuffer) {
-      return;
-    }
     song.file_url = getMusicUrl(song);
     const response = await fetch(song.file_url);
-    const arrayBuffer = await response.arrayBuffer();
-    song.fileArrayBuffer = arrayBuffer;
+    return await response.arrayBuffer();
   };
 
   const coverClick = () => {
@@ -349,13 +347,6 @@ export const AudioPlayer = () => {
     togglePlaylist(false);
     pauseAudio();
   };
-
-  // const groupSong = () => {
-  //   if (!currentSong) {
-  //     return;
-  //   }
-  //   // TODO: open group modal
-  // };
 
   const [showVolume, setShowVolume] = useState<boolean>(false);
   const changeVolume = (value: number) => {
