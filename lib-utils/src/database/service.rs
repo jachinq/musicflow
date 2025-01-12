@@ -680,6 +680,13 @@ pub fn artist_by_name(name: &str) -> Result<Option<Artist>> {
     Ok(artist)
 }
 
+pub fn set_artist_cover(id: i64, cover: &str) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("UPDATE artist SET cover = ? WHERE id = ?")?;
+    let size = stmt.execute([cover, &id.to_string()])?;
+    Ok(size)
+}
+
 pub fn add_artist_songs(artist_songs: &Vec<ArtistSong>) -> Result<usize> {
     let mut conn = connect_db()?;
     let tx = conn.transaction()?;

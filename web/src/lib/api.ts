@@ -327,4 +327,16 @@ export const getArtistSongs = (
     method: "GET",
   });
 };
+export const setArtistCover = (
+  id: number,
+  cover: string,
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/set_artist_cover/${id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "PUT",
+    body: JSON.stringify({ cover }),
+  });
+};
 

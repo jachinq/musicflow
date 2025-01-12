@@ -146,6 +146,10 @@ async fn main() -> io::Result<()> {
                 "/api/artist_songs/{artist_id}",
                 web::get().to(handle_get_artist_songs),
             )
+            .route(
+                "/api/set_artist_cover/{artist_id}",
+                web::put().to(handle_set_artist_cover),
+            )
             // 用户相关接口
             .route("/api/user", web::get().to(handle_get_user))
             .route("/api/login", web::post().to(handle_login))
