@@ -17,7 +17,7 @@ echo "Building the frontend"
 cd web
 pnpm install
 pnpm build
-cp -r dist/ ../docker/web/
+cp -r dist/ ../docker/web/dist/
 cd ..
 
 # build the docker image
