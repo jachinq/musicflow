@@ -91,6 +91,7 @@ docker-compose up -d
 2024-12-24: Created the project structure, added the basic structure of the backend server.
 2025-01-02: First version.
 2025-01-07: Added the db initialization tool.
+2025-01-11: Fixed genre operate.
 
 # License
 
