@@ -1,6 +1,6 @@
 # MusicFlow
 
-This is a project to create a web application that allows users to create playlists based on their music taste.
+This is a project to create a web application that allows users to create songlist based on their music taste.
 
 All the music data is from server side APIs.
 
@@ -12,13 +12,13 @@ All the music data is from server side APIs.
 
 # Features
 
-- User can create a playlist based on their music taste.
-- User can add songs to their playlist.
-- User can remove songs from their playlist.
-- User can search for songs and add them to their playlist.
-- User can view their playlists.
-- User can edit their playlists.
-- User can delete their playlists.
+- User can create a songlist based on their music taste.
+- User can add songs to their songlist.
+- User can remove songs from their songlist.
+- User can search for songs and add them to their songlist.
+- User can view their songlist.
+- User can edit their songlist.
+- User can delete their songlist.
 
 # Installation
 
