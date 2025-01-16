@@ -301,8 +301,8 @@ export const AudioPlayer = () => {
           song.decodedAudioBuffer = audioBuffer;
           actuallyDecode && setLoadStatus("");
         })
-        .catch((_error) => {
-          console.log("decode audio data error", _error);
+        .catch((error) => {
+          console.log("decode audio data error", error);
           setLoadStatus("解码音频数据失败...");
         });
     }
