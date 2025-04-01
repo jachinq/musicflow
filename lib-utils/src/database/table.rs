@@ -127,6 +127,14 @@ fn sql() -> String {
       song_title TEXT NOT NULL,
       album_artist TEXT NOT NULL
     );
+
+  CREATE TABLE
+    IF NOT EXISTS playlist (
+      user_id INTEGER NOT NULL,
+      song_id TEXT NOT NULL,
+      status INTEGER NOT NULL DEFAULT 0,
+      offset INTEGER NOT NULL DEFAULT 0
+    );
   
   COMMIT;  
   "#
