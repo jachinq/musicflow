@@ -340,3 +340,22 @@ export const setArtistCover = (
   });
 };
 
+// --- 一些工具相关的接口 ---//
+export const scanMusic = (
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/scan_music`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+  });
+};
+export const scanMusicProgress = (
+  onSuccess: (data: JsonResult<any>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/scan_music_progress`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "GET",
+  });
+};

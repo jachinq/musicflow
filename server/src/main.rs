@@ -18,6 +18,7 @@ mod controller_artist;
 mod controller_genre;
 mod controller_song;
 mod controller_songlist;
+mod controller_tool;
 mod controller_user;
 
 use controller_album::*;
@@ -25,6 +26,7 @@ use controller_artist::*;
 use controller_genre::*;
 use controller_song::*;
 use controller_songlist::*;
+use controller_tool::*;
 use controller_user::*;
 
 // 应用状态
@@ -158,6 +160,9 @@ async fn main() -> io::Result<()> {
                 "/api/change_password",
                 web::post().to(handle_change_password),
             )
+            // 工具相关接口
+            .route("/api/scan_music", web::post().to(handle_scan_music))
+            .route("/api/handle_scan_music_progress", web::post().to(handle_scan_music_progress))
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", &web_dir).index_file("index.html"))

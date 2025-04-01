@@ -3,6 +3,7 @@ import { Input } from "../components/Input";
 import { Option, OptionGroup } from "../components/Option";
 import { useTheme } from "../components/theme-provider";
 import { useDevice } from "../hooks/use-device";
+import { scanMusic } from "../lib/api";
 import { OnlineEngine, useSettingStore } from "../store/setting";
 import {
   ListMusic,
@@ -12,12 +13,38 @@ import {
   Shuffle,
   Sun,
 } from "lucide-react";
+import { toast } from "sonner";
 
 function SettingsPage() {
-  const { play_mode, server_url, online_engine, setPlayMode, setServerUrl, setOnlineEngine } =
+  const { play_mode, server_url, online_engine, setPlayMode, setServerUrl, setOnlineEngine, is_running_scan, setIsRunningScan } =
     useSettingStore();
 
   const { theme, setTheme } = useTheme();
+
+  const handleScanMusic = () => {
+    if (is_running_scan) {
+      return
+    }
+    setIsRunningScan(true);
+    console.log('scanMusic');
+
+    toast.success("启动扫描，等待完成....")
+    // 轮询获取扫描进度
+    setInterval(() => {
+      
+    }, 1500);
+
+    scanMusic(
+      () => {
+        toast.success("扫描完成")
+        setIsRunningScan(false)
+      },
+      (error) => {
+        toast.error(`启动扫描线程失败：${error}`)
+      }
+    )
+
+  }
 
   return (
     <div className="p-4 overflow-y-scroll flex justify-center items-center">
@@ -86,6 +113,12 @@ function SettingsPage() {
             </OptionGroup>
           </FormItem>
         </FormLayout>
+
+        <FormLayout label="工具" className="flex gap-4 flex-col">
+          <FormItem label="重新扫描">
+            <div className="button" onClick={handleScanMusic}>执行</div>
+          </FormItem>
+        </FormLayout>
       </div>
     </div>
   );
@@ -113,8 +146,8 @@ const FormItem = ({ label, children }: any) => {
   return (
     <div
       className={`${isSmallDevice
-          ? "grid-rows-[25px,1fr] gap-1"
-          : "grid-cols-[150px,1fr] gap-4"
+        ? "grid-rows-[25px,1fr] gap-1"
+        : "grid-cols-[150px,1fr] gap-4"
         } grid items-center`}
     >
       <label className="text-sm">{label}</label>
