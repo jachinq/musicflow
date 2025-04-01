@@ -273,6 +273,9 @@ pub fn get_cover(link_id: i64, cover_type: &str, size: &str) -> Result<Option<Co
 }
 
 pub fn add_covers(cover_list: Vec<Cover>) -> Result<usize> {
+    if cover_list.is_empty() {
+        return Ok(0);
+    }
     let mut conn = connect_db()?;
     let tx = conn.transaction()?;
     let mut count = 0;

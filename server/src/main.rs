@@ -6,7 +6,7 @@ use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use env_logger::Env;
 use lib_utils::config::get_config;
-use lib_utils::readmeta;
+use lib_utils::{database, log, readmeta};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
@@ -198,6 +198,7 @@ async fn check_lost_file(music_dir: &str) {
     }
 
     let mut lost_files = Vec::new();
+    // 第一种情况：遍历音乐目录，如果文件路径在metas中不存在，则认为是缺失文件
     for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let path = entry.path().display().to_string().replace("\\", "/");
@@ -207,6 +208,33 @@ async fn check_lost_file(music_dir: &str) {
                 continue;
             }
         }
+    }
+
+    // 第二种情况：对应路径存在metadata，但是关联的封面、歌词等缺失，也需要重新扫描
+    for metadata in &metas {
+        let path = metadata.file_path.to_string();
+        let path = path.replace("\\", "/");
+        if lost_files.contains(&path) { // 如果路径已经在待扫描列表，则跳过
+            continue;
+        }
+
+        // 遍历metadata的封面、歌词等文件，如果文件不存在，则认为是缺失文件
+        if let Ok(Some(_)) = database::service::get_album_by_name(&metadata.album) {} else {
+            log::log("info", &format!("check lost file:Album {} not found; path={path}.", &metadata.album));
+            lost_files.push(path.clone());
+        }
+
+        if let Ok(list) = database::service::get_lyric(&metadata.id) {
+            if list.is_empty() {
+                log::log("info", &format!("check lost file:Lyric empty; path={path}."));
+                lost_files.push(path.clone());
+            }
+        } else {
+            log::log("info", &format!("check lost file:Lyric not found; path={path}."));
+            lost_files.push(path.clone());
+        }
+        
+
     }
 
     let lost_cnt = lost_files.len();
