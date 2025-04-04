@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use lib_utils::{
-    config::get_config, database::service::{self, Metadata}, log::log
+    config::get_config, database::service::{self, Metadata}, log::log_err
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -57,8 +57,7 @@ impl IntoVec<MetadataVo> for Vec<Metadata> {
                 id_album_id_map.insert(album_song.song_id.clone(), album_song.album_id);
             }
         } else {
-            log(
-                "error",
+            log_err(
                 &format!("album_songs error: {}", album_songs.unwrap_err()),
             );
         }
@@ -68,8 +67,7 @@ impl IntoVec<MetadataVo> for Vec<Metadata> {
                 id_artist_id_map.insert(artist_song.song_id.clone(), artist_song.artist_id);
             }
         } else {
-            log(
-                "error",
+            log_err(
                 &format!("artist_songs error: {}", artist_songs.unwrap_err()),
             );
         }

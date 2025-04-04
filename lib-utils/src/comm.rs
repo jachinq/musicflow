@@ -50,3 +50,22 @@ pub fn get_parent_directory_names(file_path: &str) -> Vec<String> {
 
     parent_folders
 }
+
+pub fn is_music_file(file_path: &str) -> bool {
+    let file_extensions = vec![
+        "mp3", "flac",
+        // "wav",
+        // "ogg",
+        // "m4a"
+    ];
+    let file_extension = Path::new(file_path)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_lowercase());
+
+    if file_extension.is_none() {
+        return false;
+    }
+    let file_extension = file_extension.unwrap();
+    file_extensions.contains(&file_extension.as_str())
+}

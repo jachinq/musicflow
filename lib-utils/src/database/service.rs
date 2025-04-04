@@ -254,6 +254,48 @@ pub fn set_metadata_by_id(metadata: &Metadata) -> Result<usize> {
     Ok(size)
 }
 
+pub fn del_metadata_by_id(song_id: &str) -> Result<usize> {
+    let mut conn = connect_db()?;
+    // 开启事务
+    let tx = conn.transaction()?;
+    let mut count_size = 0;
+
+    let size = tx.execute("DELETE FROM metadata WHERE id = ?", [song_id])?;
+    println!("del meta size: {size}");
+    count_size += size;
+
+    let size = tx.execute("DELETE FROM cover WHERE link_id = ?", [song_id])?;
+    println!("del cover size: {size}");
+    count_size += size;
+
+    let size = tx.execute("DELETE FROM user_favorite WHERE song_id = ?", [song_id])?;
+    println!("del favorite size: {size}");
+    count_size += size;
+
+    let size = tx.execute("DELETE FROM album_song WHERE song_id = ?", [song_id])?;
+    println!("del album_song size: {size}");
+    count_size += size;
+
+    let size = tx.execute("DELETE FROM artist_song WHERE song_id = ?", [song_id])?;
+    println!("del artist_song size: {size}");
+    count_size += size;
+
+    let size = tx.execute("DELETE FROM lyric WHERE song_id = ?", [song_id])?;
+    println!("del lyric size: {size}");
+    count_size += size;
+
+    let size = tx.execute("DELETE FROM song_list_song WHERE song_id = ?", [song_id])?;
+    println!("del song_list_song size: {size}");
+    count_size += size;
+    
+    // let size = tx.execute("DELETE FROM playlist WHERE song_id = ?", [song_id])?;
+    // println!("del playlist size: {size}");
+    // count_size += size;
+    
+    tx.commit()?;
+    Ok(count_size)
+}
+
 pub fn get_cover(link_id: i64, cover_type: &str, size: &str) -> Result<Option<Cover>> {
     let conn = connect_db()?;
     let mut stmt =
@@ -314,6 +356,20 @@ pub fn get_lyric(song_id: &str) -> Result<Vec<Lyric>> {
     }
 
     Ok(lyric_list)
+}
+
+pub fn get_lyric_song_ids() -> Result<Vec<String>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT DISTINCT song_id FROM lyric")?;
+    let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+
+    let mut song_id_list = Vec::new();
+    for song_id in rows {
+        if let Ok(song_id) = song_id {
+            song_id_list.push(song_id);
+        }
+    }
+    Ok(song_id_list)
 }
 
 pub fn add_lyrics(lyric_list: Vec<Lyric>) -> Result<usize> {

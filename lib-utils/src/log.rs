@@ -1,14 +1,34 @@
-use std::{fs::{self, OpenOptions}, io::Write, path::Path, time::Instant};
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+    path::Path,
+    time::Instant,
+};
 
-pub fn log(level: &str, info: &str) {
+#[derive(Debug, Clone)]
+pub enum LogLevel {
+    Info,
+    Warn,
+    Error,
+    Debug,
+}
+
+pub fn log_info(info: &str) {
+    log(LogLevel::Info, info);
+}
+pub fn log_warn(info: &str) {
+    log(LogLevel::Warn, info);
+}
+pub fn log_err(info: &str) {
+    log(LogLevel::Error, info);
+}
+pub fn log_debug(info: &str) {
+    log(LogLevel::Debug, info);
+}
+pub fn log(level: LogLevel, info: &str) {
     let now = chrono::Local::now();
     let datetime = now.format("%Y-%m-%d %H:%M:%S");
-    println!(
-        "<{}>[{}] {{i={};}} ",
-        level,
-        datetime,
-        info,
-    );
+    println!("<{:?}>[{}] {{{};}} ", level, datetime, info,);
 }
 pub fn log_time_used(start_time: Instant, info: &str) {
     let end_time = Instant::now();
@@ -44,15 +64,9 @@ pub fn log_req(start: Instant, url: &str, ip: &str) {
 pub fn log_file(file_path: &str, level: &str, info: &str) -> Result<(), std::io::Error> {
     let now = chrono::Local::now();
     let datetime = now.format("%Y-%m-%d %H:%M:%S");
-    let log_str = format!(
-        "<{}>[{}] {{{}}}\n",
-        level,
-        datetime,
-        info,
-    );
+    let log_str = format!("<{}>[{}] {{{}}}\n", level, datetime, info,);
     println!("{}", log_str);
 
-    
     // 确保路径存在
     let path = Path::new(file_path);
     if let Some(parent) = path.parent() {

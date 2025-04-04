@@ -3,11 +3,11 @@ use base64::{engine::general_purpose, Engine};
 use super::service::{Album, AlbumSong, Artist, ArtistSong, Cover, Lyric, Metadata};
 use crate::{
     comm::{generate_random_string, get_parent_directory_names},
-    readmeta::MyMetadata,
+    readmeta::PreMetadata,
 };
 
-impl From<MyMetadata> for Metadata {
-    fn from(value: MyMetadata) -> Self {
+impl From<PreMetadata> for Metadata {
+    fn from(value: PreMetadata) -> Self {
         let mut metadata = Metadata::default();
         metadata.id = generate_random_string(9);
         metadata.title = value.title;
@@ -26,7 +26,7 @@ impl From<MyMetadata> for Metadata {
     }
 }
 
-impl MyMetadata {
+impl PreMetadata {
     pub fn build_lyrics(&self, song_id: &str) -> Vec<Lyric> {
         let mut lyrics = Vec::new();
         for lyric in self.lyrics.clone() {

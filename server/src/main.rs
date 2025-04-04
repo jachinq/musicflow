@@ -3,8 +3,9 @@
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::middleware::Logger;
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpServer};
 use env_logger::Env;
+use lib_utils::comm::is_music_file;
 use lib_utils::config::get_config;
 use lib_utils::{database, log, readmeta};
 use serde::{Deserialize, Serialize};
@@ -50,13 +51,13 @@ async fn main() -> io::Result<()> {
     // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
     let music_dir = config.music_dir.clone();
     let music_dir = music_dir.replace("\\", "/");
-    println!("Music dir: {}, Web dir: {}", music_dir, web_dir);
+    log::log_info(&format!("Music dir: {}, Web dir: {}", music_dir, web_dir));
 
     check_lost_file(&music_dir).await;
     // 映射音乐文件的静态路径
     let music_path = "/music";
 
-    println!("Server started on http://{}:{}", ip, port);
+    log::log_info(&format!("Server started on http://{}:{}", ip, port));
     // 启动 HTTP 服务
     HttpServer::new(move || {
         App::new()
@@ -72,7 +73,6 @@ async fn main() -> io::Result<()> {
                 web_path: web_dir.to_string(),
                 music_path: music_path.to_string(),
             }))
-            .route("/api/log", web::post().to(frontend_log))
             // 歌曲相关接口
             .route("/api/list", web::post().to(handle_get_metadatas))
             .route("/api/single/{song_id}", web::get().to(handle_get_metadata))
@@ -161,8 +161,13 @@ async fn main() -> io::Result<()> {
                 web::post().to(handle_change_password),
             )
             // 工具相关接口
+            .route("/api/log", web::post().to(frontend_log))
+            .route("/api/del/{song_id}", web::get().to(handle_delete_meta))
             .route("/api/scan_music", web::post().to(handle_scan_music))
-            .route("/api/handle_scan_music_progress", web::post().to(handle_scan_music_progress))
+            .route(
+                "/api/handle_scan_music_progress",
+                web::post().to(handle_scan_music_progress),
+            )
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", &web_dir).index_file("index.html"))
@@ -192,6 +197,7 @@ fn handle_server_error(
 }
 // 检查音乐文件是否缺失metadata，如果有缺失文件，启动后台线程重新扫描
 async fn check_lost_file(music_dir: &str) {
+    log::log_info("Start check lost file");
     let metas = lib_utils::database::service::get_metadata_list();
     let metas = metas.unwrap_or_default();
     if metas.len() == 0 {
@@ -207,6 +213,9 @@ async fn check_lost_file(music_dir: &str) {
     for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let path = entry.path().display().to_string().replace("\\", "/");
+            if !is_music_file(&path) {
+                continue;
+            }
             let metadata = path_metadata_map.get(&path);
             if metadata.is_none() {
                 lost_files.push(path);
@@ -216,56 +225,67 @@ async fn check_lost_file(music_dir: &str) {
     }
 
     // 第二种情况：对应路径存在metadata，但是关联的封面、歌词等缺失，也需要重新扫描
+    let album_list = if let Ok(list) = database::service::get_album_list() {
+        list.iter().map(|album| album.name.to_string()).collect()
+    } else {
+        Vec::new()
+    };
+    let lyric_song_ids = if let Ok(list) = database::service::get_lyric_song_ids() {
+        list
+    } else {
+        Vec::new()
+    };
+    // let mut lost_album = Vec::new();
+    // let mut lost_lyric = Vec::new();
     for metadata in &metas {
         let path = metadata.file_path.to_string();
         let path = path.replace("\\", "/");
-        if lost_files.contains(&path) { // 如果路径已经在待扫描列表，则跳过
+        if lost_files.contains(&path) {
+            // 如果路径已经在待扫描列表，则跳过
+            continue;
+        }
+        if !is_music_file(&path) {
             continue;
         }
 
         // 遍历metadata的封面、歌词等文件，如果文件不存在，则认为是缺失文件
-        if let Ok(Some(_)) = database::service::get_album_by_name(&metadata.album) {} else {
-            log::log("info", &format!("check lost file:Album {} not found; path={path}.", &metadata.album));
+        if !album_list.contains(&metadata.album) {
+            log::log_info(&format!(
+                "check lost Album {}; path={path}",
+                &metadata.album
+            ));
             lost_files.push(path.clone());
         }
 
-        if let Ok(list) = database::service::get_lyric(&metadata.id) {
-            if list.is_empty() {
-                log::log("info", &format!("check lost file:Lyric empty; path={path}."));
-                lost_files.push(path.clone());
-            }
-        } else {
-            log::log("info", &format!("check lost file:Lyric not found; path={path}."));
+        if !lyric_song_ids.contains(&metadata.id) {
+            log::log_info(&format!(
+                "check lost Lyric; path={path} sond_id={}",
+                metadata.id
+            ));
             lost_files.push(path.clone());
         }
-        
-
     }
 
+    let meta_cnt = metas.len();
     let lost_cnt = lost_files.len();
-    println!(
-        "Music count: {}, Lost files count: {}",
-        metas.len(),
-        lost_cnt
-    );
+    log::log_info(&format!(
+        "Music count: {meta_cnt}, Lost files count: {lost_cnt}"
+    ));
 
     if lost_cnt > 0 {
         // 后台线程把缺失metadata的文件重新扫描到数据库中
         let _ = std::thread::spawn(move || {
             let start = std::time::Instant::now();
-            println!("Start scan lost files...");
+            log::log_info(&format!("Start scan lost files..."));
             let mut count = 0.0;
             for file_path in lost_files {
-
                 let config = get_config();
                 let music_dir = config.music_dir.clone();
                 let start = std::time::Instant::now();
-                if let Err(e) =
-                    readmeta::read_metadata_into_db(file_path.clone(), music_dir.clone())
-                {
-                    println!("path: {}, read_metadata_into_db error: {:?}", file_path, e);
+                if let Err(e) = readmeta::read_metadata_into_db(&file_path, &music_dir) {
+                    log::log_info(&format!("path: {file_path}, read_meta error: {e:?}"));
                 } else {
-                    println!("path: {}, read_metadata_into_db ok", file_path);
+                    log::log_info(&format!("path: {file_path}, read_metad_into_db ok"));
                 }
 
                 count += 1.0;
@@ -279,25 +299,9 @@ async fn check_lost_file(music_dir: &str) {
                 );
             }
             let elapsed = start.elapsed();
-            println!("Scan lost files done. Elapsed: {:.2?}", elapsed);
+            log::log_info(&format!("Scan lost files done. Elapsed: {:.2?}", elapsed));
         });
     }
-}
-
-// 前端日志记录
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
-struct FrontendLog {
-    level: String,
-    timestamp: String,
-    message: String,
-}
-
-async fn frontend_log(log: web::Json<FrontendLog>) -> impl Responder {
-    println!(
-        "[frontend_log]: {} {} {}",
-        log.level, log.timestamp, log.message
-    );
-    HttpResponse::Ok().json(log)
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

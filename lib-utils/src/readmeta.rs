@@ -7,10 +7,16 @@ use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::{MetadataOptions, Tag, Value, Visual};
 use symphonia::core::probe::{Hint, ProbeResult};
 
+use crate::comm::is_music_file;
+use crate::database::service::Metadata;
+use crate::database::service::*;
 use crate::image::{compress_img, resize_image};
+use crate::log::log_file;
+use std::path::Path;
 
+// 用于数据预处理的meta结构
 #[derive(Debug, Clone, Default)]
-pub struct MyMetadata {
+pub struct PreMetadata {
     pub title: String,
     pub artist: String,
     pub album: String,
@@ -49,7 +55,7 @@ pub struct Pair {
     pub value: String,
 }
 
-pub fn read_metadata(file_path: &str) -> Result<MyMetadata, Error> {
+pub fn read_metadata(file_path: &str, is_proc_cover: bool) -> Result<PreMetadata, Error> {
     let file = File::open(file_path)?;
     let source = MediaSourceStream::new(Box::new(file), Default::default());
     let format_options = FormatOptions::default();
@@ -63,14 +69,14 @@ pub fn read_metadata(file_path: &str) -> Result<MyMetadata, Error> {
         &metadata_options,
     )?;
 
-    let metadata = get_metadata(&mut probed);
+    let metadata = get_metadata(&mut probed, is_proc_cover);
     let metadata = metadata.unwrap_or_default();
 
     Ok(metadata)
 }
 
 pub fn print_metadata(file_path: &str) {
-    let metadata = read_metadata(file_path);
+    let metadata = read_metadata(file_path, false);
     if metadata.is_err() {
         println!("No metadata found.");
     } else {
@@ -103,7 +109,8 @@ pub fn print_metadata(file_path: &str) {
     }
 }
 
-fn pack_meta_from_track_flow(probed: &mut ProbeResult, metadata: &mut MyMetadata) {
+// 获取 language, bitrate, samplerate, duration
+fn pack_meta_from_track_flow(probed: &mut ProbeResult, metadata: &mut PreMetadata) {
     let tracks = probed.format.tracks();
     if tracks.is_empty() {
         println!("No tracks found.");
@@ -155,7 +162,7 @@ fn pack_meta_from_track_flow(probed: &mut ProbeResult, metadata: &mut MyMetadata
     metadata.duration = hours * 3600.0 + mins * 60.0 + secs;
 }
 
-fn get_metadata(probed: &mut ProbeResult) -> Option<MyMetadata> {
+fn get_metadata(probed: &mut ProbeResult, is_proc_cover: bool) -> Option<PreMetadata> {
     // Prefer metadata that's provided in the container format, over other tags found during the
     // probe operation.
     let (tags, cover) = if let Some(metadata_rev) = probed.format.metadata().current() {
@@ -169,21 +176,21 @@ fn get_metadata(probed: &mut ProbeResult) -> Option<MyMetadata> {
 
         (
             proc_tags(metadata_rev.tags()),
-            proc_cover(metadata_rev.visuals()),
+            proc_cover(metadata_rev.visuals(), is_proc_cover),
         )
     } else if let Some(metadata_rev) = probed.metadata.get().as_ref().and_then(|m| m.current()) {
         // print_tags(metadata_rev.tags());
         // print_visuals(metadata_rev.visuals());
         (
             proc_tags(metadata_rev.tags()),
-            proc_cover(metadata_rev.visuals()),
+            proc_cover(metadata_rev.visuals(), is_proc_cover),
         )
     } else {
         println!("No metadata found.");
         return None;
     };
 
-    let mut metadata = MyMetadata::default();
+    let mut metadata = PreMetadata::default();
     for pair in tags.iter() {
         let key = pair.key.to_lowercase();
         let value = pair.value.clone();
@@ -210,16 +217,18 @@ fn get_metadata(probed: &mut ProbeResult) -> Option<MyMetadata> {
         }
     }
 
-    if let Some(cover) = cover {
-        metadata.covers = vec![];
-        // metadata.covers = vec![cover.clone()];
-        let resized_cover = resize_cover(cover.clone(), 140, 80);
-        if let Some(resized_cover) = resized_cover {
-            metadata.covers.push(resized_cover);
-        }
-        let resized_cover = resize_cover(cover, 600, 80);
-        if let Some(resized_cover) = resized_cover {
-            metadata.covers.push(resized_cover);
+    if is_proc_cover {
+        if let Some(cover) = cover {
+            metadata.covers = vec![];
+            // metadata.covers = vec![cover.clone()];
+            let resized_cover = resize_cover(cover.clone(), 140, 80);
+            if let Some(resized_cover) = resized_cover {
+                metadata.covers.push(resized_cover);
+            }
+            let resized_cover = resize_cover(cover, 600, 80);
+            if let Some(resized_cover) = resized_cover {
+                metadata.covers.push(resized_cover);
+            }
         }
     }
 
@@ -255,7 +264,11 @@ fn get_key_tag_value(key: &str, value: &Value) -> Pair {
     }
 }
 
-fn proc_cover(visuals: &[Visual]) -> Option<Cover> {
+fn proc_cover(visuals: &[Visual], is_proc_cover: bool) -> Option<Cover> {
+    if !is_proc_cover {
+        return None;
+    }
+
     if visuals.is_empty() {
         return None;
     }
@@ -388,13 +401,51 @@ fn parse_line(line: &str) -> Option<Lyric> {
 }
 
 const LOG_PATH: &str = "./initdb.log";
-pub fn read_metadata_into_db(file_path: String, music_dir: String) -> Result<(), Error> {
-    use crate::database::service::*;
-    use crate::log::log_file;
-    use std::path::Path;
 
-    let match_ext = file_path.ends_with(".flac") || file_path.ends_with(".mp3");
-    if !match_ext {
+/*
+* 需要处理的数据
+* 1. meta
+* 2. album
+* 3. album_song
+* 4. artist
+* 5. artist_song
+* 6. lyrics
+* 7. cover
+*/
+pub fn read_metadata_into_db(file_path: &str, music_dir: &str) -> Result<(), Error> {
+    // 处理meta数据
+    let (premetadata, metadata) = proc_metadata(&file_path, &music_dir, false)?;
+    // 开始写入数据
+    let song_id = insert_meta(&metadata)?;
+    let (album_name, album_id, album_song_size) = insert_album(&premetadata, &song_id)?;
+    let (artist_len, artist_song_size) = insert_artist(&premetadata, &song_id)?;
+    let cover_size = insert_cover(&file_path, &music_dir, album_id)?;
+    let lyric_size = insert_lyrics(&premetadata, &song_id)?;
+
+    let _ = log_file(
+        LOG_PATH,
+        "Info",
+        &format!(
+            "title: {}, album: {}-{}({}), artists: {}({}), covers: {}, lyrics: {}",
+            premetadata.title,
+            album_name,
+            album_id,
+            album_song_size,
+            artist_len,
+            artist_song_size,
+            cover_size,
+            lyric_size
+        ),
+    );
+    Ok(())
+}
+
+fn proc_metadata(
+    file_path: &str,
+    music_dir: &str,
+    is_proc_cover: bool,
+) -> Result<(PreMetadata, Metadata), Error> {
+    if !is_music_file(file_path) {
         // let _ = log_file(LOG_PATH, "info", &format!("ignore file: {}", file_path));
         return Err(Error::msg("ignore file"));
     }
@@ -414,7 +465,7 @@ pub fn read_metadata_into_db(file_path: String, music_dir: String) -> Result<(),
     let file_name = file_name.unwrap().to_str().unwrap().to_string();
 
     // print_metadata(f);
-    let metadata = read_metadata(file_path);
+    let metadata = read_metadata(file_path, is_proc_cover);
     if metadata.is_err() {
         let _ = log_file(
             LOG_PATH,
@@ -424,51 +475,65 @@ pub fn read_metadata_into_db(file_path: String, music_dir: String) -> Result<(),
         return Err(Error::msg("No metadata found"));
     }
 
-    let mut mymetadata = metadata.unwrap();
-    if mymetadata.title.is_empty() {
-        let _ = log_file(
-            LOG_PATH,
-            "error",
-            &format!("title is empty: {}", file_path),
-        );
+    let mut premetadata = metadata.unwrap();
+    if premetadata.title.is_empty() {
+        let _ = log_file(LOG_PATH, "error", &format!("title is empty: {}", file_path));
         return Err(Error::msg("title is empty"));
     }
 
-    mymetadata.build_genre(file_path, &music_dir);
-    let mut metadata = mymetadata.build_metadata();
+    premetadata.build_genre(file_path, &music_dir);
+    let mut metadata = premetadata.build_metadata();
     metadata.file_name = file_name.clone().replace("\\", "/");
     metadata.file_path = file_path.replace("\\", "/");
     metadata.file_url = file_path.replace(music_dir, "").replace("\\", "/");
+    Ok((premetadata, metadata))
+}
 
+fn insert_meta(metadata: &Metadata) -> Result<String, Error> {
     let exist = get_metadata_by_title_artist(&metadata.title, &metadata.artist)?;
     let song_id = if exist.is_none() {
         let _ = add_metadata(&metadata)?;
         metadata.id.clone()
     } else {
         let exist = exist.unwrap();
-        metadata.id = exist.id.clone();
+        // metadata.id = exist.id.clone();
         if exist.file_path != metadata.file_path {
             let size = set_metadata_by_id(&metadata)?;
-            let _ = log_file(LOG_PATH, "info", &format!("Already exist, but file path is different, {} -> {}, update rows: {}", exist.file_path, metadata.file_path, size));
+            let _ = log_file(
+                LOG_PATH,
+                "info",
+                &format!(
+                    "Already exist, but file path is different, {} -> {}, update rows: {}",
+                    exist.file_path, metadata.file_path, size
+                ),
+            );
         }
         exist.id
     };
+    Ok(song_id)
+}
 
-    let album = mymetadata.build_album();
+// 写入 artist 和 artist_song 数据
+fn insert_album(premetadata: &PreMetadata, song_id: &str) -> Result<(String, i64, usize), Error> {
+    let album = premetadata.build_album();
     let album_id = if let Some(exist) = get_album_by_name(&album.name)? {
         exist.id
     } else {
         add_album(&album)?
     };
 
-    let album_song = mymetadata.build_album_song(&song_id, album_id);
+    let album_song = premetadata.build_album_song(&song_id, album_id);
     let album_song_size = if let Some(_) = album_song_by_id(&song_id, album_id)? {
         0
     } else {
         add_album_song(&album_song)?
     };
+    Ok((album.name.to_string(), album_id, album_song_size))
+}
 
-    let artists = mymetadata.build_artist();
+// 写入 artist 和 artist_song 数据
+fn insert_artist(premetadata: &PreMetadata, song_id: &str) -> Result<(usize, usize), Error> {
+    let artists = premetadata.build_artist();
     let mut artist_ids = Vec::new();
     for artist in artists {
         if let Some(exist) = artist_by_name(&artist.name)? {
@@ -480,44 +545,61 @@ pub fn read_metadata_into_db(file_path: String, music_dir: String) -> Result<(),
         }
     }
 
-    let mut artist_songs = mymetadata.build_artist_songs(&song_id, &artist_ids);
+    let mut artist_songs = premetadata.build_artist_songs(&song_id, &artist_ids);
     if let Some(exist) = artist_song_by_song_id(&song_id)? {
         artist_songs.retain(|a| exist.artist_id != a.artist_id && exist.song_id != a.song_id);
     };
     let artist_song_size = add_artist_songs(&artist_songs)?;
+    Ok((artist_ids.len(), artist_song_size))
+}
 
-    let mut covers = mymetadata.build_covers(album_id, "album");
+// 写入专辑封面数据
+fn insert_cover(file_path: &str, music_dir: &str, album_id: i64) -> Result<usize, Error> {
+    // 先确认一下对应专辑是否已存在封面，存在则直接返回
+    let small_size = get_cover(album_id, "album", "small")?;
+    let medium_size = get_cover(album_id, "album", "medium")?;
+    if small_size.is_some() && medium_size.is_some() {
+        // print!("small_size={:?}", small_size.unwrap());
+        return Ok(0);
+    }
+
+    let (premetadata, _) = proc_metadata(&file_path, &music_dir, true)?;
+    let mut covers = premetadata.build_covers(album_id, "album");
     let mut exist_cover = vec![];
     for cover in &covers {
-        if let Some(exist) = get_cover(album_id, "", &cover.size)? {
+        if let Some(exist) = get_cover(album_id, "album", &cover.size)? {
             exist_cover.push(exist.size);
         }
     }
     covers.retain(|c| !exist_cover.contains(&c.size));
     let cover_size = add_covers(covers)?;
+    Ok(cover_size)
+}
 
-    let lyrics = mymetadata.build_lyrics(&metadata.id);
+// 写入歌词数据
+fn insert_lyrics(premetadata: &PreMetadata, song_id: &str) -> Result<usize, Error> {
     let exist = get_lyric(&song_id)?;
     let lyric_size = if exist.len() > 0 {
+        println!("exist lyric, song_id={song_id}");
         exist.len()
     } else {
+        let lyrics = premetadata.build_lyrics(&song_id);
         add_lyrics(lyrics)?
     };
+    Ok(lyric_size)
+}
 
-    let _ = log_file(
-        LOG_PATH,
-        "info",
-        &format!(
-            "title: {}, album: {}-{}({}), artists: {}({}), covers: {}, lyrics: {}",
-            metadata.title,
-            album.name,
-            album_id,
-            album_song_size,
-            artist_ids.len(),
-            artist_song_size,
-            cover_size,
-            lyric_size
-        ),
-    );
+// 检查专辑封面是否丢失
+pub fn check_lost_album(metadata: &Metadata, music_dir: &str) -> Result<(), Error> {
+    // metadata.file_path
+    let (premetadata, _) = proc_metadata(&metadata.file_path, music_dir, true)?;
+    insert_album(&premetadata, &metadata.id)?;
+    Ok(())
+}
+
+// 检查歌词是否丢失
+pub fn check_lost_lyric(metadata: &Metadata, music_dir: &str) -> Result<(), Error> {
+    let (premetadata, _) = proc_metadata(&metadata.file_path, music_dir, true)?;
+    insert_lyrics(&premetadata, &metadata.id)?;
     Ok(())
 }

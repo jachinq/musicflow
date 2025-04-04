@@ -82,8 +82,7 @@ fn metadata_to_db_task() -> anyhow::Result<()> {
         let count_arc = count_arc.clone();
         pool.execute(move || {
             let start = time::Instant::now();
-            let result = read_metadata_into_db(file_path.clone(), music_dir.clone());
-            if let Err(e) = result {
+            if let Err(e) = read_metadata_into_db(&file_path, &music_dir) {
                 if let Ok(mut err_vec) = err_count.lock() {
                     err_vec.push(e.to_string());
                 }
