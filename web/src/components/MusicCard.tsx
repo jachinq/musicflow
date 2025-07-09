@@ -1,12 +1,13 @@
 // components/MusicCard.tsx
 import { Music } from "../lib/defined";
-import { getCoverSmallUrl } from "../lib/api";
+import { delLyric, getCoverSmallUrl } from "../lib/api";
 import { Cover } from "./Cover";
 import { PlayIcon } from "lucide-react";
 import { useState } from "react";
 import { Drawer } from "./Drawer";
 import { DetailInfo } from "./DetailInfo";
 import Lyrics from "./Lyrics";
+import { toast } from "sonner";
 
 interface MusicCardProps {
   music: Music;
@@ -26,6 +27,33 @@ export const MusicCard = ({ music, onClickTitle, onPlay }: MusicCardProps) => {
 
   const [showDetail, setShowDetail] = useState(false);
 
+  const [confirmDeleteLyrics, setConfirmDeleteLyrics] = useState(false);
+  const [deleteLyricsBtnText, setDeleteLyricsBtnText] = useState("删除歌词");
+  const onDeleteLyrics = async (song_id: string) => {
+    if (confirmDeleteLyrics) {
+      delLyric(song_id,
+        (result) => {
+          if (result.success) {
+            toast.success("歌词删除成功");
+            setShowDetail(false);
+          } else {
+            toast.error(result.message)
+          }
+        },
+        (error) => {
+          toast.error(error);
+          console.error(error);
+        }
+      );
+    } else {
+      setConfirmDeleteLyrics(true);
+      setDeleteLyricsBtnText("确认删除");
+      setTimeout(() => {
+        setConfirmDeleteLyrics(false);
+        setDeleteLyricsBtnText("删除歌词");
+      }, 3000);
+    }
+  };
   return (
     <>
       <div className="w-[140px] max-h-[240px]">
@@ -67,7 +95,11 @@ export const MusicCard = ({ music, onClickTitle, onPlay }: MusicCardProps) => {
         <div className="p-4">
           <div className="flex flex-col gap-2">
             <DetailInfo song={music} contentH />
-            <div className="font-bold text-lg">歌词</div>
+            <div className="font-bold text-lg">
+              <span>歌词</span>
+              <span className={`button ml-2 ${confirmDeleteLyrics && 'button-danger'}`}
+                onClick={() => onDeleteLyrics(music.id)}>{deleteLyricsBtnText}</span>
+            </div>
             <Lyrics song_id={music.id} filterEmpty />
           </div>
         </div>

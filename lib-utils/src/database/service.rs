@@ -339,6 +339,7 @@ pub fn add_covers(cover_list: Vec<Cover>) -> Result<usize> {
     Ok(count)
 }
 
+// 歌词相关接口
 pub fn get_lyric(song_id: &str) -> Result<Vec<Lyric>> {
     // 打开数据库连接（如果数据库文件不存在，会自动创建）
     let conn = connect_db()?;
@@ -389,6 +390,12 @@ pub fn add_lyrics(lyric_list: Vec<Lyric>) -> Result<usize> {
     }
     tx.commit()?;
     Ok(count)
+}
+
+pub fn del_lyrics(song_id: &str) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("DELETE FROM lyric WHERE song_id = ?")?;
+    Ok(stmt.execute([song_id])?)
 }
 
 // 歌单相关接口

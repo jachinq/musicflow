@@ -1,7 +1,10 @@
 use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use lib_utils::{
-    config::get_config, database::service::{self, Metadata}, log::log_err
+    config::get_config,
+    database::service::{self, Metadata},
+    log::log_err,
+    readmeta,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -57,9 +60,7 @@ impl IntoVec<MetadataVo> for Vec<Metadata> {
                 id_album_id_map.insert(album_song.song_id.clone(), album_song.album_id);
             }
         } else {
-            log_err(
-                &format!("album_songs error: {}", album_songs.unwrap_err()),
-            );
+            log_err(&format!("album_songs error: {}", album_songs.unwrap_err()));
         }
 
         if let Ok(artist_songs) = artist_songs {
@@ -67,9 +68,10 @@ impl IntoVec<MetadataVo> for Vec<Metadata> {
                 id_artist_id_map.insert(artist_song.song_id.clone(), artist_song.artist_id);
             }
         } else {
-            log_err(
-                &format!("artist_songs error: {}", artist_songs.unwrap_err()),
-            );
+            log_err(&format!(
+                "artist_songs error: {}",
+                artist_songs.unwrap_err()
+            ));
         }
 
         self.iter()
@@ -140,6 +142,12 @@ pub async fn handle_get_metadatas(query: web::Json<MusicListQuery>) -> impl Resp
     }
 
     let mut list = result.unwrap();
+    let config = get_config();
+    if config.debug {
+        list.iter_mut().for_each(|f| {
+            f.file_path = f.file_path.replace("/mnt/data/music", &config.music_dir);
+        });
+    }
 
     // 过滤
     if let Some(filter) = &query.any {
@@ -265,6 +273,28 @@ pub async fn get_lyrics(song_id: web::Path<String>) -> impl Responder {
     };
 
     HttpResponse::Ok().json(lyrics)
+}
+
+pub async fn del_lyrics(song_id: web::Path<String>) -> impl Responder {
+    let lyrics = service::del_lyrics(&song_id);
+
+    let lyrics = if let Ok(lyrics) = lyrics {
+        lyrics
+    } else {
+        println!("Lyrics not found for {}", song_id);
+        0
+    };
+
+    if let Ok(Some(meta)) = service::get_metadata_by_id(&song_id) {
+        let config = get_config();
+        if let Err(e) = readmeta::read_metadata_into_db(&meta.file_path, &config.music_dir) {
+            return HttpResponse::Ok().json(JsonResult::<()>::error(&format!(
+                "删除成功，重新扫描时出错:{}",
+                &e.to_string()
+            )));
+        }
+    }
+    HttpResponse::Ok().json(JsonResult::success(lyrics))
 }
 
 async fn get_song_id_by_artist_ids(artist_ids: &Vec<i64>) -> Vec<String> {

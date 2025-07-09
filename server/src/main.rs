@@ -82,6 +82,7 @@ async fn main() -> io::Result<()> {
                 web::get().to(get_cover_medium),
             )
             .route("/api/lyrics/{song_id}", web::get().to(get_lyrics))
+            .route("/api/lyrics/delete/{song_id}", web::delete().to(del_lyrics))
             // 标签相关接口
             .route("/api/genres", web::get().to(handle_get_genres))
             .route(
@@ -216,9 +217,12 @@ async fn check_lost_file(music_dir: &str) {
             if !is_music_file(&path) {
                 continue;
             }
+            let path2 = path.clone().replace(music_dir, "/mnt/data/music");
             let metadata = path_metadata_map.get(&path);
-            if metadata.is_none() {
-                lost_files.push(path);
+            let metadata2 = path_metadata_map.get(&path2);
+            if metadata.is_none() && metadata2.is_none() {
+                println!("lost file: {}", path);
+                // lost_files.push(path);
                 continue;
             }
         }

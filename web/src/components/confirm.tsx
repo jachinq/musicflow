@@ -4,29 +4,29 @@ import ReactDOM from "react-dom/client";
 // 创建确认对话框组件
 const ConfirmDialog: React.FC<{
   message: React.ReactNode;
-  onConfirm: () => void;
-  onCancel: () => void;
-  onClose: () => void;
+  onConfirm: (e: React.MouseEvent) => void;
+  onCancel: (e: React.MouseEvent) => void;
+  onClose: (e: React.MouseEvent) => void;
 }> = ({ message, onConfirm, onCancel, onClose }) => {
   return (
-    <div className="confirm-overlay fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black bg-opacity-50">
+    <div className="confirm-overlay fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black bg-opacity-50 z-[999]">
       <div className="confirm-dialog px-8 py-4 bg-muted rounded-lg flex flex-col items-center gap-4">
         <div className="text-lg font-bold">{message}</div>
         <div className="flex gap-4">
           <button
             className="button"
-            onClick={() => {
-              onConfirm();
-              onClose();
+            onClick={(e) => {
+              onConfirm(e);
+              onClose(e);
             }}
           >
             确认
           </button>
           <button
             className="button-info"
-            onClick={() => {
-              onCancel();
-              onClose();
+            onClick={(e) => {
+              onCancel(e);
+              onClose(e);
             }}
           >
             取消
@@ -39,14 +39,14 @@ const ConfirmDialog: React.FC<{
 
 interface ConfirmOptions {
   message?: React.ReactNode;
-  onConfirm?: () => void;
-  onCancel?: () => void;
+  onConfirm?: (e: React.MouseEvent) => void;
+  onCancel?: (e: React.MouseEvent) => void;
 }
 
 interface ConfirmStateProps {
   message: React.ReactNode;
-  onConfirm: () => void;
-  onCancel: () => void;
+  onConfirm: (e: React.MouseEvent) => void;
+  onCancel: (e: React.MouseEvent) => void;
   isOpen: boolean;
 }
 
@@ -85,8 +85,8 @@ export const useConfirm = () => {
         rootRef.current.render(
           <ConfirmDialog
             message={confirmState.message}
-            onConfirm={confirmState.onConfirm}
-            onCancel={confirmState.onCancel}
+            onConfirm={(e: React.MouseEvent<Element, MouseEvent>) => confirmState.onConfirm(e)}
+            onCancel={(e: React.MouseEvent<Element, MouseEvent>) => confirmState.onCancel(e)}
             onClose={closeConfirm}
           />
         );

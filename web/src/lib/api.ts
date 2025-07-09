@@ -85,6 +85,19 @@ export const getLyrics = (
   fetchUtils(url, onSuccess, onError);
 };
 
+export const delLyric = (
+  song_id: string,
+  onSuccess: (data: any) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/lyrics/delete/${song_id}`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "DELETE",
+  });
+};
+
+
+
 // 自定义日志记录器
 export const sendLogToServer = (
   level: string,

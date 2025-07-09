@@ -8,6 +8,7 @@ pub struct Config {
     pub web_dir: String,   // 前端静态文件目录
     pub music_dir: String, // 音乐文件目录
     pub db_path: String,   // 数据库文件路径
+    pub debug: bool,       // 是否开启调试模式
 }
 
 // 获取 config.json 中的配置信息

@@ -8,6 +8,7 @@ use symphonia::core::meta::{MetadataOptions, Tag, Value, Visual};
 use symphonia::core::probe::{Hint, ProbeResult};
 
 use crate::comm::is_music_file;
+use crate::config::get_config;
 use crate::database::service::Metadata;
 use crate::database::service::*;
 use crate::image::{compress_img, resize_image};
@@ -413,6 +414,12 @@ const LOG_PATH: &str = "./initdb.log";
 * 7. cover
 */
 pub fn read_metadata_into_db(file_path: &str, music_dir: &str) -> Result<(), Error> {
+    let config = get_config();
+    let file_path = if config.debug {
+        &file_path.replace("/mnt/data/music", music_dir)
+    } else {
+        file_path
+    };
     // 处理meta数据
     let (premetadata, metadata) = proc_metadata(&file_path, &music_dir, false)?;
     // 开始写入数据

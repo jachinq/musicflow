@@ -206,3 +206,6 @@
 .button-info {
   @apply hover:text-primary-hover rounded-full px-4 py-2 cursor-pointer select-none text-center;
 }
+.button-danger {
+  @apply text-destructive-foreground hover:bg-destructive rounded-full px-4 py-2 cursor-pointer select-none text-center;
+}

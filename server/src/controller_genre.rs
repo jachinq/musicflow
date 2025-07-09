@@ -30,7 +30,9 @@ pub async fn handle_get_genres() -> impl Responder {
     genres.iter().for_each(|g| {
         set.insert(g);
     });
-    let genres = set.iter().map(|n| n.to_string()).collect::<Vec<_>>();
+    let mut genres = set.iter().map(|n| n.to_string()).collect::<Vec<_>>();
+    // 排序
+    genres.sort();
 
     HttpResponse::Ok().json(JsonResult::success(genres))
 }
