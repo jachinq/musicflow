@@ -7,6 +7,7 @@ use actix_web::{web, App, HttpServer};
 use env_logger::Env;
 use lib_utils::comm::is_music_file;
 use lib_utils::config::get_config;
+use lib_utils::database::table;
 use lib_utils::{database, log, readmeta};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -42,6 +43,14 @@ async fn main() -> io::Result<()> {
     // 初始化日志记录
     std::env::set_var("RUST_LOG", "debug");
     env_logger::init_from_env(Env::default().default_filter_or("info"));
+
+    // 初始化数据库
+    let result = table::init();
+    if result.is_err() {
+        let _ = log::log_err(&format!("init table error: {}", result.err().unwrap()));
+        return Err(io::Error::new(io::ErrorKind::Other, "init table error"));
+    }
+
     // 读取配置文件信息
     let config = get_config();
     let web_dir = config.web_dir.clone();
@@ -201,9 +210,6 @@ async fn check_lost_file(music_dir: &str) {
     log::log_info("Start check lost file");
     let metas = lib_utils::database::service::get_metadata_list();
     let metas = metas.unwrap_or_default();
-    if metas.len() == 0 {
-        return;
-    }
     let mut path_metadata_map = HashMap::new();
     for metadata in &metas {
         path_metadata_map.insert(metadata.file_path.to_string(), metadata);
@@ -222,7 +228,7 @@ async fn check_lost_file(music_dir: &str) {
             let metadata2 = path_metadata_map.get(&path2);
             if metadata.is_none() && metadata2.is_none() {
                 println!("lost file: {}", path);
-                // lost_files.push(path);
+                lost_files.push(path);
                 continue;
             }
         }
