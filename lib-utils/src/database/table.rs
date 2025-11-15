@@ -1,13 +1,17 @@
 use rusqlite::Result;
 
+// use crate::log;
+
 use super::connect_db;
 
 // use crate::connect_db;
 
 pub fn init() -> Result<()> {
+    // log::log_info("Initializing database...");
     let conn = connect_db()?;
     let sql = sql();
     conn.execute_batch(&sql)?;
+    // log::log_info(&format!("Database initialized, sql={}", sql));
     Ok(())
 }
 

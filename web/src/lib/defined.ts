@@ -89,6 +89,13 @@ export interface MusicFilter {
     genres?: string[];
 }
 
+export interface Playlist {
+    user_id: number;
+    song_id: string;
+    status: number;
+    offset: number;
+}
+
 export interface SongList {
     id: number;
     user_id: number;

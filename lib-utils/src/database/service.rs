@@ -153,6 +153,15 @@ fn covert_row_to_album_song(row: &rusqlite::Row) -> Result<AlbumSong> {
     })
 }
 
+fn covert_row_to_play_list(row: &rusqlite::Row) -> Result<PlayList> {
+    Ok(PlayList {
+        user_id: row.get(0)?,
+        song_id: row.get(1)?,
+        status: row.get(2)?,
+        offset: row.get(3)?,
+    })
+}
+
 pub fn get_metadata_by_id(id: &str) -> Result<Option<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM metadata WHERE id = ?")?;
@@ -288,9 +297,9 @@ pub fn del_metadata_by_id(song_id: &str) -> Result<usize> {
     println!("del song_list_song size: {size}");
     count_size += size;
     
-    // let size = tx.execute("DELETE FROM playlist WHERE song_id = ?", [song_id])?;
-    // println!("del playlist size: {size}");
-    // count_size += size;
+    let size = tx.execute("DELETE FROM playlist WHERE song_id = ?", [song_id])?;
+    println!("del playlist size: {size}");
+    count_size += size;
     
     tx.commit()?;
     Ok(count_size)
@@ -817,6 +826,56 @@ pub fn artist_song_by_song_ids(song_ids: &Vec<String>) -> Result<Vec<ArtistSong>
     Ok(artist_list)
 }
 
+pub fn get_play_list(user_id: i64) -> Result<Vec<PlayList>> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("SELECT * FROM playlist WHERE user_id = ?")?;
+    let rows = stmt.query_map([&user_id.to_string()], |row| covert_row_to_play_list(row))?;
+
+    let mut play_list = Vec::new();
+    for pl in rows {
+        if let Ok(pl) = pl {
+            play_list.push(pl);
+        } else {
+            println!("getPlayList Error: {}", pl.unwrap_err());
+        }
+    }
+    Ok(play_list)
+}
+
+pub fn add_play_list(user_id: i64, play_lists: &Vec<PlayList>) -> Result<usize> {
+    let conn = connect_db()?;
+
+    // 先清空
+    let mut stmt = conn.prepare("DELETE FROM playlist WHERE user_id = ?")?;
+    let _ = stmt.execute([&user_id.to_string()])?;
+    if play_lists.is_empty() {
+        return Ok(0);
+    }
+
+
+    let mut stmt = conn.prepare("INSERT INTO playlist (user_id, song_id, status, offset) VALUES (?, ?, ?, ?)")?;
+    for pl in play_lists {
+        let _ = stmt.execute([
+            &user_id.to_string(),
+            &pl.song_id.clone(),
+            &pl.status.to_string(),
+            &pl.offset.to_string(),
+        ])?;
+    }
+    Ok(play_lists.len())
+}
+
+pub fn set_play_list_status(user_id: i64, song_id: &str, status: i64) -> Result<usize> {
+    let conn = connect_db()?;
+    let mut stmt = conn.prepare("UPDATE playlist SET status = ? WHERE user_id = ? AND song_id = ?")?;
+    let _ = stmt.execute([&status.to_string(), &user_id.to_string(), song_id])?;
+
+    let mut stmt = conn.prepare("UPDATE playlist SET status = 0 WHERE user_id = ? AND song_id != ?")?;
+    let size = stmt.execute([&user_id.to_string(), song_id])?;
+    
+    Ok(size)
+}
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Cover {
     pub r#type: String,
@@ -937,6 +996,14 @@ pub struct AlbumSong {
     pub album_name: String,
     pub song_title: String,
     pub album_artist: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+pub struct PlayList {
+    pub user_id: i64,
+    pub song_id: String,
+    pub status: i64,
+    pub offset: i64,
 }
 
 impl Album {

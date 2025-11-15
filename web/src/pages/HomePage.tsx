@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { MusicCard } from "../components/MusicCard";
 
-import { getMusicList } from "../lib/api";
+import { getMusicList, getPlayList } from "../lib/api";
 import { Pagination } from "../components/Pagination";
 import { Music } from "../lib/defined";
 import { FlameKindling, Loader, Play, Rabbit, X } from "lucide-react";
@@ -63,6 +63,8 @@ export const HomePage = () => {
       </div>
     );
   }
+
+  
 
   return (
     <div className="p-4 grid gap-4">
@@ -173,7 +175,7 @@ const SelectTag = () => {
 };
 
 const MusicList = () => {
-  const { playSingleSong } = usePlaylist();
+  const { playSingleSong, setAllSongs, setCurrentSong } = usePlaylist();
   const { initialized, setInitialized, setLoading, setError } =
     useHomePageStore();
   const { isSmallDevice } = useDevice();
@@ -191,6 +193,23 @@ const MusicList = () => {
     if (initialized) return;
     fetchMusicList(1, pageSize, setTotalCount, setLoading, setError); // 标签切换时重新获取音乐列表
     setInitialized(true);
+
+    // 获取播放列表
+    getPlayList(1, 0, (data) => {
+      if (!data || !data.success) {
+        console.error("获取播放列表失败", data);
+        return;
+      }
+      setAllSongs(data.data.list, true)
+      if (data.data.current_song) {
+        setCurrentSong(data.data.current_song);
+      }
+      
+    }, (error) => { 
+      console.error("获取播放列表失败", error);
+      setError(error);
+    });
+
   }, []);
 
   useEffect(() => {

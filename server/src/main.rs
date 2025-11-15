@@ -18,6 +18,7 @@ use walkdir::WalkDir; // 引入 CORS 中间件
 mod controller_album;
 mod controller_artist;
 mod controller_genre;
+mod controller_playlist;
 mod controller_song;
 mod controller_songlist;
 mod controller_tool;
@@ -26,6 +27,7 @@ mod controller_user;
 use controller_album::*;
 use controller_artist::*;
 use controller_genre::*;
+use controller_playlist::*;
 use controller_song::*;
 use controller_songlist::*;
 use controller_tool::*;
@@ -170,6 +172,10 @@ async fn main() -> io::Result<()> {
                 "/api/change_password",
                 web::post().to(handle_change_password),
             )
+            // 播放列表相关接口
+            .route("/api/playlist", web::post().to(handle_get_playlist))
+            .route("/api/add_playlist", web::post().to(handle_add_playlist))
+            .route("/api/set_playlist/{song_id}", web::put().to(handle_set_current))
             // 工具相关接口
             .route("/api/log", web::post().to(frontend_log))
             .route("/api/del/{song_id}", web::get().to(handle_delete_meta))

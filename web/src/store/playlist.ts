@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Music } from "../lib/defined";
+import { addPlayList, setPlaylist } from "../lib/api";
 
 interface PlaylistState {
   openPlaylist: boolean;
@@ -9,13 +10,14 @@ interface PlaylistState {
   selectedSongs: Music[];
   currentSong: Music | null;
   currentPage: number;
-  setOpenPlaylist: (show: boolean) => void;
   showPlaylist: boolean;
+  setOpenPlaylist: (show: boolean) => void;
   setShowPlaylist: (show: boolean) => void;
   togglePlaylist: (open?: boolean) => void;
-  setAllSongs: (songs: Music[]) => void;
-  setPageSongs: (songs: Music[]) => void;
+
+  setAllSongs: (songs: Music[], initial?: boolean) => void;
   setCurrentPage: (page: number) => void;
+
   setSearchQuery: (query: string) => void;
   setSelectedSongs: (songs: Music[]) => void;
   setCurrentSong: (song: Music) => void;
@@ -58,8 +60,12 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
         return { openPlaylist: true };
       }
     }),
-  setAllSongs: (songs) =>
+  setAllSongs: (songs, initial = false) =>
     set(() => {
+      if (!initial) {
+        addDbPlaylist(songs)
+      }
+
       if (songs.length === 0) {
         return {
           allSongs: [],
@@ -68,10 +74,10 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
           currentSong: null,
         };
       }
+
       const pageSongs = songs.slice(0, 10);
       return { allSongs: songs, pageSongs, currentSong: pageSongs[0] };
     }),
-  setPageSongs: (songs) => set(() => ({ pageSongs: songs })),
   setCurrentPage: (page) =>
     set(() => {
       const pageSize = 10;
@@ -96,26 +102,40 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
       return { searchQuery: query, pageSongs: songs };
     }),
   setSelectedSongs: (songs) => set(() => ({ selectedSongs: songs })),
-  setCurrentSong: (song) => set(() => ({ currentSong: song })),
+  setCurrentSong: (song) => set(() => {
+    setDbPlaylist(song)
+    return { currentSong: song }
+  }),
   addSong: (song) =>
-    set((state) => ({
-      allSongs: [...state.allSongs, song],
-      pageSongs: [...state.pageSongs, song],
-    })),
+    set((state) => {
+      const allSongs = [...state.allSongs, song];
+      addDbPlaylist(allSongs)
+      return {
+        allSongs,
+        pageSongs: [...state.pageSongs, song],
+      }
+    }),
   removeSong: (song) =>
-    set((state) => ({
-      allSongs: state.allSongs.filter((s) => s.id !== song.id),
-      pageSongs: state.pageSongs.filter((s) => s.id !== song.id),
-      selectedSongs: state.selectedSongs.filter((s) => s.id !== song.id),
-      currentSong: null,
-    })),
+    set((state) => {
+      const allSongs = state.allSongs.filter((s) => s.id !== song.id);
+      addDbPlaylist(allSongs)
+      return {
+        allSongs,
+        pageSongs: state.pageSongs.filter((s) => s.id !== song.id),
+        selectedSongs: state.selectedSongs.filter((s) => s.id !== song.id),
+        currentSong: null,
+      }
+    }),
   clearPlaylist: () =>
-    set(() => ({
-      allSongs: [],
-      pageSongs: [],
-      selectedSongs: [],
-      currentSong: null,
-    })),
+    set(() => {
+      addDbPlaylist([])
+      return {
+        allSongs: [],
+        pageSongs: [],
+        selectedSongs: [],
+        currentSong: null,
+      }
+    }),
   getTotal: () => get().allSongs.length,
   playSingleSong: (song) => set(() => {
     const allSongs = get().allSongs;
@@ -123,6 +143,21 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
     if (index === -1) {
       get().setAllSongs([...allSongs, song]);
     }
+    setDbPlaylist(song)
     return { currentSong: song };
   }),
 }));
+
+
+const addDbPlaylist = (songs: Music[]) => {
+  const playlist: String[] = songs.map((song) => song.id);
+  addPlayList(playlist, (_data) => { }, (error) => {
+    console.error(error);
+  })
+}
+
+const setDbPlaylist = (song: Music) => {
+  setPlaylist(song.id, (_data) => { }, (error) => {
+    console.error(error);
+  })
+}

@@ -31,7 +31,7 @@ function SettingsPage() {
     toast.success("启动扫描，等待完成....")
     // 轮询获取扫描进度
     setInterval(() => {
-      
+
     }, 1500);
 
     scanMusic(
@@ -49,6 +49,14 @@ function SettingsPage() {
   return (
     <div className="p-4 overflow-y-scroll flex justify-center items-center">
       <div className="max-w-[860px] w-full gap-4 flex flex-col">
+      
+        <FormLayout label="当前版本">
+          <div className="flex items-center gap-4">
+            <span>v1.2.0</span>
+            <span className="text-sm text-gray-400">2025-11-15</span>
+          </div>
+        </FormLayout>
+
         <FormLayout label="主题">
           <OptionGroup defaultValue={theme} setValue={setTheme}>
             <Option
@@ -133,7 +141,9 @@ const FormLayout = ({ label, children, className = "" }: any) => {
       className={`${isSmallDevice ? "grid-rows-[50px,1fr]" : "grid-cols-[150px,1fr]"
         } grid gap-4`}
     >
-      <label className="font-bold">{label}</label>
+      <div className="flex items-center">
+        <label className="font-bold">{label}</label>
+      </div>
       <div className={"px-8 py-4 bg-card rounded-lg " + className}>
         {children}
       </div>

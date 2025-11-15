@@ -171,6 +171,42 @@ export const removeGenreFromSong = (
   });
 };
 
+// ----- 播放列表相关接口 -----//
+export const getPlayList = (
+  page: number,
+  size: number,
+  onSuccess: (data: any) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/playlist`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+    body: JSON.stringify({ page, size }),
+  });
+};
+
+export const addPlayList = (
+  song_ids: String[],
+  onSuccess: (data: any) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/add_playlist`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+    body: JSON.stringify({ song_ids }),
+  });
+};
+export const setPlaylist = (
+  song_id: String,
+  onSuccess: (data: any) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/set_playlist/${song_id}`;
+  fetchUtils(url, onSuccess, onError, { method: "PUT" });
+};
+
+
+
 // ----- songList 相关接口 -----//
 
 // 获取歌单列表

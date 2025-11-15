@@ -1,6 +1,7 @@
 [workspace]
 members = [ "server", "lib-utils", "initdb"]
 resolver = "2"
+version = "1.2.0"
 
 [workspace.dependencies]
 
