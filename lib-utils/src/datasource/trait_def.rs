@@ -1,0 +1,106 @@
+use anyhow::Result;
+use async_trait::async_trait;
+
+use super::types::*;
+
+/// 音乐数据源抽象接口
+///
+/// 该 trait 定义了访问音乐数据的统一接口,允许从不同数据源
+/// (本地文件系统、Subsonic服务器等)获取音乐元数据和音频流
+#[async_trait]
+pub trait MusicDataSource: Send + Sync {
+    /// 获取单个歌曲的元数据
+    ///
+    /// # 参数
+    /// * `id` - 歌曲唯一标识符
+    ///
+    /// # 返回
+    /// * `Ok(UnifiedMetadata)` - 歌曲元数据
+    /// * `Err` - 获取失败(歌曲不存在或网络错误)
+    async fn get_metadata(&self, id: &str) -> Result<UnifiedMetadata>;
+
+    /// 查询元数据列表
+    ///
+    /// # 参数
+    /// * `filter` - 查询过滤条件(分页、流派、关键字等)
+    ///
+    /// # 返回
+    /// * `Ok(Vec<UnifiedMetadata>)` - 符合条件的歌曲列表
+    async fn list_metadata(&self, filter: MetadataFilter) -> Result<Vec<UnifiedMetadata>>;
+
+    /// 获取封面图片
+    ///
+    /// # 参数
+    /// * `link_id` - 关联ID(歌曲ID或专辑ID)
+    /// * `size` - 图片尺寸(Small/Medium/Large)
+    ///
+    /// # 返回
+    /// * `Ok(Vec<u8>)` - 图片二进制数据
+    async fn get_cover(&self, link_id: &str, size: CoverSize) -> Result<Vec<u8>>;
+
+    /// 获取歌词
+    ///
+    /// # 参数
+    /// * `song_id` - 歌曲ID
+    ///
+    /// # 返回
+    /// * `Ok(Vec<LyricLine>)` - 歌词行列表(包含时间戳)
+    async fn get_lyrics(&self, song_id: &str) -> Result<Vec<LyricLine>>;
+
+    /// 获取音频流
+    ///
+    /// # 参数
+    /// * `song_id` - 歌曲ID
+    ///
+    /// # 返回
+    /// * `Ok(AudioStream)` - 音频流(本地文件路径或网络流URL)
+    async fn get_audio_stream(&self, song_id: &str) -> Result<AudioStream>;
+
+    /// 扫描音乐库
+    ///
+    /// 触发音乐库扫描,更新元数据数据库
+    /// - 本地模式: 遍历本地目录,提取元数据
+    /// - Subsonic模式: 从服务器同步数据
+    ///
+    /// # 返回
+    /// * `Ok(ScanProgress)` - 扫描进度信息
+    async fn scan_library(&self) -> Result<ScanProgress>;
+
+    /// 获取专辑列表
+    ///
+    /// # 返回
+    /// * `Ok(Vec<AlbumInfo>)` - 专辑列表
+    async fn list_albums(&self) -> Result<Vec<AlbumInfo>>;
+
+    /// 获取艺术家列表
+    ///
+    /// # 返回
+    /// * `Ok(Vec<ArtistInfo>)` - 艺术家列表
+    async fn list_artists(&self) -> Result<Vec<ArtistInfo>>;
+
+    /// 搜索音乐
+    ///
+    /// # 参数
+    /// * `query` - 搜索关键字
+    ///
+    /// # 返回
+    /// * `Ok(SearchResult)` - 搜索结果(歌曲、专辑、艺术家)
+    async fn search(&self, query: &str) -> Result<SearchResult>;
+
+    /// 获取数据源类型
+    ///
+    /// # 返回
+    /// * `DataSourceType` - 本地或Subsonic
+    fn source_type(&self) -> DataSourceType;
+
+    /// 健康检查
+    ///
+    /// 检查数据源是否可用
+    /// - 本地模式: 检查数据库和音乐目录是否存在
+    /// - Subsonic模式: ping 服务器
+    ///
+    /// # 返回
+    /// * `Ok(())` - 数据源健康
+    /// * `Err` - 数据源不可用
+    async fn health_check(&self) -> Result<()>;
+}
