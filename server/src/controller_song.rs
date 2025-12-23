@@ -3,13 +3,14 @@ use base64::Engine;
 use lib_utils::{
     config::get_config,
     database::service::{self, Metadata},
+    datasource::types::MetadataFilter,
     log::log_err,
     readmeta,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::JsonResult;
+use crate::{adapters, AppState, JsonResult};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListMusic {
@@ -133,91 +134,61 @@ pub struct MusicListQuery {
     any: Option<String>,
 }
 
-/// 获取服务器上所有音乐文件
-pub async fn handle_get_metadatas(query: web::Json<MusicListQuery>) -> impl Responder {
-    let result = service::get_metadata_list();
+/// 获取服务器上所有音乐文件 (使用 DataSource)
+pub async fn handle_get_metadatas(
+    query: web::Json<MusicListQuery>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    // 使用 DataSource 获取元数据
+    let filter = MetadataFilter {
+        keyword: query.any.clone(),
+        genres: query.genres.clone(),
+        page: query.page,
+        page_size: query.page_size,
+        ..Default::default()
+    };
+
+    let result = app_state.data_source.list_metadata(filter).await;
     if let Err(e) = result {
         return HttpResponse::InternalServerError()
             .json(JsonResult::<ListMusic>::error(&e.to_string()));
     }
 
-    let mut list = result.unwrap();
-    let config = get_config();
-    if config.debug {
-        list.iter_mut().for_each(|f| {
-            f.file_path = f.file_path.replace("/mnt/data/music", &config.music_dir);
-        });
-    }
+    let mut metadata_list = result.unwrap();
 
-    // 过滤
-    if let Some(filter) = &query.any {
-        let filter = filter.to_lowercase();
-        list.retain(|m| {
-            m.title.to_lowercase().contains(&filter)
-                || m.artist.to_lowercase().contains(&filter)
-                || m.album.to_lowercase().contains(&filter)
-                || m.year.to_lowercase().contains(&filter)
-                || m.genre.contains(&m.id)
-        });
-    }
-
-    if let Some(genres) = &query.genres {
-        if genres.len() > 0 {
-            list.retain(|m| genres.iter().any(|g| m.split_genre().contains(g)));
-        }
-    }
-
+    // 根据艺术家过滤 (仅本地模式)
     if let Some(artist_ids) = &query.artist {
-        if artist_ids.len() > 0 {
+        if !artist_ids.is_empty() {
             let song_ids = get_song_id_by_artist_ids(artist_ids).await;
-            list.retain(|m| song_ids.contains(&m.id));
+            metadata_list.retain(|m| song_ids.contains(&m.id));
         }
     }
 
-    if let Some(ids) = &query.album {
-        if ids.len() > 0 {
-            let song_ids = get_song_id_by_album_ids(ids).await;
-            list.retain(|m| song_ids.contains(&m.id));
+    // 根据专辑过滤 (仅本地模式)
+    if let Some(album_ids) = &query.album {
+        if !album_ids.is_empty() {
+            let song_ids = get_song_id_by_album_ids(album_ids).await;
+            metadata_list.retain(|m| song_ids.contains(&m.id));
         }
     }
 
-    // 分页
-    let mut current_page = 1;
-    let mut page_size = 10;
-    if let Some(page) = query.page {
-        current_page = page;
-    }
-    if let Some(page_size1) = query.page_size {
-        page_size = page_size1;
-    }
-    // println!(
-    //     "current_page: {}, page_size: {}, {:?}",
-    //     current_page, page_size, query
-    // );
-    let total = list.len() as u32;
+    let total = metadata_list.len() as u32;
 
-    let start = (current_page - 1) * page_size;
-    let end = start + page_size;
-    let end = end.min(total); // 防止超过总数
-    list = list
-        .get(start as usize..end as usize)
-        .unwrap_or(&[])
-        .to_vec();
+    // 转换为 VO
+    let list = adapters::unified_list_to_vo(metadata_list);
 
-    let list = list.into_vec();
     HttpResponse::Ok().json(JsonResult::success(ListMusic { list, total }))
 }
 
-pub async fn handle_get_metadata(song_id: web::Path<String>) -> impl Responder {
-    let metadata = service::get_metadata_by_id(&song_id);
-    match metadata {
+pub async fn handle_get_metadata(
+    song_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let result = app_state.data_source.get_metadata(&song_id).await;
+    match result {
         Ok(metadata) => {
-            if let Some(metadata) = metadata {
-                let vo = MetadataVo::from(&metadata);
-                HttpResponse::Ok().json(JsonResult::success(vo))
-            } else {
-                HttpResponse::Ok().json(JsonResult::<()>::error("not found"))
-            }
+            let vo = adapters::unified_to_vo(metadata);
+            HttpResponse::Ok().json(JsonResult::success(vo))
         }
         Err(e) => HttpResponse::InternalServerError().json(JsonResult::<()>::error(&e.to_string())),
     }

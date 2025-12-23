@@ -8,11 +8,14 @@ use env_logger::Env;
 use lib_utils::comm::is_music_file;
 use lib_utils::config::get_config;
 use lib_utils::database::table;
+use lib_utils::datasource::factory::create_data_source;
+use lib_utils::datasource::MusicDataSource;
 use lib_utils::{database, log, readmeta};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
 use std::path::Path;
+use std::sync::Arc;
 use walkdir::WalkDir; // 引入 CORS 中间件
 
 mod controller_album;
@@ -23,6 +26,7 @@ mod controller_song;
 mod controller_songlist;
 mod controller_tool;
 mod controller_user;
+mod adapters;
 
 use controller_album::*;
 use controller_artist::*;
@@ -34,10 +38,11 @@ use controller_tool::*;
 use controller_user::*;
 
 // 应用状态
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone)]
 struct AppState {
     web_path: String,
     music_path: String,
+    data_source: Arc<dyn MusicDataSource>,
 }
 
 #[actix_web::main]
@@ -58,6 +63,10 @@ async fn main() -> io::Result<()> {
     let web_dir = config.web_dir.clone();
     let ip = config.ip.clone();
     let port = config.port.clone();
+
+    // 创建数据源
+    let data_source = create_data_source(&config);
+    log::log_info(&format!("Data source created: {:?}", data_source.source_type()));
 
     // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
     let music_dir = config.music_dir.clone();
@@ -83,6 +92,7 @@ async fn main() -> io::Result<()> {
             .app_data(web::Data::new(AppState {
                 web_path: web_dir.to_string(),
                 music_path: music_path.to_string(),
+                data_source: data_source.clone(),
             }))
             // 歌曲相关接口
             .route("/api/list", web::post().to(handle_get_metadatas))

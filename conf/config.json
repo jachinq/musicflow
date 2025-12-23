@@ -6,10 +6,20 @@
   "db_path": "../data/musicflow1.db",
   "debug": true,
   "data_source": {
-    "mode": "local",
+    "mode": "subsonic",
     "local": {
       "music_dir": "../music"
     },
-    "subsonic": null
+    "subsonic": {
+      "server_url": "http://192.168.2.127:10032/",
+      "username": "jachin",
+      "password": "176866",
+      "use_token_auth": true,
+      "api_version": "1.16.1",
+      "client_name": "MusicFlow",
+      "max_bitrate": 320,
+      "prefer_format": "mp3",
+      "cache_ttl_seconds": 3600
+    }
   }
 }
