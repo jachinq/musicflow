@@ -178,13 +178,36 @@ impl MusicDataSource for SubsonicDataSource {
         })
     }
 
-    async fn list_albums(&self) -> Result<Vec<AlbumInfo>> {
+    async fn list_albums(&self, pagination: Pagination) -> Result<Vec<AlbumInfo>> {
         let albums = self
             .client
-            .get_album_list2("alphabeticalByName", 500, 0)
+            .get_album_list2("alphabeticalByName", pagination.page_size, pagination.start())
             .await?;
 
         Ok(albums.into_iter().map(|a| a.into()).collect())
+    }
+
+    async fn get_album_by_id(&self, album_id: &str) -> Result<AlbumInfo> {
+        let album = self.client.get_album(album_id).await?;
+        Ok(album.into())
+    }
+
+    async fn get_album_songs(&self, album_id: &str) -> Result<Vec<UnifiedMetadata>> {
+        let album = self.client.get_album(album_id).await?;
+
+        let songs = album.song.unwrap_or_default();
+        let mut metadata_list: Vec<UnifiedMetadata> = songs.into_iter().map(|s| s.into()).collect();
+
+        // 为每个歌曲设置流式 URL
+        for meta in &mut metadata_list {
+            meta.stream_url = Some(self.client.get_stream_url(
+                &meta.id,
+                self.max_bitrate,
+                &self.prefer_format,
+            ));
+        }
+
+        Ok(metadata_list)
     }
 
     async fn list_artists(&self) -> Result<Vec<ArtistInfo>> {

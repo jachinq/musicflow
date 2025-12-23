@@ -1,8 +1,9 @@
 use actix_web::{web, HttpResponse, Responder};
-use lib_utils::database::service::{self, Album};
 use serde::{Deserialize, Serialize};
 
-use crate::{IntoVec, JsonResult};
+use crate::{AppState, JsonResult};
+use lib_utils::datasource::types::{AlbumInfo, Pagination};
+use crate::adapters::unified_list_to_vo;
 
 #[derive(Deserialize)]
 pub struct AlbumsBody {
@@ -10,80 +11,18 @@ pub struct AlbumsBody {
     page_size: Option<usize>,
     filter_text: Option<String>,
 }
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListAlbumResponse {
-    list: Vec<Album>,
+    list: Vec<AlbumInfo>,
     total: usize,
 }
 
-/* pub async fn handle_get_album(
-    body: web::Json<AlbumsBody>,
-    app_data: web::Data<crate::AppState>,
-) -> impl Responder {
-    // 分页
-    let mut current_page = 1;
-    let mut page_size = 10;
-    if let Some(page) = body.page {
-        current_page = page;
-    }
-    if let Some(page_size1) = body.page_size {
-        page_size = page_size1;
-    }
-
-    let mut list = app_data.album_list.clone();
-    if let Some(filter) = &body.filter_text {
-        let filter = filter.to_lowercase();
-        list.retain(|album| album.name.to_lowercase().contains(&filter));
-    }
-
-    let total = list.len();
-
-    let start = (current_page - 1) * page_size;
-    let end = start + page_size;
-    let end = end.min(total); // 防止超过总数
-    let list = list.get(start..end).unwrap_or(&[]).to_vec();
-    HttpResponse::Ok().json(JsonResult::success(ListAlbumResponse { list, total }))
-}
-
-pub async fn handle_get_album_songs(
-    album_name: web::Path<String>,
-    app_data: web::Data<crate::AppState>,
-) -> impl Responder {
-    let list: Vec<Metadata> = app_data
-        .music_map
-        .clone()
-        .into_iter()
-        .filter(|(_, metadata)| metadata.album.to_string() == album_name.clone())
-        .map(|(_, meta)| meta)
-        .collect();
-    HttpResponse::Ok().json(JsonResult::success(list))
-}
- */
-pub async fn handle_get_album(body: web::Json<AlbumsBody>) -> impl Responder {
-    // 分页
-    let mut current_page = 1;
-    let mut page_size = 10;
-    if let Some(page) = body.page {
-        current_page = page;
-    }
-    if let Some(page_size1) = body.page_size {
-        page_size = page_size1;
-    }
-
-    let albums = service::get_album_list();
+pub async fn handle_get_album(app_data: web::Data<AppState>, pagination: web::Json<Pagination>) -> impl Responder {
+    let albums = app_data.data_source.list_albums(pagination.into_inner()).await;
     match albums {
-        Ok(mut list) => {
-            if let Some(filter) = &body.filter_text {
-                let filter = filter.to_lowercase();
-                list.retain(|album| album.name.to_lowercase().contains(&filter));
-            }
-
+        Ok(list) => {
             let total = list.len();
-
-            let start = (current_page - 1) * page_size;
-            let end = start + page_size;
-            let end = end.min(total); // 防止超过总数
-            let list = list.get(start..end).unwrap_or(&[]).to_vec();
             HttpResponse::Ok().json(JsonResult::success(ListAlbumResponse { list, total }))
         }
         Err(e) => HttpResponse::InternalServerError()
@@ -91,21 +30,36 @@ pub async fn handle_get_album(body: web::Json<AlbumsBody>) -> impl Responder {
     }
 }
 
-pub async fn handle_get_album_songs(album_id: web::Path<i64>) -> impl Responder {
-    let songs = service::album_songs(album_id.into_inner());
-    if songs.is_err() {
-        return HttpResponse::InternalServerError().json(JsonResult::<()>::error(&format!(
-            "Error: {}",
-            songs.err().unwrap()
-        )));
+pub async fn handle_get_album_songs(
+    album_id: web::Path<String>,
+    app_data: web::Data<AppState>,
+) -> impl Responder {
+    let songs = app_data
+        .data_source
+        .get_album_songs(&album_id.into_inner())
+        .await;
+
+    match songs {
+        Ok(metadata_list) => {
+            let vo_list = unified_list_to_vo(metadata_list);
+            HttpResponse::Ok().json(JsonResult::success(vo_list))
+        }
+        Err(e) => HttpResponse::InternalServerError()
+            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
-    HttpResponse::Ok().json(JsonResult::success(songs.unwrap().into_vec()))
 }
 
-pub async fn handle_get_album_by_id(id: web::Path<i64>) -> impl Responder {
-    if let Ok(Some(album)) = service::album_by_id(id.into_inner()) {
-        HttpResponse::Ok().json(JsonResult::success(album))
-    } else {
-        HttpResponse::NotFound().json(JsonResult::<()>::error("Album not found"))
+pub async fn handle_get_album_by_id(
+    id: web::Path<String>,
+    app_data: web::Data<AppState>,
+) -> impl Responder {
+    let album = app_data
+        .data_source
+        .get_album_by_id(&id.into_inner())
+        .await;
+
+    match album {
+        Ok(album_info) => HttpResponse::Ok().json(JsonResult::success(album_info)),
+        Err(_) => HttpResponse::NotFound().json(JsonResult::<()>::error("Album not found")),
     }
 }

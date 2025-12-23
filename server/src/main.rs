@@ -155,7 +155,7 @@ async fn main() -> io::Result<()> {
                 web::get().to(handle_get_album_by_id),
             )
             .route(
-                "/api/album_songs/{album_name}",
+                "/api/album_songs/{album_id}",
                 web::get().to(handle_get_album_songs),
             )
             // 艺术家相关接口

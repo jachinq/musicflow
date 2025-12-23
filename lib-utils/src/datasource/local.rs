@@ -158,8 +158,18 @@ impl MusicDataSource for LocalDataSource {
         })
     }
 
-    async fn list_albums(&self) -> Result<Vec<AlbumInfo>> {
-        let albums = service::get_album_list()?;
+    async fn list_albums(&self, pagination: Pagination) -> Result<Vec<AlbumInfo>> {
+        let mut albums = service::get_album_list()?;
+
+        // 分页
+        let start = pagination.start();
+        let end = pagination.end();
+
+        if start < albums.len() {
+            albums = albums[start..end].to_vec();
+        } else {
+            albums = vec![];
+        }
 
         Ok(albums
             .into_iter()
@@ -169,9 +179,37 @@ impl MusicDataSource for LocalDataSource {
                 artist: album.artist,
                 year: album.year,
                 cover_art_id: None,
-                song_count: 0, // TODO: 查询歌曲数量
+                song_count: 0,
             })
             .collect())
+    }
+
+    async fn get_album_by_id(&self, album_id: &str) -> Result<AlbumInfo> {
+        let id = album_id
+            .parse::<i64>()
+            .map_err(|_| anyhow::anyhow!("Invalid album ID: {}", album_id))?;
+
+        let album = service::album_by_id(id)?
+            .ok_or_else(|| anyhow::anyhow!("Album not found: {}", album_id))?;
+
+        Ok(AlbumInfo {
+            id: album.id.to_string(),
+            name: album.name,
+            artist: album.artist,
+            year: album.year,
+            cover_art_id: None,
+            song_count: 0, // TODO: 查询歌曲数量
+        })
+    }
+
+    async fn get_album_songs(&self, album_id: &str) -> Result<Vec<UnifiedMetadata>> {
+        let id = album_id
+            .parse::<i64>()
+            .map_err(|_| anyhow::anyhow!("Invalid album ID: {}", album_id))?;
+
+        let songs = service::album_songs(id)?;
+
+        Ok(songs.into_iter().map(|s| self.convert_metadata(s)).collect())
     }
 
     async fn list_artists(&self) -> Result<Vec<ArtistInfo>> {

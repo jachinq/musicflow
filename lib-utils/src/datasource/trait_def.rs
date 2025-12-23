@@ -70,7 +70,25 @@ pub trait MusicDataSource: Send + Sync {
     ///
     /// # 返回
     /// * `Ok(Vec<AlbumInfo>)` - 专辑列表
-    async fn list_albums(&self) -> Result<Vec<AlbumInfo>>;
+    async fn list_albums(&self, pagination: Pagination) -> Result<Vec<AlbumInfo>>;
+
+    /// 根据ID获取专辑信息
+    ///
+    /// # 参数
+    /// * `album_id` - 专辑ID
+    ///
+    /// # 返回
+    /// * `Ok(AlbumInfo)` - 专辑信息
+    async fn get_album_by_id(&self, album_id: &str) -> Result<AlbumInfo>;
+
+    /// 获取专辑的歌曲列表
+    ///
+    /// # 参数
+    /// * `album_id` - 专辑ID
+    ///
+    /// # 返回
+    /// * `Ok(Vec<UnifiedMetadata>)` - 专辑的歌曲列表
+    async fn get_album_songs(&self, album_id: &str) -> Result<Vec<UnifiedMetadata>>;
 
     /// 获取艺术家列表
     ///

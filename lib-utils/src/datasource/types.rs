@@ -2,6 +2,32 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+/// 分页数据
+/// page: 当前页码
+/// page_size: 每页数量
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct Pagination {
+    pub page: usize,
+    pub page_size: usize,
+}
+
+impl Pagination {
+    pub fn new(page: usize, page_size: usize) -> Self {
+        Self { page, page_size }
+    }
+    pub fn is_valid(&self) -> bool {
+        self.page > 0 && self.page_size > 0
+    }
+    // 起始位置
+    pub fn start(&self) -> usize {
+        (self.page - 1) * self.page_size
+    }
+    // 结束位置
+    pub fn end(&self) -> usize {
+        self.page * self.page_size
+    }
+}
+
 /// 数据源类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DataSourceType {
