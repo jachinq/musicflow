@@ -10,6 +10,7 @@ use tokio::sync::RwLock;
 use crate::datasource::trait_def::MusicDataSource;
 use crate::datasource::types::*;
 use super::client::SubsonicClient;
+use super::mapper::parse_subsonic_lyrics;
 
 /// Subsonic 数据源
 pub struct SubsonicDataSource {
@@ -77,22 +78,85 @@ impl MusicDataSource for SubsonicDataSource {
         Ok(metadata)
     }
 
-    async fn list_metadata(&self, _filter: MetadataFilter) -> Result<Vec<UnifiedMetadata>> {
-        // TODO: 实现列表查询
-        // 需要调用 getAlbumList2, search3 等 API
-        Ok(vec![])
+    async fn list_metadata(&self, filter: MetadataFilter) -> Result<Vec<UnifiedMetadata>> {
+        // 使用搜索功能或获取专辑列表
+        if let Some(keyword) = &filter.keyword {
+            // 如果有关键字,使用搜索
+            let search_result = self.client.search3(keyword).await?;
+            let songs = search_result.song.unwrap_or_default();
+
+            let mut metadata_list: Vec<UnifiedMetadata> =
+                songs.into_iter().map(|s| s.into()).collect();
+
+            // 为每个歌曲设置流式 URL
+            for meta in &mut metadata_list {
+                meta.stream_url = Some(self.client.get_stream_url(
+                    &meta.id,
+                    self.max_bitrate,
+                    &self.prefer_format,
+                ));
+            }
+
+            // 应用分页
+            if let (Some(page), Some(page_size)) = (filter.page, filter.page_size) {
+                let start = ((page - 1) * page_size) as usize;
+                let end = (start + page_size as usize).min(metadata_list.len());
+
+                if start < metadata_list.len() {
+                    metadata_list = metadata_list[start..end].to_vec();
+                } else {
+                    metadata_list = vec![];
+                }
+            }
+
+            Ok(metadata_list)
+        } else {
+            // 否则获取最近的专辑
+            let albums = self
+                .client
+                .get_album_list2("newest", 50, 0)
+                .await?;
+
+            let mut songs = vec![];
+            for album in albums {
+                if let Some(album_songs) = album.song {
+                    for song in album_songs {
+                        let mut meta: UnifiedMetadata = song.into();
+                        meta.stream_url = Some(self.client.get_stream_url(
+                            &meta.id,
+                            self.max_bitrate,
+                            &self.prefer_format,
+                        ));
+                        songs.push(meta);
+                    }
+                }
+            }
+
+            Ok(songs)
+        }
     }
 
-    async fn get_cover(&self, _link_id: &str, _size: CoverSize) -> Result<Vec<u8>> {
-        // TODO: 实现封面获取
-        // 需要调用 getCoverArt API
-        Ok(vec![])
+    async fn get_cover(&self, link_id: &str, _size: CoverSize) -> Result<Vec<u8>> {
+        // 获取封面 URL
+        let cover_url = self.client.get_cover_art_url(link_id);
+
+        // 下载图片
+        let response = reqwest::get(&cover_url).await?;
+        let bytes = response.bytes().await?;
+
+        Ok(bytes.to_vec())
     }
 
-    async fn get_lyrics(&self, _song_id: &str) -> Result<Vec<LyricLine>> {
-        // TODO: 实现歌词获取
-        // 需要调用 getLyrics API
-        Ok(vec![])
+    async fn get_lyrics(&self, song_id: &str) -> Result<Vec<LyricLine>> {
+        // 首先获取歌曲信息以得到艺术家和标题
+        let metadata = self.get_metadata(song_id).await?;
+
+        // 调用 getLyrics API
+        if let Some(lyrics) = self.client.get_lyrics(&metadata.artist, &metadata.title).await? {
+            Ok(parse_subsonic_lyrics(lyrics))
+        } else {
+            Ok(vec![])
+        }
     }
 
     async fn get_audio_stream(&self, song_id: &str) -> Result<AudioStream> {
@@ -109,33 +173,66 @@ impl MusicDataSource for SubsonicDataSource {
     }
 
     async fn scan_library(&self) -> Result<ScanProgress> {
-        // TODO: 实现库扫描
-        // 需要调用 startScan / getScanStatus API
+        // Subsonic 服务器端扫描
+        // 注意: 大多数 Subsonic 服务器不提供扫描进度 API
+        // 这里返回一个占位符
         Ok(ScanProgress {
-            status: ScanStatus::Idle,
+            status: ScanStatus::Completed,
             processed: 0,
             total: 0,
             current_file: None,
-            error: None,
+            error: Some("Subsonic scan managed by server".to_string()),
         })
     }
 
     async fn list_albums(&self) -> Result<Vec<AlbumInfo>> {
-        // TODO: 实现专辑列表
-        Ok(vec![])
+        let albums = self.client.get_album_list2("alphabeticalByName", 500, 0).await?;
+
+        Ok(albums.into_iter().map(|a| a.into()).collect())
     }
 
     async fn list_artists(&self) -> Result<Vec<ArtistInfo>> {
-        // TODO: 实现艺术家列表
-        Ok(vec![])
+        let artists = self.client.get_artists().await?;
+
+        Ok(artists.into_iter().map(|a| a.into()).collect())
     }
 
-    async fn search(&self, _query: &str) -> Result<SearchResult> {
-        // TODO: 实现搜索
+    async fn search(&self, query: &str) -> Result<SearchResult> {
+        let result = self.client.search3(query).await?;
+
+        let songs: Vec<UnifiedMetadata> = result
+            .song
+            .unwrap_or_default()
+            .into_iter()
+            .map(|s| {
+                let mut meta: UnifiedMetadata = s.into();
+                meta.stream_url = Some(self.client.get_stream_url(
+                    &meta.id,
+                    self.max_bitrate,
+                    &self.prefer_format,
+                ));
+                meta
+            })
+            .collect();
+
+        let albums: Vec<AlbumInfo> = result
+            .album
+            .unwrap_or_default()
+            .into_iter()
+            .map(|a| a.into())
+            .collect();
+
+        let artists: Vec<ArtistInfo> = result
+            .artist
+            .unwrap_or_default()
+            .into_iter()
+            .map(|a| a.into())
+            .collect();
+
         Ok(SearchResult {
-            songs: vec![],
-            albums: vec![],
-            artists: vec![],
+            songs,
+            albums,
+            artists,
         })
     }
 

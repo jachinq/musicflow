@@ -1,0 +1,23 @@
+{
+  "ip": "0.0.0.0",
+  "port": 9090,
+  "music_dir": "../music",
+  "web_dir": "../web/dist",
+  "db_path": "../data/musicflow1.db",
+  "debug": true,
+  "data_source": {
+    "mode": "subsonic",
+    "local": null,
+    "subsonic": {
+      "server_url": "http://music.example.com",
+      "username": "your_username",
+      "password": "your_password_or_token",
+      "use_token_auth": true,
+      "api_version": "1.16.1",
+      "client_name": "MusicFlow",
+      "max_bitrate": 320,
+      "prefer_format": "mp3",
+      "cache_ttl_seconds": 3600
+    }
+  }
+}
