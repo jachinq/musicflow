@@ -104,6 +104,11 @@ export const sendLogToServer = (
   timestamp: string,
   message: string
 ) => {
+  // 本地调试时，不发送日志到服务器
+  if (process.env.NODE_ENV === "development") {
+    return;
+  }
+
   // 使用 fetch 发送日志信息
   fetch(LOG_API, {
     method: "POST",
