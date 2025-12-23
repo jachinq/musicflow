@@ -14,7 +14,6 @@ import {
 import { Album, Artist, Music, MyRoutes } from "../lib/defined";
 import { GenreElement } from "../components/Genre";
 import { toast } from "sonner";
-import { Pagination } from "../components/Pagination";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Input } from "../components/Input";
 import { useDevice } from "../hooks/use-device";
@@ -33,6 +32,7 @@ import { useSettingStore } from "../store/setting";
 import { formatTime, getOnlineEngineUrl } from "../lib/utils";
 import { usePlaylist } from "../store/playlist";
 import { Form } from "../components/Form";
+import { useInfiniteScroll } from "../hooks/use-infinite-scroll";
 
 type TabId = "genres" | "albums" | "artists";
 interface TagPageState {
@@ -157,27 +157,39 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(30);
+  const [pageSize] = useState(30);
   const [total, setTotal] = useState(0);
   const [filterText, setFilterText] = useState("");
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { setShowDrawer, setSelectedItem } = useTagPageStore();
   const { isSmallDevice } = useDevice();
   const iconSize = isSmallDevice ? 80 : 120;
-  const fetchItems = (currentPage: number, pageSize?: number) => {
-    setCurrentPage(currentPage);
-    if (!pageSize) {
-      pageSize = 30;
+
+  const hasMore = items.length < total;
+
+  const fetchItems = (page: number, append: boolean = false) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setLoading(true);
     }
-    setPageSize(pageSize);
+
     const fetchFunc = type === DrawerType.ALBUM ? getAlbumList : getArtistList;
     fetchFunc(
-      currentPage,
+      page,
       pageSize,
       filterText,
       (result) => {
         if (result && result.success) {
-          setItems(result.data.list);
+          if (append) {
+            // 追加数据
+            setItems((prevItems) => [...prevItems, ...result.data.list]);
+          } else {
+            // 替换数据（用于搜索或初始加载）
+            setItems(result.data.list);
+          }
           setTotal(result.data.total);
+          setCurrentPage(page);
         } else {
           toast.error("获取专辑列表失败", {
             description: result.message,
@@ -185,16 +197,36 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
           setError(result.message as any);
         }
         setLoading(false);
+        setIsLoadingMore(false);
       },
       (error) => {
         console.error(error);
         toast.error(error.message);
         setError(error.message);
+        setLoading(false);
+        setIsLoadingMore(false);
       }
     );
   };
+
+  const loadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      fetchItems(currentPage + 1, true);
+    }
+  };
+
+  useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    isLoading: isLoadingMore,
+    threshold: 200,
+  });
+
   useEffect(() => {
-    fetchItems(1, pageSize);
+    // 重置并重新加载
+    setItems([]);
+    setCurrentPage(1);
+    fetchItems(1, false);
   }, [filterText]);
 
   if (loading) {
@@ -211,12 +243,6 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
           placeholder={"搜索" + type}
           value={filterText}
           onChange={setFilterText}
-        />
-        <Pagination
-          total={total}
-          limit={pageSize}
-          currentPage={currentPage}
-          onPageChange={fetchItems}
         />
       </div>
       <div
@@ -248,8 +274,23 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
           </div>
         ))}
       </div>
+      {isLoadingMore && (
+        <div className="text-center py-4 text-muted-foreground">
+          加载中...
+        </div>
+      )}
+      {!hasMore && items.length > 0 && (
+        <div className="text-center py-4 text-muted-foreground">
+          已加载全部 {total} 项
+        </div>
+      )}
       <DetaialDrawer />
-      <EditForm onSussess={() => fetchItems(currentPage)} />
+      <EditForm onSussess={() => {
+        // 刷新当前列表
+        setItems([]);
+        setCurrentPage(1);
+        fetchItems(1, false);
+      }} />
     </div>
   );
 };
