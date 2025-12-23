@@ -194,53 +194,61 @@ pub async fn handle_get_metadata(
     }
 }
 
-pub async fn get_cover_small(album_id: web::Path<i64>) -> impl Responder {
-    let data = get_cover_size(*album_id, "small").await;
+pub async fn get_cover_small(
+    song_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let data = get_cover_size(&song_id, "small", &app_state).await;
     HttpResponse::Ok().content_type("image/webp").body(data)
 }
-pub async fn get_cover_medium(album_id: web::Path<i64>) -> impl Responder {
-    let data = get_cover_size(*album_id, "medium").await;
+
+pub async fn get_cover_medium(
+    song_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let data = get_cover_size(&song_id, "medium", &app_state).await;
     HttpResponse::Ok().content_type("image/webp").body(data)
 }
-pub async fn get_cover_size(album_id: i64, size: &str) -> Vec<u8> {
-    // let album_song = dbservice::album_song_by_song_id(album_id).await;
 
-    // let album_id = if let Ok(Some(album_song)) = album_song {
-    //     album_song.album_id
-    // } else {
-    //     0
-    // };
+pub async fn get_cover_size(song_id: &str, size: &str, app_state: &AppState) -> Vec<u8> {
+    use lib_utils::datasource::types::CoverSize;
 
-    let cover = service::get_cover(album_id, "album", size);
+    let cover_size = match size {
+        "small" => CoverSize::Small,
+        "medium" => CoverSize::Medium,
+        "large" => CoverSize::Large,
+        _ => CoverSize::Medium,
+    };
+
+    // 使用 DataSource 获取封面
+    let result = app_state.data_source.get_cover(song_id, cover_size).await;
+
+    // 默认封面 (WebP 格式的 base64)
     let default_cover = "UklGRpYBAABXRUJQVlA4IIoBAACQEgCdASrAAMAAP3G42GK0sayopLkoEpAuCWVu4QXUMQU4nn/pWmF9o0DPifE+JlGhgZqOyVZgoy7NXUtGklgA0aiSG2RF2Kbm5jQ3eoKwLpyF9R8oVd509SVeXb/tHglG1W4wL8vovtTUJhW/Jxy+Dz2kkbDPiXZ2AE9bwGmE/rM3PifIKeoZRVuuc6yX3BGpY5qSDk0eFGcLFyoAAP1V/+KHvw994S1rsgmSb8eM4Ys0mSvZP+IPrAhBml27fCTgPcHy1S6f9iSr6o2btNKixxetBHWT70dP+hIZITsA3mwH6GT6Jph31q2YsJASsCnDSmiO9ctjViN5bcVXcoIwwUZTu+9jQATMseG7OR/yl1R++egpeBnLRwGRtbdMgxlpe/+cJM8j1XCD0gwSVPZDBJ2Ke/IK/iCzWPuDO2Nw6aGgfb5Rbhor4l+4FDZjWdPVG9qP3AimXDGjWyUPw1fYuf4rBYVj4XiNln/QypsIcatiR5DVPn/YR0CBfMXURwr5Dg+721oAAAAA";
 
-    let base64str = if let Ok(Some(cover)) = cover {
-        cover.base64
-    } else {
-        println!("Cover not found for {}, cover: {:?}", album_id, cover);
-        default_cover.to_string()
-    };
-    let base64str = if base64str.is_empty() {
-        default_cover
-    } else {
-        &base64str
-    };
-
-    // 将base64编码的图片数据转换为二进制数据
-    let engine = base64::engine::general_purpose::STANDARD;
-
-    let data = engine.decode(base64str).unwrap_or_default();
-    data
+    match result {
+        Ok(data) => data,
+        Err(e) => {
+            println!("Cover not found for {}, error: {}", song_id, e);
+            // 解码默认封面
+            let engine = base64::engine::general_purpose::STANDARD;
+            engine.decode(default_cover).unwrap_or_default()
+        }
+    }
 }
 
-pub async fn get_lyrics(song_id: web::Path<String>) -> impl Responder {
-    let lyrics = service::get_lyric(&song_id);
+pub async fn get_lyrics(
+    song_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let result = app_state.data_source.get_lyrics(&song_id).await;
 
-    let lyrics = if let Ok(lyrics) = lyrics {
-        lyrics
-    } else {
-        println!("Lyrics not found for {}", song_id);
-        vec![]
+    let lyrics = match result {
+        Ok(lyrics) => lyrics,
+        Err(e) => {
+            println!("Lyrics not found for {}: {}", song_id, e);
+            vec![]
+        }
     };
 
     HttpResponse::Ok().json(lyrics)

@@ -18,7 +18,7 @@ impl From<SubsonicSong> for UnifiedMetadata {
             disc: String::new(),
             language: String::new(),
             comment: String::new(),
-            bitrate: song.bitrate.map(|b| b.to_string()).unwrap_or_default(),
+            bitrate: song.bit_rate.map(|b| b.to_string()).unwrap_or_default(),
             samplerate: String::new(),
             source: DataSourceType::Subsonic,
             file_name: song.suffix.clone(),

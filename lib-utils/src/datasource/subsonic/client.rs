@@ -34,6 +34,9 @@ impl SubsonicClient {
         api_version: String,
         client_name: String,
     ) -> Self {
+        // 移除 base_url 末尾的斜杠
+        let base_url = base_url.trim_end_matches('/').to_string();
+
         Self {
             base_url,
             auth: SubsonicAuth::new(username, password, use_token),
@@ -50,7 +53,10 @@ impl SubsonicClient {
         if response.subsonic_response.status == "ok" {
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Ping failed: {:?}", response.subsonic_response.error))
+            Err(anyhow::anyhow!(
+                "Ping failed: {:?}",
+                response.subsonic_response.error
+            ))
         }
     }
 
@@ -150,12 +156,8 @@ impl SubsonicClient {
 
     /// 获取歌词
     pub async fn get_lyrics(&self, artist: &str, title: &str) -> Result<Option<SubsonicLyrics>> {
-        let params = vec![
-            ("artist", artist.to_string()),
-            ("title", title.to_string()),
-        ];
-        let response: SubsonicResponse<LyricsWrapper> =
-            self.get("rest/getLyrics", params).await?;
+        let params = vec![("artist", artist.to_string()), ("title", title.to_string())];
+        let response: SubsonicResponse<LyricsWrapper> = self.get("rest/getLyrics", params).await?;
 
         Ok(response.subsonic_response.lyrics)
     }
@@ -210,10 +212,15 @@ impl SubsonicClient {
             return Err(anyhow::anyhow!("HTTP error: {}", status));
         }
 
-        response
-            .json()
-            .await
-            .context("Failed to parse Subsonic response")
+        let response = response.json::<T>().await;
+
+        match response {
+            Ok(json) => Ok(json),
+            Err(e) => {
+                println!("url={} response={:?}", url, e);
+                return Err(anyhow::anyhow!("Failed to parse Subsonic response"));
+            }
+        }
     }
 }
 
@@ -233,6 +240,13 @@ struct BaseResponse {
     version: Option<String>,
     #[serde(default)]
     error: Option<SubsonicError>,
+    // 兼容 Qm-Music 和 OpenSubsonic 的额外字段
+    #[serde(default, rename = "type")]
+    server_type: Option<String>,
+    #[serde(default, rename = "openSubsonic")]
+    open_subsonic: Option<bool>,
+    #[serde(default, rename = "serverVersion")]
+    server_version: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -258,17 +272,36 @@ pub struct SubsonicSong {
     pub id: String,
     pub title: String,
     pub album: Option<String>,
+    pub album_id: Option<String>,
+    pub album_artists: Option<Vec<SubsonicArtist>>,
     pub artist: Option<String>,
-    pub track: Option<u32>,
+    pub artist_id: Option<String>,
+    pub artists: Option<Vec<SubsonicArtist>>,
+    pub display_album_artist: Option<String>,
+    pub display_artist: Option<String>,
+    pub bit_depth: Option<u32>,
+    pub track: Option<String>,
+    #[serde(deserialize_with = "deserialize_year")]
     pub year: Option<u32>,
+    pub parent: Option<u32>,
     pub genre: Option<String>,
     pub duration: Option<u32>,
-    pub bitrate: Option<u32>,
+    pub bit_rate: Option<u32>,
+    pub sampling_rate: Option<u32>,
+    pub disc_number: Option<u32>,
+    pub channel_count: Option<u32>,
     pub cover_art: Option<String>,
     pub size: Option<u64>,
     pub content_type: Option<String>,
+    pub created: Option<String>,
     pub suffix: Option<String>,
     pub path: Option<String>,
+    pub media_type: Option<String>,
+    pub sort_name: Option<String>,
+    pub user_rating: Option<u32>,
+    pub r#type: Option<String>,
+    pub is_dir: Option<bool>,
+    pub is_video: Option<bool>,
 }
 
 /// Subsonic 专辑信息
@@ -278,14 +311,19 @@ pub struct SubsonicAlbum {
     pub id: String,
     pub name: String,
     pub artist: Option<String>,
+    pub display_artist: Option<String>,
     pub artist_id: Option<String>,
+    pub artists: Option<Vec<SubsonicArtist>>,
     pub cover_art: Option<String>,
     pub song_count: Option<u32>,
     pub duration: Option<u32>,
     pub created: Option<String>,
+    #[serde(deserialize_with = "deserialize_year")]
     pub year: Option<u32>,
     pub genre: Option<String>,
     pub song: Option<Vec<SubsonicSong>>,
+    pub sort_name: Option<String>,
+    pub user_rating: Option<u32>,
 }
 
 /// 专辑列表响应包装
@@ -375,6 +413,33 @@ struct LyricsWrapper {
     #[serde(flatten)]
     base: BaseResponse,
     lyrics: Option<SubsonicLyrics>,
+}
+
+// 自定义反序列化函数，同时支持 String 和 u32 类型的 year 字段
+fn deserialize_year<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::{self, Deserialize};
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum YearValue {
+        Number(u32),
+        String(String),
+    }
+
+    match Option::<YearValue>::deserialize(deserializer)? {
+        None => Ok(None),
+        Some(YearValue::Number(n)) => Ok(Some(n)),
+        Some(YearValue::String(s)) => {
+            if s.is_empty() {
+                Ok(None)
+            } else {
+                s.parse::<u32>().map(Some).map_err(de::Error::custom)
+            }
+        }
+    }
 }
 
 // 添加 urlencoding 辅助函数
