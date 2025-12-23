@@ -59,8 +59,9 @@ export const Cover = ({
     };
     return () => {
       img.onload = null;
+      img.onerror = null;
     };
-  }, [src, defaultSrc, showFallback]);
+  }, [src, defaultSrc]);
 
   const getStyle = () => {
     let sizePx = size + "px";
