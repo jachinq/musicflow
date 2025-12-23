@@ -7,10 +7,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::datasource::trait_def::MusicDataSource;
-use crate::datasource::types::*;
 use super::client::SubsonicClient;
 use super::mapper::parse_subsonic_lyrics;
+use crate::datasource::trait_def::MusicDataSource;
+use crate::datasource::types::*;
 
 /// Subsonic 数据源
 pub struct SubsonicDataSource {
@@ -79,67 +79,50 @@ impl MusicDataSource for SubsonicDataSource {
     }
 
     async fn list_metadata(&self, filter: MetadataFilter) -> Result<Vec<UnifiedMetadata>> {
-        // 使用搜索功能或获取专辑列表
-        if let Some(keyword) = &filter.keyword {
-            // 如果有关键字,使用搜索
-            let search_result = self.client.search3(keyword).await?;
-            let songs = search_result.song.unwrap_or_default();
+        let keyword = filter.keyword.unwrap_or_default();
+        // 如果有关键字,使用搜索
+        let search_result = self.client.search3(&keyword).await?;
+        let songs = search_result.song.unwrap_or_default();
 
-            let mut metadata_list: Vec<UnifiedMetadata> =
-                songs.into_iter().map(|s| s.into()).collect();
+        let mut metadata_list: Vec<UnifiedMetadata> = songs.into_iter().map(|s| s.into()).collect();
 
-            // 为每个歌曲设置流式 URL
-            for meta in &mut metadata_list {
-                meta.stream_url = Some(self.client.get_stream_url(
-                    &meta.id,
-                    self.max_bitrate,
-                    &self.prefer_format,
-                ));
-            }
-
-            // 应用分页
-            if let (Some(page), Some(page_size)) = (filter.page, filter.page_size) {
-                let start = ((page - 1) * page_size) as usize;
-                let end = (start + page_size as usize).min(metadata_list.len());
-
-                if start < metadata_list.len() {
-                    metadata_list = metadata_list[start..end].to_vec();
-                } else {
-                    metadata_list = vec![];
-                }
-            }
-
-            Ok(metadata_list)
-        } else {
-            // 否则获取最近的专辑
-            let albums = self
-                .client
-                .get_album_list2("newest", 50, 0)
-                .await?;
-
-            let mut songs = vec![];
-            for album in albums {
-                if let Some(album_songs) = album.song {
-                    for song in album_songs {
-                        let mut meta: UnifiedMetadata = song.into();
-                        meta.stream_url = Some(self.client.get_stream_url(
-                            &meta.id,
-                            self.max_bitrate,
-                            &self.prefer_format,
-                        ));
-                        songs.push(meta);
-                    }
-                }
-            }
-
-            Ok(songs)
+        // 为每个歌曲设置流式 URL
+        for meta in &mut metadata_list {
+            meta.stream_url = Some(self.client.get_stream_url(
+                &meta.id,
+                self.max_bitrate,
+                &self.prefer_format,
+            ));
         }
+
+        // 应用分页
+        if let (Some(page), Some(page_size)) = (filter.page, filter.page_size) {
+            let start = ((page - 1) * page_size) as usize;
+            let end = (start + page_size as usize).min(metadata_list.len());
+
+            if start < metadata_list.len() {
+                metadata_list = metadata_list[start..end].to_vec();
+            } else {
+                metadata_list = vec![];
+            }
+        }
+
+        Ok(metadata_list)
     }
 
-    async fn get_cover(&self, link_id: &str, _size: CoverSize) -> Result<Vec<u8>> {
-        // 获取封面 URL
-        let cover_url = self.client.get_cover_art_url(link_id);
+    async fn get_cover(&self, album_id: &str, _size: CoverSize) -> Result<Vec<u8>> {
+        // 根据 song_id 获取到 专辑 cover_art
+        let album = self.client.get_album(album_id).await?;
+        if album.cover_art.is_none() {
+            println!("No cover art found for album album_id={}", album_id);
+            return Err(anyhow::anyhow!("No cover art found for song"));
+        }
+        let cover_art = album.cover_art.unwrap();
 
+        // 获取封面 URL
+        let cover_url = self.client.get_cover_art_url(&cover_art);
+
+        println!("cover_url={}", cover_url);
         // 下载图片
         let response = reqwest::get(&cover_url).await?;
         let bytes = response.bytes().await?;
@@ -151,8 +134,15 @@ impl MusicDataSource for SubsonicDataSource {
         // 首先获取歌曲信息以得到艺术家和标题
         let metadata = self.get_metadata(song_id).await?;
 
+        println!("song_id={}/{}, artist={}, title={}", song_id,metadata.id, metadata.artist, metadata.title);
+
         // 调用 getLyrics API
-        if let Some(lyrics) = self.client.get_lyrics(&metadata.artist, &metadata.title).await? {
+        if let Some(lyrics) = self
+            .client
+            .get_lyrics(&metadata.artist, &metadata.title)
+            .await?
+        {
+            println!("{:?}", lyrics);
             Ok(parse_subsonic_lyrics(lyrics))
         } else {
             Ok(vec![])
@@ -160,11 +150,9 @@ impl MusicDataSource for SubsonicDataSource {
     }
 
     async fn get_audio_stream(&self, song_id: &str) -> Result<AudioStream> {
-        let stream_url = self.client.get_stream_url(
-            song_id,
-            self.max_bitrate,
-            &self.prefer_format,
-        );
+        let stream_url = self
+            .client
+            .get_stream_url(song_id, self.max_bitrate, &self.prefer_format);
 
         Ok(AudioStream::SubsonicStream {
             url: stream_url,
@@ -186,7 +174,10 @@ impl MusicDataSource for SubsonicDataSource {
     }
 
     async fn list_albums(&self) -> Result<Vec<AlbumInfo>> {
-        let albums = self.client.get_album_list2("alphabeticalByName", 500, 0).await?;
+        let albums = self
+            .client
+            .get_album_list2("alphabeticalByName", 500, 0)
+            .await?;
 
         Ok(albums.into_iter().map(|a| a.into()).collect())
     }

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 /// 将 UnifiedMetadata 转换为 MetadataVo
 pub fn unified_to_vo(metadata: UnifiedMetadata) -> MetadataVo {
-    // 获取 album_id 和 artist_id (仅本地模式需要)
+    // 获取 album_id 和 artist_id
     let (album_id, artist_id) = if metadata.source == DataSourceType::Local {
         let album_id = service::album_song_by_song_ids(&vec![metadata.id.clone()])
             .ok()
@@ -19,9 +19,16 @@ pub fn unified_to_vo(metadata: UnifiedMetadata) -> MetadataVo {
             .and_then(|artists| artists.first().map(|a| a.artist_id))
             .unwrap_or(0);
 
-        (album_id, artist_id)
+        (album_id.to_string(), artist_id.to_string())
     } else {
-        (0, 0)
+        // Subsonic 模式: 尝试解析字符串 ID 为数字
+        let album_id = metadata.album_id
+            .unwrap_or_default();
+
+        let artist_id = metadata.artist_id
+            .unwrap_or_default();
+
+        (album_id, artist_id)
     };
 
     // 生成 file_url
@@ -129,8 +136,8 @@ pub fn unified_list_to_vo(metadata_list: Vec<UnifiedMetadata>) -> Vec<MetadataVo
                     track: m.track.clone(),
                     disc: m.disc.clone(),
                     comment: m.comment.clone(),
-                    album_id,
-                    artist_id,
+                    album_id: album_id.to_string(),
+                    artist_id: artist_id.to_string(),
                 }
             })
             .collect()

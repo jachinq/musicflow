@@ -36,8 +36,8 @@ pub struct MetadataVo {
     pub track: String,
     pub disc: String,
     pub comment: String,
-    pub album_id: i64,
-    pub artist_id: i64,
+    pub album_id: String,
+    pub artist_id: String,
 }
 
 pub trait IntoVec<T> {
@@ -58,7 +58,7 @@ impl IntoVec<MetadataVo> for Vec<Metadata> {
 
         if let Ok(album_songs) = album_songs {
             for album_song in album_songs {
-                id_album_id_map.insert(album_song.song_id.clone(), album_song.album_id);
+                id_album_id_map.insert(album_song.song_id.clone(), album_song.album_id.to_string());
             }
         } else {
             log_err(&format!("album_songs error: {}", album_songs.unwrap_err()));
@@ -66,7 +66,10 @@ impl IntoVec<MetadataVo> for Vec<Metadata> {
 
         if let Ok(artist_songs) = artist_songs {
             for artist_song in artist_songs {
-                id_artist_id_map.insert(artist_song.song_id.clone(), artist_song.artist_id);
+                id_artist_id_map.insert(
+                    artist_song.song_id.clone(),
+                    artist_song.artist_id.to_string(),
+                );
             }
         } else {
             log_err(&format!(
@@ -78,8 +81,8 @@ impl IntoVec<MetadataVo> for Vec<Metadata> {
         self.iter()
             .map(|m| {
                 let mut vo = MetadataVo::convert(m);
-                vo.album_id = id_album_id_map.get(&vo.id).cloned().unwrap_or(0);
-                vo.artist_id = id_artist_id_map.get(&vo.id).cloned().unwrap_or(0);
+                vo.album_id = id_album_id_map.get(&vo.id).cloned().unwrap_or_default();
+                vo.artist_id = id_artist_id_map.get(&vo.id).cloned().unwrap_or_default();
                 vo
             })
             .collect::<Vec<_>>()
@@ -212,6 +215,9 @@ pub async fn get_cover_medium(
 
 pub async fn get_cover_size(song_id: &str, size: &str, app_state: &AppState) -> Vec<u8> {
     use lib_utils::datasource::types::CoverSize;
+    if song_id.len() == 0 {
+        return default_cover();
+    }
 
     let cover_size = match size {
         "small" => CoverSize::Small,
@@ -223,18 +229,28 @@ pub async fn get_cover_size(song_id: &str, size: &str, app_state: &AppState) -> 
     // 使用 DataSource 获取封面
     let result = app_state.data_source.get_cover(song_id, cover_size).await;
 
-    // 默认封面 (WebP 格式的 base64)
-    let default_cover = "UklGRpYBAABXRUJQVlA4IIoBAACQEgCdASrAAMAAP3G42GK0sayopLkoEpAuCWVu4QXUMQU4nn/pWmF9o0DPifE+JlGhgZqOyVZgoy7NXUtGklgA0aiSG2RF2Kbm5jQ3eoKwLpyF9R8oVd509SVeXb/tHglG1W4wL8vovtTUJhW/Jxy+Dz2kkbDPiXZ2AE9bwGmE/rM3PifIKeoZRVuuc6yX3BGpY5qSDk0eFGcLFyoAAP1V/+KHvw994S1rsgmSb8eM4Ys0mSvZP+IPrAhBml27fCTgPcHy1S6f9iSr6o2btNKixxetBHWT70dP+hIZITsA3mwH6GT6Jph31q2YsJASsCnDSmiO9ctjViN5bcVXcoIwwUZTu+9jQATMseG7OR/yl1R++egpeBnLRwGRtbdMgxlpe/+cJM8j1XCD0gwSVPZDBJ2Ke/IK/iCzWPuDO2Nw6aGgfb5Rbhor4l+4FDZjWdPVG9qP3AimXDGjWyUPw1fYuf4rBYVj4XiNln/QypsIcatiR5DVPn/YR0CBfMXURwr5Dg+721oAAAAA";
-
     match result {
-        Ok(data) => data,
+        Ok(data) => {
+            println!("file size={}", data.len());
+            if data.len() == 0 {
+                default_cover()
+            } else {
+                data
+            }
+        }
         Err(e) => {
             println!("Cover not found for {}, error: {}", song_id, e);
-            // 解码默认封面
-            let engine = base64::engine::general_purpose::STANDARD;
-            engine.decode(default_cover).unwrap_or_default()
+            default_cover()
         }
     }
+}
+
+fn default_cover() -> Vec<u8> {
+    // 默认封面 (WebP 格式的 base64)
+    let default_cover = "UklGRpYBAABXRUJQVlA4IIoBAACQEgCdASrAAMAAP3G42GK0sayopLkoEpAuCWVu4QXUMQU4nn/pWmF9o0DPifE+JlGhgZqOyVZgoy7NXUtGklgA0aiSG2RF2Kbm5jQ3eoKwLpyF9R8oVd509SVeXb/tHglG1W4wL8vovtTUJhW/Jxy+Dz2kkbDPiXZ2AE9bwGmE/rM3PifIKeoZRVuuc6yX3BGpY5qSDk0eFGcLFyoAAP1V/+KHvw994S1rsgmSb8eM4Ys0mSvZP+IPrAhBml27fCTgPcHy1S6f9iSr6o2btNKixxetBHWT70dP+hIZITsA3mwH6GT6Jph31q2YsJASsCnDSmiO9ctjViN5bcVXcoIwwUZTu+9jQATMseG7OR/yl1R++egpeBnLRwGRtbdMgxlpe/+cJM8j1XCD0gwSVPZDBJ2Ke/IK/iCzWPuDO2Nw6aGgfb5Rbhor4l+4FDZjWdPVG9qP3AimXDGjWyUPw1fYuf4rBYVj4XiNln/QypsIcatiR5DVPn/YR0CBfMXURwr5Dg+721oAAAAA";
+    // 解码默认封面
+    let engine = base64::engine::general_purpose::STANDARD;
+    engine.decode(default_cover).unwrap_or_default()
 }
 
 pub async fn get_lyrics(

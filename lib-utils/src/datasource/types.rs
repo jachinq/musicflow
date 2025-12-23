@@ -46,6 +46,8 @@ pub struct UnifiedMetadata {
     pub subsonic_id: Option<String>,
     pub stream_url: Option<String>,
     pub cover_art_id: Option<String>,
+    pub album_id: Option<String>,
+    pub artist_id: Option<String>,
 }
 
 impl Default for UnifiedMetadata {
@@ -71,6 +73,8 @@ impl Default for UnifiedMetadata {
             subsonic_id: None,
             stream_url: None,
             cover_art_id: None,
+            album_id: None,
+            artist_id: None,
         }
     }
 }

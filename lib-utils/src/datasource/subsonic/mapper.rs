@@ -27,6 +27,8 @@ impl From<SubsonicSong> for UnifiedMetadata {
             subsonic_id: Some(song.id.clone()),
             stream_url: None, // 会在 DataSource 中设置
             cover_art_id: song.cover_art.clone(),
+            album_id: song.album_id.clone(),
+            artist_id: song.artist_id.clone(),
         }
     }
 }
@@ -47,8 +49,8 @@ impl From<SubsonicAlbum> for AlbumInfo {
 impl From<SubsonicArtist> for ArtistInfo {
     fn from(artist: SubsonicArtist) -> Self {
         ArtistInfo {
-            id: artist.id,
-            name: artist.name,
+            id: artist.id.unwrap_or_default(),
+            name: artist.name.unwrap_or_default(),
             album_count: artist.album_count.unwrap_or(0) as usize,
             cover: artist.cover_art,
         }
@@ -57,7 +59,7 @@ impl From<SubsonicArtist> for ArtistInfo {
 
 /// 解析 Subsonic 歌词为 LyricLine 列表
 pub fn parse_subsonic_lyrics(lyrics: SubsonicLyrics) -> Vec<LyricLine> {
-    if let Some(text) = lyrics.value {
+    if let Some(text) = lyrics.text {
         // Subsonic 歌词格式通常是 LRC 格式
         parse_lrc_lyrics(&text)
     } else {

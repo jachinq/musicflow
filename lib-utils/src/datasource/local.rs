@@ -47,6 +47,8 @@ impl LocalDataSource {
             subsonic_id: None,
             stream_url: None,
             cover_art_id: None,
+            album_id: None,
+            artist_id: None,
         }
     }
 

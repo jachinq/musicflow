@@ -73,8 +73,8 @@ async fn main() {
                 for (i, artist) in artists.iter().take(5).enumerate() {
                     println!("     {}. {} (ID: {}, 专辑数: {})",
                         i + 1,
-                        artist.name,
-                        artist.id,
+                        artist.name.clone().unwrap_or_default(),
+                        artist.id.clone().unwrap_or_default(),
                         artist.album_count.unwrap_or(0)
                     );
                 }
@@ -129,6 +129,7 @@ async fn main() {
                             if let Some(cover_id) = &album.cover_art {
                                 println!("\n5. 封面 URL:");
                                 let cover_url = client.get_cover_art_url(cover_id);
+                                println!("   cover_id={}", cover_id);
                                 println!("   {}", cover_url);
                             }
 
@@ -140,7 +141,7 @@ async fn main() {
                                     println!("   {}", stream_url);
 
                                     // 7. 获取单个歌曲信息
-                                    println!("\n7. 获取歌曲详情...");
+                                    println!("\n7. 获取歌曲详情... id={}", &first_song.id);
                                     match client.get_song(&first_song.id).await {
                                         Ok(song) => {
                                             println!("   ✓ 歌曲: {}", song.title);
@@ -160,7 +161,7 @@ async fn main() {
                                     match client.get_lyrics(artist, title).await {
                                         Ok(Some(lyrics)) => {
                                             println!("   ✓ 歌词:");
-                                            if let Some(text) = &lyrics.value {
+                                            if let Some(text) = &lyrics.text {
                                                 let lines: Vec<&str> = text.lines().take(5).collect();
                                                 for line in lines {
                                                     println!("     {}", line);
@@ -211,7 +212,7 @@ async fn main() {
             if let Some(artists) = result.artist {
                 println!("   ✓ 找到 {} 位艺术家", artists.len());
                 for (i, artist) in artists.iter().take(3).enumerate() {
-                    println!("     {}. {}", i + 1, artist.name);
+                    println!("     {}. {}", i + 1, artist.name.clone().unwrap_or_default());
                 }
             }
         }

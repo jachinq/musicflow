@@ -354,8 +354,8 @@ struct AlbumWrapper {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SubsonicArtist {
-    pub id: String,
-    pub name: String,
+    pub id: Option<String>,
+    pub name: Option<String>,
     pub album_count: Option<u32>,
     pub cover_art: Option<String>,
 }
@@ -402,8 +402,7 @@ struct SearchResult3Wrapper {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubsonicLyrics {
     pub artist: Option<String>,
-    pub title: Option<String>,
-    pub value: Option<String>, // 歌词文本
+    pub text: Option<String>, // 歌词文本
 }
 
 /// 歌词响应包装
