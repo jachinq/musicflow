@@ -70,7 +70,7 @@ pub trait MusicDataSource: Send + Sync {
     ///
     /// # 返回
     /// * `Ok(Vec<AlbumInfo>)` - 专辑列表
-    async fn list_albums(&self, pagination: Pagination) -> Result<Vec<AlbumInfo>>;
+    async fn list_albums(&self, pagination: Pagination, filter_text: Option<String>) -> Result<Vec<AlbumInfo>>;
 
     /// 根据ID获取专辑信息
     ///

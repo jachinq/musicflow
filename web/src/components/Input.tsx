@@ -9,6 +9,7 @@ interface InputProps {
   name?: string; // 可选的name属性
   className?: string; // 可选的className
   onEnter?: (value: string, name: string) => void; // 可选的onEnter回调函数
+  onBlur?: (value: string, name: string) => void; // 可选的onBlur回调函数
 }
 
 // const a = forwardRef<HTMLInputElement, InputProps>({}, {
@@ -16,7 +17,7 @@ interface InputProps {
 // }) ;
 
 // 自定义Input组件
-export const Input = forwardRef<HTMLInputElement, InputProps>(({ type = 'text', placeholder, value, name, className, onChange, onEnter }, ref) => {
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ type = 'text', placeholder, value, name, className, onChange, onEnter, onBlur }, ref) => {
   // 使用useState来管理输入框的值
   const [inputValue, setInputValue] = useState(value || '');
 
@@ -40,6 +41,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({ type = 'text', 
         if (event.key === 'Enter') {
           onEnter && onEnter(inputValue, name || '');
         }
+      }}
+      onBlur={() => {
+        onBlur && onBlur(inputValue, name || '');
       }}
       name={name}
       className={`${className || ''} outline-none bg-muted px-4 py-2 rounded-sm w-full`}

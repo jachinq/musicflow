@@ -139,7 +139,10 @@ impl MusicDataSource for SubsonicDataSource {
         // 首先获取歌曲信息以得到艺术家和标题
         let metadata = self.get_metadata(song_id).await?;
 
-        println!("song_id={}/{}, artist={}, title={}", song_id,metadata.id, metadata.artist, metadata.title);
+        println!(
+            "song_id={}/{}, artist={}, title={}",
+            song_id, metadata.id, metadata.artist, metadata.title
+        );
 
         // 调用 getLyrics API
         if let Some(lyrics) = self
@@ -178,10 +181,41 @@ impl MusicDataSource for SubsonicDataSource {
         })
     }
 
-    async fn list_albums(&self, pagination: Pagination) -> Result<Vec<AlbumInfo>> {
+    async fn list_albums(
+        &self,
+        pagination: Pagination,
+        filter_text: Option<String>,
+    ) -> Result<Vec<AlbumInfo>> {
+        if let Some(filter_text) = filter_text {
+            let filter_text = filter_text.trim();
+            if !filter_text.is_empty() {
+                let search_result = self
+                    .client
+                    .search3(filter_text)
+                    .await?;
+                let albums = search_result.album.unwrap_or_default();
+                let all_albums: Vec<AlbumInfo> = albums.into_iter().map(|a| a.into()).collect();
+
+                let start = pagination.start();
+                let end = pagination.end(all_albums.len());
+                // 越界检查
+                if end > all_albums.len() {
+                    return Ok(all_albums[start..].to_vec());
+                } else if start >= all_albums.len() {
+                    return Ok(vec![]);
+                } else {
+                    return Ok(all_albums[start..end].to_vec());
+                }
+            }
+        }
+
         let albums = self
             .client
-            .get_album_list2("alphabeticalByName", pagination.page_size, pagination.start())
+            .get_album_list2(
+                "alphabeticalByName",
+                pagination.page_size,
+                pagination.start(),
+            )
             .await?;
 
         Ok(albums.into_iter().map(|a| a.into()).collect())

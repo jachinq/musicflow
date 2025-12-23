@@ -11,15 +11,18 @@ pub struct AlbumsBody {
     page_size: Option<usize>,
     filter_text: Option<String>,
 }
-
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListAlbumResponse {
     list: Vec<AlbumInfo>,
     total: usize,
 }
 
-pub async fn handle_get_album(app_data: web::Data<AppState>, pagination: web::Json<Pagination>) -> impl Responder {
-    let albums = app_data.data_source.list_albums(pagination.into_inner()).await;
+pub async fn handle_get_album(app_data: web::Data<AppState>, albums_body: web::Json<AlbumsBody>) -> impl Responder {
+
+    let pagination = Pagination::new(albums_body.page.unwrap_or(1), albums_body.page_size.unwrap_or(30));
+    let filter_text = albums_body.filter_text.clone();
+    println!("{:?} {:?}", pagination, filter_text);
+    let albums = app_data.data_source.list_albums(pagination, filter_text).await;
     match albums {
         Ok(list) => {
             let total = list.len();

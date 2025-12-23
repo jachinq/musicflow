@@ -158,12 +158,19 @@ impl MusicDataSource for LocalDataSource {
         })
     }
 
-    async fn list_albums(&self, pagination: Pagination) -> Result<Vec<AlbumInfo>> {
+    async fn list_albums(&self, pagination: Pagination, filter_text: Option<String>) -> Result<Vec<AlbumInfo>> {
         let mut albums = service::get_album_list()?;
+        if filter_text.is_some() {
+            let filter_text_lower = filter_text.as_ref().unwrap().to_lowercase();
+            albums = albums.into_iter().filter(|a| {
+                a.name.to_lowercase().contains(&filter_text_lower)
+                    || a.artist.to_lowercase().contains(&filter_text_lower)
+            }).collect();
+        }
 
         // 分页
         let start = pagination.start();
-        let end = pagination.end();
+        let end = pagination.end(albums.len());
 
         if start < albums.len() {
             albums = albums[start..end].to_vec();

@@ -23,11 +23,14 @@ impl Pagination {
         (self.page - 1) * self.page_size
     }
     // 结束位置
-    pub fn end(&self) -> usize {
-        self.page * self.page_size
+    pub fn end(&self, total: usize) -> usize {
+        if self.page * self.page_size > total {
+            total
+        } else {
+            self.page * self.page_size
+        }
     }
 }
-
 /// 数据源类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DataSourceType {

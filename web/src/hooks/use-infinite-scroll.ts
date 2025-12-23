@@ -1,22 +1,20 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 
 interface UseInfiniteScrollOptions {
   onLoadMore: () => void;
   hasMore: boolean;
   isLoading: boolean;
-  threshold?: number; // 距离底部多少像素时触发加载，默认 100px
+  threshold?: number; // 距离底部多少像素时触发加载，默认 300px
 }
 
 export const useInfiniteScroll = ({
   onLoadMore,
   hasMore,
   isLoading,
-  threshold = 100,
+  threshold = 300,
 }: UseInfiniteScrollOptions) => {
-  const observerTarget = useRef<HTMLDivElement>(null);
-
   const handleScroll = useCallback(() => {
-    if (!observerTarget.current || isLoading || !hasMore) {
+    if (isLoading || !hasMore) {
       return;
     }
 
@@ -24,39 +22,44 @@ export const useInfiniteScroll = ({
 
     // 当滚动到距离底部 threshold 像素时触发加载
     if (scrollHeight - scrollTop - clientHeight < threshold) {
+      console.log('触发加载更多', {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+        remaining: scrollHeight - scrollTop - clientHeight,
+      });
       onLoadMore();
     }
   }, [onLoadMore, isLoading, hasMore, threshold]);
 
   useEffect(() => {
-    const debouncedScroll = debounce(handleScroll, 200);
+    const throttledScroll = throttle(handleScroll, 100);
 
-    window.addEventListener('scroll', debouncedScroll);
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+
+    // 初始检查，防止内容不足一屏时无法触发滚动
+    setTimeout(() => {
+      handleScroll();
+    }, 100);
 
     return () => {
-      window.removeEventListener('scroll', debouncedScroll);
+      window.removeEventListener('scroll', throttledScroll);
     };
   }, [handleScroll]);
-
-  return { observerTarget };
 };
 
-// 简单的防抖函数
-function debounce<T extends (...args: any[]) => any>(
+// 节流函数 - 比防抖更适合滚动事件
+function throttle<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let lastTime = 0;
 
   return function executedFunction(...args: Parameters<T>) {
-    const later = () => {
-      timeout = null;
+    const now = Date.now();
+    if (now - lastTime >= wait) {
+      lastTime = now;
       func(...args);
-    };
-
-    if (timeout) {
-      clearTimeout(timeout);
     }
-    timeout = setTimeout(later, wait);
   };
 }

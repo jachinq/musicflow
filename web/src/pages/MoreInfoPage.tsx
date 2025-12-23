@@ -156,18 +156,17 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
   const [items, setItems] = useState<WithDrawerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const currentPageRef = useRef(1); // 使用 ref 避免闭包问题
   const [pageSize] = useState(30);
-  const [total, setTotal] = useState(0);
   const [filterText, setFilterText] = useState("");
+  const [startSearch, setStartSearch] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true); // 根据返回数据判断是否还有更多
   const { setShowDrawer, setSelectedItem } = useTagPageStore();
   const { isSmallDevice } = useDevice();
   const iconSize = isSmallDevice ? 80 : 120;
 
-  const hasMore = items.length < total;
-
-  const fetchItems = (page: number, append: boolean = false) => {
+  const fetchItems = useCallback((page: number, append: boolean = false) => {
     if (append) {
       setIsLoadingMore(true);
     } else {
@@ -181,23 +180,34 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
       filterText,
       (result) => {
         if (result && result.success) {
+          const newData = result.data.list;
+
           if (append) {
             // 追加数据
-            setItems((prevItems) => [...prevItems, ...result.data.list]);
+            setItems((prevItems) => [...prevItems, ...newData]);
           } else {
             // 替换数据（用于搜索或初始加载）
-            setItems(result.data.list);
+            setItems(newData);
           }
-          setTotal(result.data.total);
-          setCurrentPage(page);
+
+          // 如果返回的数据少于请求的页大小，说明没有更多数据了
+          if (newData.length < pageSize) {
+            setHasMore(false);
+          } else {
+            setHasMore(true);
+          }
+
+          currentPageRef.current = page;
         } else {
           toast.error("获取专辑列表失败", {
             description: result.message,
           });
           setError(result.message as any);
+          setHasMore(false);
         }
         setLoading(false);
         setIsLoadingMore(false);
+        setStartSearch(false);
       },
       (error) => {
         console.error(error);
@@ -205,19 +215,20 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
         setError(error.message);
         setLoading(false);
         setIsLoadingMore(false);
+        setStartSearch(false);
       }
     );
-  };
+  }, [type, pageSize, startSearch]);
 
-  const loadMore = () => {
-    if (!isLoadingMore && hasMore) {
-      fetchItems(currentPage + 1, true);
-    }
-  };
+  const loadMore = useCallback(() => {
+    const nextPage = currentPageRef.current + 1;
+    console.log('loadMore 被调用，加载第', nextPage, '页');
+    fetchItems(nextPage, true);
+  }, [fetchItems]);
 
   useInfiniteScroll({
     onLoadMore: loadMore,
-    hasMore,
+    hasMore: hasMore,
     isLoading: isLoadingMore,
     threshold: 200,
   });
@@ -225,9 +236,10 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
   useEffect(() => {
     // 重置并重新加载
     setItems([]);
-    setCurrentPage(1);
+    currentPageRef.current = 1;
+    setHasMore(true); // 重置 hasMore 状态
     fetchItems(1, false);
-  }, [filterText]);
+  }, [startSearch, fetchItems]);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -243,6 +255,8 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
           placeholder={"搜索" + type}
           value={filterText}
           onChange={setFilterText}
+          onEnter={() => setStartSearch(true)}
+          onBlur={() => setStartSearch(true)}
         />
       </div>
       <div
@@ -281,14 +295,15 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
       )}
       {!hasMore && items.length > 0 && (
         <div className="text-center py-4 text-muted-foreground">
-          已加载全部 {total} 项
+          已加载全部 {items.length} 项
         </div>
       )}
       <DetaialDrawer />
       <EditForm onSussess={() => {
         // 刷新当前列表
         setItems([]);
-        setCurrentPage(1);
+        currentPageRef.current = 1;
+        setHasMore(true);
         fetchItems(1, false);
       }} />
     </div>
