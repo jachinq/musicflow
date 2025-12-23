@@ -92,6 +92,9 @@ fn parse_lrc_line(line: &str) -> Option<LyricLine> {
     let end_bracket = line.find(']')?;
     let time_str = &line[1..end_bracket];
     let text = &line[end_bracket + 1..];
+    if text.is_empty() {
+        return None;
+    }
 
     // 解析时间 mm:ss.xx
     let parts: Vec<&str> = time_str.split(':').collect();

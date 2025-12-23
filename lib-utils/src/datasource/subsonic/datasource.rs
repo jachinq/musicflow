@@ -110,7 +110,7 @@ impl MusicDataSource for SubsonicDataSource {
         Ok(metadata_list)
     }
 
-    async fn get_cover(&self, album_id: &str, _size: CoverSize) -> Result<Vec<u8>> {
+    async fn get_cover(&self, album_id: &str, size: CoverSize) -> Result<Vec<u8>> {
         // 根据 song_id 获取到 专辑 cover_art
         let album = self.client.get_album(album_id).await?;
         if album.cover_art.is_none() {
@@ -119,8 +119,13 @@ impl MusicDataSource for SubsonicDataSource {
         }
         let cover_art = album.cover_art.unwrap();
 
+        let size = match size {
+            CoverSize::Small => "280",
+            CoverSize::Medium => "600",
+            CoverSize::Large => "1000",
+        };
         // 获取封面 URL
-        let cover_url = self.client.get_cover_art_url(&cover_art);
+        let cover_url = self.client.get_cover_art_url(&cover_art, size);
 
         println!("cover_url={}", cover_url);
         // 下载图片

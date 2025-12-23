@@ -136,13 +136,14 @@ impl SubsonicClient {
     }
 
     /// 获取封面 URL
-    pub fn get_cover_art_url(&self, id: &str) -> String {
+    pub fn get_cover_art_url(&self, id: &str, size: &str) -> String {
         let mut params = self.auth.get_auth_params();
         params.extend(vec![
             ("v", self.api_version.clone()),
             ("c", self.client_name.clone()),
             ("f", "json".to_string()),
             ("id", id.to_string()),
+            ("size", size.to_string()),
         ]);
 
         let query_string = params

@@ -128,7 +128,7 @@ async fn main() {
                             // 5. 获取封面 URL
                             if let Some(cover_id) = &album.cover_art {
                                 println!("\n5. 封面 URL:");
-                                let cover_url = client.get_cover_art_url(cover_id);
+                                let cover_url = client.get_cover_art_url(cover_id, "800");
                                 println!("   cover_id={}", cover_id);
                                 println!("   {}", cover_url);
                             }
