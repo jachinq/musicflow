@@ -237,6 +237,36 @@ impl MusicDataSource for LocalDataSource {
             .collect())
     }
 
+    async fn get_artist_by_id(&self, artist_id: &str) -> Result<ArtistInfo> {
+        let id = artist_id
+            .parse::<i64>()
+            .map_err(|_| anyhow::anyhow!("Invalid artist ID: {}", artist_id))?;
+
+        let artist = service::artist_by_id(id)?
+            .ok_or_else(|| anyhow::anyhow!("Artist not found: {}", artist_id))?;
+
+        Ok(ArtistInfo {
+            id: artist.id.to_string(),
+            name: artist.name,
+            album_count: 0, // TODO: 查询专辑数量
+            cover: if artist.cover.is_empty() {
+                None
+            } else {
+                Some(artist.cover)
+            },
+        })
+    }
+
+    async fn get_artist_songs(&self, artist_id: &str) -> Result<Vec<UnifiedMetadata>> {
+        let id = artist_id
+            .parse::<i64>()
+            .map_err(|_| anyhow::anyhow!("Invalid artist ID: {}", artist_id))?;
+
+        let songs = service::artist_songs(id)?;
+
+        Ok(songs.into_iter().map(|s| self.convert_metadata(s)).collect())
+    }
+
     async fn search(&self, query: &str) -> Result<SearchResult> {
         // 简单的搜索实现:使用 list_metadata 的关键字过滤
         let songs = self

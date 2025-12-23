@@ -123,6 +123,32 @@ impl SubsonicClient {
         Ok(artists)
     }
 
+    /// 获取单个艺术家信息
+    pub async fn get_artist(&self, id: &str) -> Result<SubsonicArtistDetail> {
+        let params = vec![("id", id.to_string())];
+        let response: SubsonicResponse<ArtistWrapper> =
+            self.get("rest/getArtist", params).await?;
+
+        response
+            .subsonic_response
+            .artist
+            .ok_or_else(|| anyhow::anyhow!("Artist not found: {}", id))
+    }
+
+    /// 获取单个艺术家的歌曲列表
+    pub async fn get_top_songs(&self, artist_name: &str) -> Result<Vec<SubsonicSong>> {
+        let params = vec![("artist", artist_name.to_string())];
+        let response: SubsonicResponse<TopSongsWrapper> =
+            self.get("rest/getTopSongs", params).await?;
+
+        println!("{} {:?}", artist_name, response);
+        response
+            .subsonic_response
+            .top_songs.song
+            // .map(|t| t.song.unwrap_or_default())
+            .ok_or_else(|| anyhow::anyhow!("top songs not found: {}", artist_name))
+    }
+
     /// 搜索
     pub async fn search3(&self, query: &str) -> Result<SubsonicSearchResult> {
         let params = vec![("query", query.to_string())];
@@ -213,8 +239,16 @@ impl SubsonicClient {
             return Err(anyhow::anyhow!("HTTP error: {}", status));
         }
 
+        // println!("{:?}", self
+        //     .client
+        //     .get(&url)
+        //     .query(&params)
+        //     .send()
+        //     .await
+        //     .context("Failed to send request to Subsonic server")?.text().await);
         let response = response.json::<T>().await;
 
+        // println!("{}?{}", url, params.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>().join("&"));
         match response {
             Ok(json) => Ok(json),
             Err(e) => {
@@ -264,6 +298,22 @@ struct SongWrapper {
     #[serde(flatten)]
     base: BaseResponse,
     song: Option<SubsonicSong>,
+}
+
+/// 艺术家歌曲响应
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+#[serde(rename_all = "camelCase")]
+struct TopSongsWrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    top_songs: TopSongs,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct TopSongs {
+    song: Option<Vec<SubsonicSong>>,
 }
 
 /// Subsonic 歌曲信息
@@ -361,6 +411,19 @@ pub struct SubsonicArtist {
     pub cover_art: Option<String>,
 }
 
+/// Subsonic 艺术家详细信息(包含专辑列表)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubsonicArtistDetail {
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub album_count: Option<u32>,
+    pub song_count: Option<u32>,
+    pub user_rating: Option<u32>,
+    pub cover_art: Option<String>,
+    pub album: Option<Vec<SubsonicAlbum>>,
+}
+
 /// 艺术家响应包装
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
@@ -368,6 +431,15 @@ struct ArtistsWrapper {
     #[serde(flatten)]
     base: BaseResponse,
     artists: Option<Artists>,
+}
+
+/// 单个艺术家响应包装
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct ArtistWrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    artist: Option<SubsonicArtistDetail>,
 }
 
 #[derive(Debug, Deserialize)]

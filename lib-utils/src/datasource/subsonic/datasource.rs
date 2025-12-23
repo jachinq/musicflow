@@ -250,6 +250,31 @@ impl MusicDataSource for SubsonicDataSource {
         Ok(artists.into_iter().map(|a| a.into()).collect())
     }
 
+    async fn get_artist_by_id(&self, artist_id: &str) -> Result<ArtistInfo> {
+        let artist = self.client.get_artist(artist_id).await?;
+        Ok(artist.into())
+    }
+
+    async fn get_artist_songs(&self, artist_id: &str) -> Result<Vec<UnifiedMetadata>> {
+        let artist_detail = self.client.get_artist(artist_id).await?;
+
+        let top_songs = self.client.get_top_songs(&artist_detail.name.unwrap_or_default()).await?;
+
+        let mut metadata_list: Vec<UnifiedMetadata> =
+            top_songs.into_iter().map(|s| s.into()).collect();
+
+        // 为每个歌曲设置流式 URL
+        for meta in &mut metadata_list {
+            meta.stream_url = Some(self.client.get_stream_url(
+                &meta.id,
+                self.max_bitrate,
+                &self.prefer_format,
+            ));
+        }
+
+        Ok(metadata_list)
+    }
+
     async fn search(&self, query: &str) -> Result<SearchResult> {
         let result = self.client.search3(query).await?;
 

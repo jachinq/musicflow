@@ -1,8 +1,8 @@
 use actix_web::{web, HttpResponse, Responder};
-use lib_utils::database::service::{self, Artist};
 use serde::{Deserialize, Serialize};
 
-use crate::{IntoVec, JsonResult};
+use crate::{adapters::unified_list_to_vo, AppState, JsonResult};
+use lib_utils::datasource::types::ArtistInfo;
 
 #[derive(Deserialize)]
 pub struct ArtistBody {
@@ -12,58 +12,70 @@ pub struct ArtistBody {
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListArtistResponse {
-    list: Vec<Artist>,
+    list: Vec<ArtistInfo>,
     total: usize,
 }
 
-pub async fn handle_get_artist(body: web::Json<ArtistBody>) -> impl Responder {
-    // 分页
-    let mut current_page = 1;
-    let mut page_size = 10;
-    if let Some(page) = body.page {
-        current_page = page;
-    }
-    if let Some(page_size1) = body.page_size {
-        page_size = page_size1;
-    }
+pub async fn handle_get_artist(
+    app_data: web::Data<AppState>,
+    body: web::Json<ArtistBody>,
+) -> impl Responder {
+    // 获取艺术家列表
+    let artists = app_data.data_source.list_artists().await;
+    match artists {
+        Ok(mut list) => {
+            // 应用过滤
+            if let Some(filter_text) = &body.filter_text {
+                list.retain(|a| a.name.contains(filter_text));
+            }
 
-    let albums = service::artists();
-    if albums.is_err() {
-        return HttpResponse::InternalServerError().json(JsonResult::<()>::error(&format!(
-            "Error: {}",
-            albums.err().unwrap()
-        )));
-    }
-    let mut list = albums.unwrap();
-    if let Some(filter_text) = &body.filter_text {
-        list.retain(|a| a.name.contains(filter_text));
-    }
+            let total = list.len();
 
-    let total = list.len();
+            // 应用分页
+            let current_page = body.page.unwrap_or(1);
+            let page_size = body.page_size.unwrap_or(10);
+            let start = (current_page - 1) * page_size;
+            let end = (start + page_size).min(total);
+            let list = list.get(start..end).unwrap_or(&[]).to_vec();
 
-    let start = (current_page - 1) * page_size;
-    let end = start + page_size;
-    let end = end.min(total); // 防止超过总数
-    let list = list.get(start..end).unwrap_or(&[]).to_vec();
-    HttpResponse::Ok().json(JsonResult::success(ListArtistResponse { list, total }))
+            HttpResponse::Ok().json(JsonResult::success(ListArtistResponse { list, total }))
+        }
+        Err(e) => HttpResponse::InternalServerError()
+            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
+    }
 }
 
-pub async fn handle_get_artist_songs(artist_id: web::Path<i64>) -> impl Responder {
-    let songs = service::artist_songs(artist_id.into_inner());
-    if songs.is_err() {
-        return HttpResponse::InternalServerError().json(JsonResult::<()>::error(&format!(
-            "Error: {}",
-            songs.err().unwrap()
-        )));
+pub async fn handle_get_artist_songs(
+    artist_id: web::Path<String>,
+    app_data: web::Data<AppState>,
+) -> impl Responder {
+    let songs = app_data
+        .data_source
+        .get_artist_songs(&artist_id.into_inner())
+        .await;
+
+    match songs {
+        Ok(metadata_list) => {
+            let vo_list = unified_list_to_vo(metadata_list);
+            HttpResponse::Ok().json(JsonResult::success(vo_list))
+        }
+        Err(e) => HttpResponse::InternalServerError()
+            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
-    HttpResponse::Ok().json(JsonResult::success(songs.unwrap().into_vec()))
 }
 
-pub async fn handle_get_artist_by_id(id: web::Path<i64>) -> impl Responder {
-    if let Ok(Some(artist)) = service::artist_by_id(id.into_inner()) {
-        HttpResponse::Ok().json(JsonResult::success(artist))
-    } else {
-        HttpResponse::NotFound().json(JsonResult::<()>::error("Artist not found"))
+pub async fn handle_get_artist_by_id(
+    id: web::Path<String>,
+    app_data: web::Data<AppState>,
+) -> impl Responder {
+    let artist = app_data
+        .data_source
+        .get_artist_by_id(&id.into_inner())
+        .await;
+
+    match artist {
+        Ok(artist_info) => HttpResponse::Ok().json(JsonResult::success(artist_info)),
+        Err(_) => HttpResponse::NotFound().json(JsonResult::<()>::error("Artist not found")),
     }
 }
 
@@ -71,13 +83,18 @@ pub async fn handle_get_artist_by_id(id: web::Path<i64>) -> impl Responder {
 pub struct SetArtistCoverBody {
     pub cover: String,
 }
+
+/// 设置艺术家封面
+/// 注意: 此功能仅适用于本地数据源,Subsonic 数据源不支持修改封面
 pub async fn handle_set_artist_cover(
     id: web::Path<i64>,
     body: web::Json<SetArtistCoverBody>,
 ) -> impl Responder {
+    use lib_utils::database::service;
+
     let cover = body.cover.clone();
     // if cover.is_empty() {
-    //     return HttpResponse::BadRequest().json(JsonResult::<()>::error("图片不能为空，可以是链接或者base64编码字符串"));
+    //     return HttpResponse::BadRequest().json(JsonResult::<()>::error("图片不能为空,可以是链接或者base64编码字符串"));
     // }
     // 实现上传图片并保存到数据库
     if let Ok(size) = service::set_artist_cover(*id, &cover) {

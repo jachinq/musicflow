@@ -2,7 +2,7 @@
 // 将 Subsonic API 响应转换为统一的数据结构
 
 use crate::datasource::types::*;
-use super::client::{SubsonicSong, SubsonicAlbum, SubsonicArtist, SubsonicLyrics};
+use super::client::{SubsonicSong, SubsonicAlbum, SubsonicArtist, SubsonicArtistDetail, SubsonicLyrics};
 
 impl From<SubsonicSong> for UnifiedMetadata {
     fn from(song: SubsonicSong) -> Self {
@@ -48,6 +48,17 @@ impl From<SubsonicAlbum> for AlbumInfo {
 
 impl From<SubsonicArtist> for ArtistInfo {
     fn from(artist: SubsonicArtist) -> Self {
+        ArtistInfo {
+            id: artist.id.unwrap_or_default(),
+            name: artist.name.unwrap_or_default(),
+            album_count: artist.album_count.unwrap_or(0) as usize,
+            cover: artist.cover_art,
+        }
+    }
+}
+
+impl From<SubsonicArtistDetail> for ArtistInfo {
+    fn from(artist: SubsonicArtistDetail) -> Self {
         ArtistInfo {
             id: artist.id.unwrap_or_default(),
             name: artist.name.unwrap_or_default(),
