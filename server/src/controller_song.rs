@@ -320,3 +320,62 @@ async fn get_song_id_by_album_ids(ids: &Vec<i64>) -> Vec<String> {
     }
     song_ids
 }
+
+/// 查询参数结构
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RandomSongsQuery {
+    /// 返回的最大歌曲数量,默认 150,最大 500
+    pub size: Option<usize>,
+    /// 按流派筛选
+    pub genre: Option<String>,
+    /// 只返回此年份之后(含)发布的歌曲
+    #[serde(rename = "fromYear")]
+    pub from_year: Option<String>,
+    /// 只返回此年份之前(含)发布的歌曲
+    #[serde(rename = "toYear")]
+    pub to_year: Option<String>,
+    /// 按音乐文件夹筛选(暂不支持)
+    #[serde(rename = "musicFolderId")]
+    pub music_folder_id: Option<String>,
+}
+
+/// 获取随机歌曲
+///
+/// 路由: GET /api/random_songs
+///
+/// 查询参数:
+/// - size: 返回的最大歌曲数量,默认 150,最大 500
+/// - genre: 按流派筛选
+/// - fromYear: 只返回此年份之后(含)发布的歌曲
+/// - toYear: 只返回此年份之前(含)发布的歌曲
+///
+/// 返回: 随机歌曲列表
+pub async fn handle_get_random_songs(
+    query: web::Query<RandomSongsQuery>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    // 使用 DataSource 获取随机歌曲(支持本地数据库和 Subsonic 服务器)
+    let result = app_state
+        .data_source
+        .get_random_songs(
+            query.size,
+            query.genre.as_deref(),
+            query.from_year.as_deref(),
+            query.to_year.as_deref(),
+        )
+        .await;
+
+    match result {
+        Ok(metadata_list) => {
+            let total = metadata_list.len() as u32;
+            // 转换为 VO
+            let list = adapters::unified_list_to_vo(metadata_list);
+            HttpResponse::Ok().json(JsonResult::success(ListMusic { list, total }))
+        }
+        Err(e) => {
+            log_err(&format!("get_random_songs error: {}", e));
+            HttpResponse::InternalServerError()
+                .json(JsonResult::<ListMusic>::error(&e.to_string()))
+        }
+    }
+}

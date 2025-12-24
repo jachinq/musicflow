@@ -195,6 +195,71 @@ pub fn get_metadata_list() -> Result<Vec<Metadata>> {
     Ok(list)
 }
 
+/// 获取随机歌曲
+///
+/// # 参数
+/// - `size`: 返回的最大歌曲数量,默认 150,最大 500
+/// - `genre`: 可选,按流派筛选
+/// - `from_year`: 可选,只返回此年份之后(含)发布的歌曲
+/// - `to_year`: 可选,只返回此年份之前(含)发布的歌曲
+/// - `music_folder_id`: 可选,按音乐文件夹筛选(暂不支持)
+pub fn get_random_songs(
+    size: Option<usize>,
+    genre: Option<&str>,
+    from_year: Option<&str>,
+    to_year: Option<&str>,
+) -> Result<Vec<Metadata>> {
+    let conn = connect_db()?;
+
+    // 限制 size 在合理范围内
+    let limit = size.unwrap_or(150).min(500);
+
+    // 构建 SQL 查询
+    let mut sql = String::from("SELECT * FROM metadata WHERE 1=1");
+    let mut params: Vec<String> = Vec::new();
+
+    // 添加流派筛选
+    if let Some(g) = genre {
+        if !g.is_empty() {
+            sql.push_str(" AND genre = ?");
+            params.push(g.to_string());
+        }
+    }
+
+    // 添加年份筛选
+    if let Some(fy) = from_year {
+        if !fy.is_empty() {
+            sql.push_str(" AND CAST(year AS INTEGER) >= ?");
+            params.push(fy.to_string());
+        }
+    }
+
+    if let Some(ty) = to_year {
+        if !ty.is_empty() {
+            sql.push_str(" AND CAST(year AS INTEGER) <= ?");
+            params.push(ty.to_string());
+        }
+    }
+
+    // 添加随机排序和限制
+    sql.push_str(" ORDER BY RANDOM() LIMIT ?");
+    params.push(limit.to_string());
+
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(params_from_iter(&params), |row| covert_row_to_metadata(row))?;
+
+    let mut list = Vec::new();
+    for metadata in rows {
+        if let Ok(metadata) = metadata {
+            list.push(metadata);
+        } else {
+            println!("get_random_songs Error: {}", metadata.unwrap_err());
+        }
+    }
+
+    Ok(list)
+}
+
 pub fn get_metadata_by_title_artist(title: &str, artist: &str) -> Result<Option<Metadata>> {
     let conn = connect_db()?;
     let mut stmt = conn.prepare("SELECT * FROM metadata WHERE title = ? AND artist = ?")?;

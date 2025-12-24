@@ -292,6 +292,31 @@ impl MusicDataSource for SubsonicDataSource {
         Ok(metadata_list)
     }
 
+    async fn get_random_songs(
+        &self,
+        size: Option<usize>,
+        genre: Option<&str>,
+        from_year: Option<&str>,
+        to_year: Option<&str>,
+    ) -> Result<Vec<UnifiedMetadata>> {
+        let songs = self
+            .client
+            .get_random_songs(size, genre, from_year, to_year)
+            .await?;
+        let mut metadata_list: Vec<UnifiedMetadata> = songs.into_iter().map(|s| s.into()).collect();
+
+        // 为每个歌曲设置流式 URL
+        for meta in &mut metadata_list {
+            meta.stream_url = Some(self.client.get_stream_url(
+                &meta.id,
+                self.max_bitrate,
+                &self.prefer_format,
+            ));
+        }
+
+        Ok(metadata_list)
+    }
+
     async fn search(&self, query: &str, pagination: Pagination) -> Result<SearchResult> {
         let result = self
             .client

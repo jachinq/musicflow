@@ -334,6 +334,23 @@ impl MusicDataSource for LocalDataSource {
         Ok(filtered_metadatas)
     }
 
+    async fn get_random_songs(
+        &self,
+        size: Option<usize>,
+        genre: Option<&str>,
+        from_year: Option<&str>,
+        to_year: Option<&str>,
+    ) -> Result<Vec<UnifiedMetadata>> {
+        // 调用数据库层的 get_random_songs
+        let metadata_list = service::get_random_songs(size, genre, from_year, to_year)?;
+
+        // 转换为 UnifiedMetadata
+        Ok(metadata_list
+            .into_iter()
+            .map(|m| self.convert_metadata(m))
+            .collect())
+    }
+
     async fn search(&self, query: &str, pagination: Pagination) -> Result<SearchResult> {
         // 简单的搜索实现:使用 list_metadata 的关键字过滤
         let songs = self

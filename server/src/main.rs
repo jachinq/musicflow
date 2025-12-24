@@ -48,7 +48,7 @@ struct AppState {
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     // 初始化日志记录
-    std::env::set_var("RUST_LOG", "debug");
+    std::env::set_var("RUST_LOG", "info");
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
     // 初始化数据库
@@ -97,6 +97,7 @@ async fn main() -> io::Result<()> {
             // 歌曲相关接口
             .route("/api/list", web::post().to(handle_get_metadatas))
             .route("/api/single/{song_id}", web::get().to(handle_get_metadata))
+            .route("/api/random_songs", web::get().to(handle_get_random_songs))
             .route("/api/cover/small/{song_id}", web::get().to(get_cover_small))
             .route(
                 "/api/cover/medium/{song_id}",
@@ -118,6 +119,7 @@ async fn main() -> io::Result<()> {
                 "/api/delete_song_genre/{song_id}/{genre}",
                 web::delete().to(handle_delete_song_genre),
             )
+            .route("/api/songs_by_genre/{genre}", web::get().to(handle_get_songs_by_genre))
             // 歌单相关接口
             .route("/api/songlist", web::get().to(handle_song_list))
             .route(

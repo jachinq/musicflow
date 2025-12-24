@@ -128,6 +128,24 @@ pub trait MusicDataSource: Send + Sync {
     /// * `Ok(Vec<UnifiedMetadata>)` - 风格的歌曲列表
     async fn get_genre_songs(&self, genre: &str) -> Result<Vec<UnifiedMetadata>>;
 
+    /// 获取随机歌曲
+    ///
+    /// # 参数
+    /// * `size` - 返回的最大歌曲数量,默认 150,最大 500
+    /// * `genre` - 可选,按流派筛选
+    /// * `from_year` - 可选,只返回此年份之后(含)发布的歌曲
+    /// * `to_year` - 可选,只返回此年份之前(含)发布的歌曲
+    ///
+    /// # 返回
+    /// * `Ok(Vec<UnifiedMetadata>)` - 随机歌曲列表
+    async fn get_random_songs(
+        &self,
+        size: Option<usize>,
+        genre: Option<&str>,
+        from_year: Option<&str>,
+        to_year: Option<&str>,
+    ) -> Result<Vec<UnifiedMetadata>>;
+
     /// 搜索音乐
     ///
     /// # 参数

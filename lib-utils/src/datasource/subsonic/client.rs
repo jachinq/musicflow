@@ -225,6 +225,50 @@ impl SubsonicClient {
         Ok(response.subsonic_response.lyrics)
     }
 
+    /// 获取随机歌曲
+    ///
+    /// # 参数
+    /// * `size` - 返回的最大歌曲数量,默认 10,最大 500
+    /// * `genre` - 可选,按流派筛选
+    /// * `from_year` - 可选,只返回此年份之后(含)发布的歌曲
+    /// * `to_year` - 可选,只返回此年份之前(含)发布的歌曲
+    pub async fn get_random_songs(
+        &self,
+        size: Option<usize>,
+        genre: Option<&str>,
+        from_year: Option<&str>,
+        to_year: Option<&str>,
+    ) -> Result<Vec<SubsonicSong>> {
+        let mut params = vec![("size", size.unwrap_or(10).min(500).to_string())];
+
+        if let Some(g) = genre {
+            if !g.is_empty() {
+                params.push(("genre", g.to_string()));
+            }
+        }
+
+        if let Some(fy) = from_year {
+            if !fy.is_empty() {
+                params.push(("fromYear", fy.to_string()));
+            }
+        }
+
+        if let Some(ty) = to_year {
+            if !ty.is_empty() {
+                params.push(("toYear", ty.to_string()));
+            }
+        }
+
+        let response: SubsonicResponse<RandomSongsWrapper> =
+            self.get("rest/getRandomSongs", params).await?;
+
+        Ok(response
+            .subsonic_response
+            .random_songs
+            .and_then(|rs| rs.song)
+            .unwrap_or_default())
+    }
+
     /// 构建流式URL
     pub fn get_stream_url(&self, id: &str, max_bitrate: u32, format: &str) -> String {
         let mut params = self.auth.get_auth_params();
@@ -555,6 +599,23 @@ struct LyricsWrapper {
     base: BaseResponse,
     lyrics: Option<SubsonicLyrics>,
 }
+
+/// 随机歌曲响应
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+#[serde(rename_all = "camelCase")]
+struct RandomSongsWrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    random_songs: Option<RandomSongs>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct RandomSongs {
+    song: Option<Vec<SubsonicSong>>,
+}
+
 
 // 自定义反序列化函数，同时支持 String 和 u32 类型的 year 字段
 fn deserialize_year<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
