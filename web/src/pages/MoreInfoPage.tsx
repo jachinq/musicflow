@@ -121,28 +121,37 @@ export const MoreInfoPage = () => {
 
 const GenreList = () => {
   const [genres, setGenres] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     getGenreList(
       (result) => {
+        setLoading(false);
         if (!result || !result.data || result.data.length === 0) {
-          console.log("No genres found");
+          toast.error("No genres found");
           return;
         }
         // console.log(result.data);
         setGenres(result.data);
       },
       (error) => {
+        setLoading(false);
         console.error(error);
+        toast.error(error.message);
       }
     );
   }, []);
   return (
-    <div className="flex flex-wrap gap-4">
-      {genres.map((genre) => (
-        <GenreElement key={genre} genre={genre} />
-      ))}
-    </div>
+    <>
+      {loading ? <div className="flex flex-col gap-2 justify-center items-center w-full">Loading...</div> :
+        <div className="flex flex-wrap gap-4">
+          {genres.map((genre) => (
+            <GenreElement key={genre} genre={genre} />
+          ))}
+        </div>
+      }
+    </>
   );
 };
 

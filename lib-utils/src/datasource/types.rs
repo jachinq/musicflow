@@ -238,3 +238,23 @@ impl Default for LyricLine {
         }
     }
 }
+
+impl UnifiedMetadata {
+    /// 分割 genre 字符串为列表
+    /// 本地模式使用逗号分隔,Subsonic 也使用逗号分隔
+    pub fn split_genre(&self) -> Vec<String> {
+        split_genre(&self.genre)
+    }
+}
+
+/// 分割 genre 字符串(逗号分隔)
+pub fn split_genre(genre: &str) -> Vec<String> {
+    let mut list = Vec::new();
+    for split in genre.split(',') {
+        let word = split.trim().to_string();
+        if !word.is_empty() {
+            list.push(word);
+        }
+    }
+    list
+}
