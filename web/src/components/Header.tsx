@@ -66,7 +66,7 @@ export const Header = () => {
           <Link to="/playlist" className="navigation">
             <Music2Icon />
           </Link>
-          <Link to="/genres" className="navigation">
+          <Link to="/albums" className="navigation">
             <TagIcon />
           </Link>
           <Link to="/settings" className="navigation">
