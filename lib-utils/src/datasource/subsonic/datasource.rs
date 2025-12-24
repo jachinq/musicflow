@@ -84,7 +84,10 @@ impl MusicDataSource for SubsonicDataSource {
         let pagination = Pagination::new(filter.page.unwrap_or(1), filter.page_size.unwrap_or(30));
 
         // 如果有关键字,使用搜索
-        let search_result = self.client.search3(&keyword, pagination.start(), pagination.page_size).await?;
+        let search_result = self
+            .client
+            .search3(&keyword, pagination.start(), pagination.page_size)
+            .await?;
         let songs = search_result.song.unwrap_or_default();
 
         let mut metadata_list: Vec<UnifiedMetadata> = songs.into_iter().map(|s| s.into()).collect();
@@ -238,7 +241,10 @@ impl MusicDataSource for SubsonicDataSource {
     async fn get_artist_songs(&self, artist_id: &str) -> Result<Vec<UnifiedMetadata>> {
         let artist_detail = self.client.get_artist(artist_id).await?;
 
-        let top_songs = self.client.get_top_songs(&artist_detail.name.unwrap_or_default()).await?;
+        let top_songs = self
+            .client
+            .get_top_songs(&artist_detail.name.unwrap_or_default())
+            .await?;
 
         let mut metadata_list: Vec<UnifiedMetadata> =
             top_songs.into_iter().map(|s| s.into()).collect();
@@ -255,8 +261,42 @@ impl MusicDataSource for SubsonicDataSource {
         Ok(metadata_list)
     }
 
+    async fn list_genres(&self) -> Result<Vec<GenreInfo>> {
+        let artist_detail = self.client.get_genres().await?;
+        let genres: Vec<GenreInfo> = artist_detail
+            .into_iter()
+            .map(|g| GenreInfo {
+                value: g.value.unwrap_or_default(),
+                album_count: g.album_count.unwrap_or(0) as usize,
+                song_count: g.song_count.unwrap_or(0) as usize,
+            })
+            .collect();
+
+        Ok(genres)
+    }
+
+    async fn get_genre_songs(&self, genre: &str) -> Result<Vec<UnifiedMetadata>> {
+        let songs = self.client.get_genre_songs(genre).await?;
+        let mut metadata_list: Vec<UnifiedMetadata> =
+            songs.into_iter().map(|s| s.into()).collect();
+
+        // 为每个歌曲设置流式 URL
+        for meta in &mut metadata_list {
+            meta.stream_url = Some(self.client.get_stream_url(
+                &meta.id,
+                self.max_bitrate,
+                &self.prefer_format,
+            ));
+        }
+
+        Ok(metadata_list)
+    }
+
     async fn search(&self, query: &str, pagination: Pagination) -> Result<SearchResult> {
-        let result = self.client.search3(query, pagination.start(), pagination.page_size).await?;
+        let result = self
+            .client
+            .search3(query, pagination.start(), pagination.page_size)
+            .await?;
 
         let songs: Vec<UnifiedMetadata> = result
             .song

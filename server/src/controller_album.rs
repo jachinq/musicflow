@@ -21,7 +21,6 @@ pub async fn handle_get_album(app_data: web::Data<AppState>, albums_body: web::J
 
     let pagination = Pagination::new(albums_body.page.unwrap_or(1), albums_body.page_size.unwrap_or(30));
     let filter_text = albums_body.filter_text.clone();
-    println!("{:?} {:?}", pagination, filter_text);
     let albums = app_data.data_source.list_albums(pagination, filter_text).await;
     match albums {
         Ok(list) => {

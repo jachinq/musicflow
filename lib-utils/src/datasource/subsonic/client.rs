@@ -140,7 +140,6 @@ impl SubsonicClient {
         let response: SubsonicResponse<TopSongsWrapper> =
             self.get("rest/getTopSongs", params).await?;
 
-        println!("{} {:?}", artist_name, response);
         response
             .subsonic_response
             .top_songs
@@ -149,6 +148,30 @@ impl SubsonicClient {
             .ok_or_else(|| anyhow::anyhow!("top songs not found: {}", artist_name))
     }
 
+    /// 获取风格列表
+    pub async fn get_genres(&self) -> Result<Vec<Genre>> {
+        let response: SubsonicResponse<GenreWrapper> = self.get("rest/getGenres", vec![]).await?;
+
+        Ok(response
+            .subsonic_response
+            .genres
+            .unwrap_or(GenreList {
+                genre: Some(vec![]),
+            })
+            .genre
+            .unwrap_or_default())
+    }
+
+    /// 获取风格歌曲列表
+    pub async fn get_genre_songs(&self, genre: &str) -> Result<Vec<SubsonicSong>> {
+        let params = vec![("genre", genre.to_string())];
+        let response: SubsonicResponse<SongsByGenreWrapper> =
+            self.get("rest/getSongsByGenre", params).await?;
+
+        response
+            .subsonic_response
+            .songs_by_genre.song.ok_or_else(|| anyhow::anyhow!("genre songs not found: {}", genre))
+    }
     /// 搜索
     pub async fn search3(
         &self,
@@ -258,12 +281,12 @@ impl SubsonicClient {
             // println!("{}?{}", url, params.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>().join("&"));
 
             // println!("{:?}", self
-        //     .client
-        //     .get(&url)
-        //     .query(&params)
-        //     .send()
-        //     .await
-        //     .context("Failed to send request to Subsonic server")?.text().await);
+            //     .client
+            //     .get(&url)
+            //     .query(&params)
+            //     .send()
+            //     .await
+            //     .context("Failed to send request to Subsonic server")?.text().await);
         }
         match response {
             Ok(json) => Ok(json),
@@ -467,6 +490,36 @@ struct Artists {
 struct ArtistIndex {
     artist: Vec<SubsonicArtist>,
 }
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct GenreWrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    pub genres: Option<GenreList>,
+}
+#[derive(Debug, Deserialize)]
+struct GenreList {
+    pub genre: Option<Vec<Genre>>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Genre {
+    pub value: Option<String>,
+    pub album_count: Option<u32>,
+    pub song_count: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SongsByGenreWrapper {
+    pub songs_by_genre: SongsByGenre,
+}
+#[derive(Debug, Deserialize)]
+pub struct SongsByGenre {
+    pub song: Option<Vec<SubsonicSong>>,
+}
+
 
 /// 搜索结果
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

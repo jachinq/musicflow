@@ -1,4 +1,4 @@
-import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getAlbumById,
   getAlbumList,
@@ -9,10 +9,10 @@ import {
   getCoverMediumUrl,
   getCoverSmallUrl,
   getGenreList,
+  getSongsByGenre,
   setArtistCover,
 } from "../lib/api";
-import { Album, Artist, Music, MyRoutes } from "../lib/defined";
-import { GenreElement } from "../components/Genre";
+import { Album, Artist, Genre, JsonResult, Music, MyRoutes } from "../lib/defined";
 import { toast } from "sonner";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Input } from "../components/Input";
@@ -21,6 +21,7 @@ import { create } from "zustand";
 import { Option, OptionGroup } from "../components/Option";
 import {
   AlbumIcon,
+  Loader,
   PlayIcon,
   SearchIcon,
   TagIcon,
@@ -84,6 +85,8 @@ export const MoreInfoPage = () => {
       setType(DrawerType.ARTIST);
     } else if (parseTabId === "albums") {
       setType(DrawerType.ALBUM);
+    } else if (parseTabId === "genres") {
+      setType(DrawerType.GENRE);
     }
     setTabId(parseTabId);
     setShowDrawer(false);
@@ -112,53 +115,18 @@ export const MoreInfoPage = () => {
           风格
         </Option>
       </OptionGroup>
-      {tabId == "genres" && <GenreList />}
+      {tabId == "genres" && <WithDrawerList type={DrawerType.GENRE} />}
       {tabId == "albums" && <WithDrawerList type={DrawerType.ALBUM} />}
       {tabId == "artists" && <WithDrawerList type={DrawerType.ARTIST} />}
     </div>
   );
 };
 
-const GenreList = () => {
-  const [genres, setGenres] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    getGenreList(
-      (result) => {
-        setLoading(false);
-        if (!result || !result.data || result.data.length === 0) {
-          toast.error("No genres found");
-          return;
-        }
-        // console.log(result.data);
-        setGenres(result.data);
-      },
-      (error) => {
-        setLoading(false);
-        console.error(error);
-        toast.error(error.message);
-      }
-    );
-  }, []);
-  return (
-    <>
-      {loading ? <div className="flex flex-col gap-2 justify-center items-center w-full">Loading...</div> :
-        <div className="flex flex-wrap gap-4">
-          {genres.map((genre) => (
-            <GenreElement key={genre} genre={genre} />
-          ))}
-        </div>
-      }
-    </>
-  );
-};
-
-type WithDrawerItem = Album | Artist;
+type WithDrawerItem = Album | Artist | Genre;
 enum DrawerType {
   ALBUM = "专辑",
   ARTIST = "歌手",
+  GENRE = "风格",
 }
 const WithDrawerList = ({ type }: { type: DrawerType }) => {
   // const navigate = useNavigate();
@@ -182,19 +150,32 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
       setLoading(true);
     }
 
-    const fetchFunc = type === DrawerType.ALBUM ? getAlbumList : getArtistList;
+    let fetchFunc = undefined;
+    switch (type) {
+      case DrawerType.ALBUM:
+        fetchFunc = getAlbumList;
+        break;
+      case DrawerType.ARTIST:
+        fetchFunc = getArtistList;
+        break;
+      case DrawerType.GENRE:
+        fetchFunc = getGenreList;
+        break;
+      default:
+        return;
+    }
     fetchFunc(
       page,
       pageSize,
       filterText,
       (result) => {
         if (result && result.success) {
-          const newData = result.data.list;
+          const newData = result.data.list || [];
 
           if (append) {
             setItems((prevItems) => {
               // 根据id去重
-              const newList = newData.filter((item) =>
+              const newList = newData.filter((item: WithDrawerItem) =>
                 !prevItems.some((oldItem) => oldItem.id === item.id)
               );
               return [...prevItems, ...newList]
@@ -205,7 +186,7 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
           }
 
           // 如果返回的数据少于请求的页大小，说明没有更多数据了
-          if (newData.length < pageSize) {
+          if (newData.length != pageSize) {
             setHasMore(false);
           } else {
             setHasMore(true);
@@ -256,7 +237,7 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
   }, [startSearch, fetchItems]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <Loader className="animate-spin" size={32} />
   }
   if (error) {
     return <div>Error: {error}</div>;
@@ -294,22 +275,27 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
                 // navigate(`/${tabId}/${item.id}`);
               }}
             />
-            <div className="w-[100px] overflow-hidden text-center">
-              <span className="text-sm overflow-hidden text-ellipsis whitespace-nowrap">
-                {item.name}
-              </span>
-            </div>
+            {
+              type !== DrawerType.GENRE &&
+              <div className="w-[100px] overflow-hidden text-center">
+                <span className="text-sm overflow-hidden text-ellipsis whitespace-nowrap">
+                  {item.name}
+                </span>
+              </div>
+            }
           </div>
         ))}
       </div>
-      {isLoadingMore && (
-        <div className="text-center py-4 text-muted-foreground">
-          加载中...
-        </div>
-      )}
+      {isLoadingMore && <Loader className="animate-spin" size={32} />}
+
       {!hasMore && items.length > 0 && (
         <div className="text-center py-4 text-muted-foreground">
           已加载全部 {items.length} 项
+        </div>
+      )}
+      {items.length === 0 && !loading && !error && (
+        <div>
+          暂无数据
         </div>
       )}
       <DetaialDrawer />
@@ -329,9 +315,9 @@ const CoverItem = ({
   onSelect,
   type = DrawerType.ARTIST,
 }: {
-  item: Artist | Album;
+  item: WithDrawerItem;
   type?: DrawerType;
-  onSelect?: (item: Artist | Album) => void;
+  onSelect?: (item: WithDrawerItem) => void;
 }) => {
   const { isSmallDevice } = useDevice();
   const cutSize = isSmallDevice ? 4 : 8;
@@ -366,7 +352,7 @@ const CoverItem = ({
   };
   const fallback = () => (
     <div className="group-hover:text-primary-hover">
-      {item.name.slice(0, Math.min(item.name.length, cutSize))}
+      {item.name?.length == 0 ? "空" : item.name.slice(0, Math.min(item.name.length, cutSize))}
     </div>
   );
   return (
@@ -374,7 +360,7 @@ const CoverItem = ({
       <Cover
         src={getSrc()}
         alt={item.name}
-        roundType={type === DrawerType.ALBUM ? "round" : "circle"}
+        roundType={type === DrawerType.ARTIST ? "circle" : "round"}
         fallback={fallback()}
         size={iconSize}
       />
@@ -388,7 +374,8 @@ const DetaialDrawer = () => {
   const { online_engine } = useSettingStore();
   const { playSingleSong } = usePlaylist();
   const [musicList, setMusicList] = useState<Music[]>([]);
-  const [serchId, setSerchId] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [serchId, setSerchId] = useState<string | null>(null);
   const { id } = useParams();
   const [statistic, setStatistic] = useState<{
     total: number;
@@ -399,17 +386,38 @@ const DetaialDrawer = () => {
     if (!id) return;
     const num_id = parseInt(id);
     if (isNaN(num_id)) return;
-    setSerchId(num_id);
+    setSerchId(num_id.toString());
   }, [id]);
   useEffect(() => {
     if (!selectedItem) return;
-    if (selectedItem.id === serchId) return;
-    setSerchId(selectedItem.id);
+    if (selectedItem.id.toString() === serchId) return;
+    setSerchId(selectedItem.id.toString());
+    if (type === DrawerType.GENRE) {
+      setSerchId(selectedItem.name);
+    }
   }, [selectedItem]);
 
   useEffect(() => {
     if (!serchId) return;
-    const fetchFunc = type === DrawerType.ALBUM ? getAlbumById : getArtistById;
+    let fetchFunc;
+    let fetchSongs;
+    switch (type) {
+      case DrawerType.ALBUM:
+        fetchFunc = getAlbumById;
+        fetchSongs = getAlbumSongs;
+        break;
+      case DrawerType.ARTIST:
+        fetchFunc = getArtistById;
+        fetchSongs = getArtistSongs;
+        break;
+      case DrawerType.GENRE:
+        fetchFunc = () => ({ success: true, message: "", data: { id: serchId, name: "未知" } });
+        fetchSongs = getSongsByGenre;
+        break;
+      default:
+        return;
+    }
+
     fetchFunc(
       serchId,
       (result) => {
@@ -428,11 +436,12 @@ const DetaialDrawer = () => {
       }
     );
 
-    const fetchSongs =
-      type === DrawerType.ALBUM ? getAlbumSongs : getArtistSongs;
+    setMusicList([]);
+    setLoading(true);
     fetchSongs(
       serchId,
-      (result) => {
+      (result: JsonResult<Music[]>) => {
+        setLoading(false);
         if (result && result.success) {
           setMusicList(result.data);
         } else {
@@ -442,6 +451,7 @@ const DetaialDrawer = () => {
         }
       },
       (error) => {
+        setLoading(false);
         console.error(error);
         toast.error(error.message);
       }
@@ -557,6 +567,8 @@ const DetaialDrawer = () => {
             <span>播放全部</span>
           </div>
           <div>
+            {loading && <Loader className="animate-spin" size={32} />}
+
             {musicList.map((item, index) => (
               <div
                 key={item.id}
@@ -591,6 +603,11 @@ const DetaialDrawer = () => {
                 </span>
               </div>
             ))}
+
+            {musicList.length === 0 && !loading &&
+              <div className="text-center py-4 text-muted-foreground">
+                暂无歌曲
+              </div>}
           </div>
         </div>
       </div>

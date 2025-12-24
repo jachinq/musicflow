@@ -123,3 +123,9 @@ export interface Artist {
     description: string;
     year?: number;
 }
+export interface Genre {
+    id: number;
+    name: string;
+    cover_art: string;
+    year?: number;
+}

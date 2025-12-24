@@ -223,6 +223,14 @@ pub struct ArtistInfo {
     pub cover_art: Option<String>,
 }
 
+/// 风格信息
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GenreInfo {
+    pub value: String,
+    pub album_count: usize,
+    pub song_count: usize,
+}
+
 /// 歌词行
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LyricLine {

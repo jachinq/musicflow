@@ -129,6 +129,9 @@ export const sendLogToServer = (
  * @param onError 失败回调
  */
 export const getGenreList = (
+  _currentPage: number,
+  _pageSize: number,
+  _filterText: String,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
@@ -174,6 +177,21 @@ export const removeGenreFromSong = (
   fetchUtils(url, onSuccess, onError, {
     method: "DELETE",
   });
+};
+
+/**
+ * 根据风格获取歌曲列表
+ * @param genre 风格名称
+ * @param onSuccess 成功回调
+ * @param onError 失败回调
+ */
+export const getSongsByGenre = (
+  genre: string,
+  onSuccess: (data: JsonResult<Music[]>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/songs_by_genre/${encodeURIComponent(genre)}`;
+  fetchUtils(url, onSuccess, onError);
 };
 
 // ----- 播放列表相关接口 -----//
@@ -325,7 +343,7 @@ export const getAlbumList = (
   });
 };
 export const getAlbumById = (
-  id: number,
+  id: string,
   onSuccess: (data: JsonResult<Album>) => void,
   onError: (error: any) => void
 ) => {
@@ -335,7 +353,7 @@ export const getAlbumById = (
   });
 };
 export const getAlbumSongs = (
-  id: number,
+  id: string,
   onSuccess: (data: JsonResult<Music[]>) => void,
   onError: (error: any) => void
 ) => {
@@ -362,7 +380,7 @@ export const getArtistList = (
   });
 };
 export const getArtistById = (
-  id: number,
+  id: string,
   onSuccess: (data: JsonResult<Artist>) => void,
   onError: (error: any) => void
 ) => {
@@ -372,7 +390,7 @@ export const getArtistById = (
   });
 };
 export const getArtistSongs = (
-  id: number,
+  id: string,
   onSuccess: (data: JsonResult<Music[]>) => void,
   onError: (error: any) => void
 ) => {

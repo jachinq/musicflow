@@ -114,6 +114,20 @@ pub trait MusicDataSource: Send + Sync {
     /// * `Ok(Vec<UnifiedMetadata>)` - 艺术家的歌曲列表
     async fn get_artist_songs(&self, artist_id: &str) -> Result<Vec<UnifiedMetadata>>;
 
+    /// 获取风格列表
+    /// # 返回
+    /// * `Ok(Vec<String>)` - 风格列表
+    async fn list_genres(&self) -> Result<Vec<GenreInfo>>;
+    
+    /// 获取风格的歌曲列表
+    ///
+    /// # 参数
+    /// * `genre` - 风格名称
+    ///
+    /// # 返回
+    /// * `Ok(Vec<UnifiedMetadata>)` - 风格的歌曲列表
+    async fn get_genre_songs(&self, genre: &str) -> Result<Vec<UnifiedMetadata>>;
+
     /// 搜索音乐
     ///
     /// # 参数

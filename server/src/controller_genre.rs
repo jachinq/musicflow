@@ -1,48 +1,31 @@
-use std::collections::HashSet;
-
 use actix_web::{web, HttpResponse, Responder};
 use lib_utils::database::service;
-use lib_utils::datasource::types::MetadataFilter;
 use serde::{Deserialize, Serialize};
 
 use crate::{AppState, JsonResult, MetadataVo};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Genre {
-    id: i64,
+    id: String,
     name: String,
+}
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GenreList {
+    list: Vec<Genre>,
 }
 
 pub async fn handle_get_genres(app_state: web::Data<AppState>) -> impl Responder {
-    // 使用数据源获取所有元数据(不分页,获取全部)
-    let filter = MetadataFilter {
-        page: Some(1),
-        page_size: Some(100000), // 获取所有
-        ..Default::default()
-    };
-
-    let metadatas = app_state.data_source.list_metadata(filter).await;
-    if metadatas.is_err() {
+    let genres = app_state.data_source.list_genres().await;
+    if genres.is_err() {
         return HttpResponse::Ok().json(JsonResult::<()>::error("获取歌曲风格失败"));
     }
-
-    let metadatas = metadatas.unwrap();
-    let mut genres = Vec::new();
-    metadatas.iter().for_each(|m| {
-        m.split_genre()
-            .iter()
-            .for_each(|g| genres.push(g.to_string()));
-    });
-
-    let mut set = HashSet::new();
-    genres.iter().for_each(|g| {
-        set.insert(g);
-    });
-    let mut genres = set.iter().map(|n| n.to_string()).collect::<Vec<_>>();
-    // 排序
-    genres.sort();
-
-    HttpResponse::Ok().json(JsonResult::success(genres))
+    let genres = genres.unwrap();
+    let genres= genres.iter().map(|g| Genre {
+        id: g.value.to_string(),
+        name: g.value.to_string()
+    }).collect::<Vec<_>>();
+  
+    HttpResponse::Ok().json(JsonResult::success(GenreList { list: genres }))
 }
 
 pub async fn handle_get_song_genres(
@@ -152,4 +135,23 @@ pub async fn handle_delete_song_genre(
     } else {
         return HttpResponse::Ok().json(JsonResult::<MetadataVo>::error("风格删除失败"));
     }
+}
+
+/// 根据风格获取歌曲列表
+pub async fn handle_get_songs_by_genre(
+    genre: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    use crate::adapters;
+
+   let songs = app_state.data_source.get_genre_songs(&genre).await;
+    if songs.is_err() {
+        return HttpResponse::Ok().json(JsonResult::<()>::error("获取歌曲失败"));
+    }
+    let songs = songs.unwrap();
+
+    // 转换为 VO
+    let list = adapters::unified_list_to_vo(songs);
+
+    HttpResponse::Ok().json(JsonResult::success(list))
 }

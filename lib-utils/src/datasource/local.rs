@@ -4,6 +4,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine};
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use crate::database;
@@ -158,14 +159,21 @@ impl MusicDataSource for LocalDataSource {
         })
     }
 
-    async fn list_albums(&self, pagination: Pagination, filter_text: Option<String>) -> Result<Vec<AlbumInfo>> {
+    async fn list_albums(
+        &self,
+        pagination: Pagination,
+        filter_text: Option<String>,
+    ) -> Result<Vec<AlbumInfo>> {
         let mut albums = service::get_album_list()?;
         if filter_text.is_some() {
             let filter_text_lower = filter_text.as_ref().unwrap().to_lowercase();
-            albums = albums.into_iter().filter(|a| {
-                a.name.to_lowercase().contains(&filter_text_lower)
-                    || a.artist.to_lowercase().contains(&filter_text_lower)
-            }).collect();
+            albums = albums
+                .into_iter()
+                .filter(|a| {
+                    a.name.to_lowercase().contains(&filter_text_lower)
+                        || a.artist.to_lowercase().contains(&filter_text_lower)
+                })
+                .collect();
         }
 
         // 分页
@@ -216,7 +224,10 @@ impl MusicDataSource for LocalDataSource {
 
         let songs = service::album_songs(id)?;
 
-        Ok(songs.into_iter().map(|s| self.convert_metadata(s)).collect())
+        Ok(songs
+            .into_iter()
+            .map(|s| self.convert_metadata(s))
+            .collect())
     }
 
     async fn list_artists(&self) -> Result<Vec<ArtistInfo>> {
@@ -264,7 +275,63 @@ impl MusicDataSource for LocalDataSource {
 
         let songs = service::artist_songs(id)?;
 
-        Ok(songs.into_iter().map(|s| self.convert_metadata(s)).collect())
+        Ok(songs
+            .into_iter()
+            .map(|s| self.convert_metadata(s))
+            .collect())
+    }
+
+    async fn list_genres(&self) -> Result<Vec<GenreInfo>> {
+        let metadatas = service::get_metadata_list()?;
+        if metadatas.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut genres = Vec::new();
+        metadatas.iter().for_each(|m| {
+            m.split_genre()
+                .iter()
+                .for_each(|g| genres.push(g.to_string()));
+        });
+
+        let mut set = HashSet::new();
+        genres.iter().for_each(|g| {
+            set.insert(g);
+        });
+        let mut genres = set
+            .iter()
+            .map(|n| GenreInfo {
+                value: n.to_string(),
+                album_count: 0,
+                song_count: 0,
+            })
+            .collect::<Vec<_>>();
+        // 排序
+        genres.sort_by(|a, b| a.value.cmp(&b.value));
+        return Ok(genres);
+    }
+
+    async fn get_genre_songs(&self, genre: &str) -> Result<Vec<UnifiedMetadata>> {
+        // 使用数据源获取所有元数据(不分页,获取全部)
+        let filter = MetadataFilter {
+            page: Some(1),
+            page_size: Some(100000), // 获取所有
+            ..Default::default()
+        };
+
+        let metadatas = self.list_metadata(filter).await?;
+        let genre_name = genre.to_string();
+
+        // 筛选包含指定风格的歌曲
+        let filtered_metadatas: Vec<_> = metadatas
+            .into_iter()
+            .filter(|m| {
+                let genres = m.split_genre();
+                genres.contains(&genre_name)
+            })
+            .collect();
+
+        Ok(filtered_metadatas)
     }
 
     async fn search(&self, query: &str, pagination: Pagination) -> Result<SearchResult> {
