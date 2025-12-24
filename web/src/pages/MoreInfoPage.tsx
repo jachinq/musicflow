@@ -398,7 +398,10 @@ const DetaialDrawer = () => {
   }, [selectedItem]);
 
   useEffect(() => {
+    setMusicList([]);
     if (!serchId) return;
+    setLoading(true);
+
     let fetchFunc;
     let fetchSongs;
     switch (type) {
@@ -436,8 +439,6 @@ const DetaialDrawer = () => {
       }
     );
 
-    setMusicList([]);
-    setLoading(true);
     fetchSongs(
       serchId,
       (result: JsonResult<Music[]>) => {

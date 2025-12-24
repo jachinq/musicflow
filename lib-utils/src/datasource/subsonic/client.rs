@@ -371,7 +371,7 @@ pub struct SubsonicSong {
     pub display_artist: Option<String>,
     pub bit_depth: Option<u32>,
     pub track: Option<String>,
-    #[serde(deserialize_with = "deserialize_year")]
+    #[serde(default, deserialize_with = "deserialize_year")]
     pub year: Option<u32>,
     pub parent: Option<u32>,
     pub genre: Option<String>,
@@ -408,7 +408,7 @@ pub struct SubsonicAlbum {
     pub song_count: Option<u32>,
     pub duration: Option<u32>,
     pub created: Option<String>,
-    #[serde(deserialize_with = "deserialize_year")]
+    #[serde(default, deserialize_with = "deserialize_year")]
     pub year: Option<u32>,
     pub genre: Option<String>,
     pub song: Option<Vec<SubsonicSong>>,
