@@ -6,11 +6,11 @@ interface PlaylistState {
   openPlaylist: boolean;
   allSongs: Music[];
   pageSongs: Music[];
-  searchQuery: string;
   selectedSongs: Music[];
   currentSong: Music | null;
   currentPage: number;
   showPlaylist: boolean;
+  hasMore: boolean;
   setOpenPlaylist: (show: boolean) => void;
   setShowPlaylist: (show: boolean) => void;
   togglePlaylist: (open?: boolean) => void;
@@ -18,8 +18,6 @@ interface PlaylistState {
   setAllSongs: (songs: Music[], initial?: boolean) => void;
   setCurrentPage: (page: number) => void;
 
-  setSearchQuery: (query: string) => void;
-  setSelectedSongs: (songs: Music[]) => void;
   setCurrentSong: (song: Music) => void;
   addSong: (song: Music) => void;
   removeSong: (song: Music) => void;
@@ -33,10 +31,10 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
   showPlaylist: false,
   allSongs: [],
   pageSongs: [],
-  searchQuery: "",
   selectedSongs: [],
   currentSong: null,
   currentPage: 1,
+  hasMore: true,
   setOpenPlaylist: (show) => set(() => ({ openPlaylist: show })),
   setShowPlaylist: (show) => set(() => ({ showPlaylist: show })),
   togglePlaylist: (open?: boolean) =>
@@ -88,20 +86,8 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
         end = total;
       }
       const pageSongs = get().allSongs.slice(start, end);
-      return { pageSongs, currentPage: page };
+      return { pageSongs, currentPage: page, hasMore: end < total };
     }),
-  setSearchQuery: (query) =>
-    set(() => {
-      if (!query || query === "" || query.trim() === "") {
-        return { searchQuery: query, pageSongs: get().allSongs };
-      }
-      query = query.trim().toLocaleLowerCase();
-      const songs = get().allSongs.filter((song) =>
-        song.title.toLowerCase().includes(query)
-      );
-      return { searchQuery: query, pageSongs: songs };
-    }),
-  setSelectedSongs: (songs) => set(() => ({ selectedSongs: songs })),
   setCurrentSong: (song) => set(() => {
     setDbPlaylist(song)
     return { currentSong: song }
