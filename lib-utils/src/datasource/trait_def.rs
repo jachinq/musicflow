@@ -121,7 +121,7 @@ pub trait MusicDataSource: Send + Sync {
     ///
     /// # 返回
     /// * `Ok(SearchResult)` - 搜索结果(歌曲、专辑、艺术家)
-    async fn search(&self, query: &str) -> Result<SearchResult>;
+    async fn search(&self, query: &str, pagination: Pagination) -> Result<SearchResult>;
 
     /// 获取数据源类型
     ///

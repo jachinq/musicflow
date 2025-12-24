@@ -80,8 +80,11 @@ impl MusicDataSource for SubsonicDataSource {
 
     async fn list_metadata(&self, filter: MetadataFilter) -> Result<Vec<UnifiedMetadata>> {
         let keyword = filter.keyword.unwrap_or_default();
+
+        let pagination = Pagination::new(filter.page.unwrap_or(1), filter.page_size.unwrap_or(30));
+
         // 如果有关键字,使用搜索
-        let search_result = self.client.search3(&keyword).await?;
+        let search_result = self.client.search3(&keyword, pagination.start(), pagination.page_size).await?;
         let songs = search_result.song.unwrap_or_default();
 
         let mut metadata_list: Vec<UnifiedMetadata> = songs.into_iter().map(|s| s.into()).collect();
@@ -95,29 +98,17 @@ impl MusicDataSource for SubsonicDataSource {
             ));
         }
 
-        // 应用分页
-        if let (Some(page), Some(page_size)) = (filter.page, filter.page_size) {
-            let start = ((page - 1) * page_size) as usize;
-            let end = (start + page_size as usize).min(metadata_list.len());
-
-            if start < metadata_list.len() {
-                metadata_list = metadata_list[start..end].to_vec();
-            } else {
-                metadata_list = vec![];
-            }
-        }
-
         Ok(metadata_list)
     }
 
-    async fn get_cover(&self, album_id: &str, size: CoverSize) -> Result<Vec<u8>> {
-        // 根据 song_id 获取到 专辑 cover_art
-        let album = self.client.get_album(album_id).await?;
-        if album.cover_art.is_none() {
-            println!("No cover art found for album album_id={}", album_id);
-            return Err(anyhow::anyhow!("No cover art found for song"));
-        }
-        let cover_art = album.cover_art.unwrap();
+    async fn get_cover(&self, cover_art: &str, size: CoverSize) -> Result<Vec<u8>> {
+        // // 根据 song_id 获取到 专辑 cover_art
+        // let album = self.client.get_album(album_id).await?;
+        // if album.cover_art.is_none() {
+        //     println!("No cover art found for album album_id={}", album_id);
+        //     return Err(anyhow::anyhow!("No cover art found for song"));
+        // }
+        // let cover_art = album.cover_art.unwrap();
 
         let size = match size {
             CoverSize::Small => "280",
@@ -127,7 +118,6 @@ impl MusicDataSource for SubsonicDataSource {
         // 获取封面 URL
         let cover_url = self.client.get_cover_art_url(&cover_art, size);
 
-        println!("cover_url={}", cover_url);
         // 下载图片
         let response = reqwest::get(&cover_url).await?;
         let bytes = response.bytes().await?;
@@ -191,21 +181,11 @@ impl MusicDataSource for SubsonicDataSource {
             if !filter_text.is_empty() {
                 let search_result = self
                     .client
-                    .search3(filter_text)
+                    .search3(filter_text, pagination.start(), pagination.page_size)
                     .await?;
                 let albums = search_result.album.unwrap_or_default();
                 let all_albums: Vec<AlbumInfo> = albums.into_iter().map(|a| a.into()).collect();
-
-                let start = pagination.start();
-                let end = pagination.end(all_albums.len());
-                // 越界检查
-                if end > all_albums.len() {
-                    return Ok(all_albums[start..].to_vec());
-                } else if start >= all_albums.len() {
-                    return Ok(vec![]);
-                } else {
-                    return Ok(all_albums[start..end].to_vec());
-                }
+                return Ok(all_albums);
             }
         }
 
@@ -275,8 +255,8 @@ impl MusicDataSource for SubsonicDataSource {
         Ok(metadata_list)
     }
 
-    async fn search(&self, query: &str) -> Result<SearchResult> {
-        let result = self.client.search3(query).await?;
+    async fn search(&self, query: &str, pagination: Pagination) -> Result<SearchResult> {
+        let result = self.client.search3(query, pagination.start(), pagination.page_size).await?;
 
         let songs: Vec<UnifiedMetadata> = result
             .song

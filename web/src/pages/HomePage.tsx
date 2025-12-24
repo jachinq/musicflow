@@ -1,10 +1,8 @@
 // pages/HomePage.tsx
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { MusicCard } from "../components/MusicCard";
 
 import { getMusicList, getPlayList } from "../lib/api";
-import { Pagination } from "../components/Pagination";
-import { Music } from "../lib/defined";
 import { FlameKindling, Loader, Play, Rabbit, X } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
@@ -12,15 +10,18 @@ import { useDevice } from "../hooks/use-device";
 import { useKeyPress } from "../hooks/use-keypress";
 import { create } from "zustand";
 import { toast } from "sonner";
+import { useInfiniteScroll } from "../hooks/use-infinite-scroll";
 
 interface ContextProps {
   initialized: boolean;
   setInitialized: (initialized: boolean) => void;
   error: string | null;
   loading: boolean;
+  isLoadingMore: boolean;
+  setIsLoadingMore: (isLoadingMore: boolean) => void;
+  hasMore: boolean;
+  setHasMore: (hasMore: boolean) => void;
   pageSize: number;
-  currentPage: number;
-  setCurrentPage: (currentPage: number) => void;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
 }
@@ -30,14 +31,14 @@ export const useHomePageStore = create<ContextProps>((set) => ({
     set((state) => ({ ...state, initialized })),
   error: null,
   loading: false,
+  isLoadingMore: false,
+  setIsLoadingMore: (isLoadingMore: boolean) =>
+    set((state) => ({ ...state, isLoadingMore })),
+  hasMore: true,
+  setHasMore: (hasMore: boolean) => set((state) => ({ ...state, hasMore })),
   pageSize: 30,
-  currentPage: 1,
-  setCurrentPage: (currentPage: number) =>
-    set((state) => ({ ...state, currentPage })),
   setError: (error: string | null) => set((state) => ({ ...state, error })),
   setLoading: (loading: boolean) => set((state) => ({ ...state, loading })),
-  setMusicList: (musicList: Music[]) =>
-    set((state) => ({ ...state, musicList })),
 }));
 export const HomePage = () => {
   const { error, loading } = useHomePageStore();
@@ -64,13 +65,11 @@ export const HomePage = () => {
     );
   }
 
-  
-
   return (
     <div className="p-4 grid gap-4">
       <Control />
       <MusicList />
-      <HomePagePagination />
+      <LoadingIndicator />
       <NotFound loading={loading} />
     </div>
   );
@@ -176,10 +175,18 @@ const SelectTag = () => {
 
 const MusicList = () => {
   const { playSingleSong, setAllSongs, setCurrentSong } = usePlaylist();
-  const { initialized, setInitialized, setLoading, setError } =
-    useHomePageStore();
-  const { isSmallDevice } = useDevice();
-  const pageSize = isSmallDevice ? 6 : 30;
+  const {
+    initialized,
+    setInitialized,
+    setLoading,
+    setError,
+    pageSize,
+    isLoadingMore,
+    setIsLoadingMore,
+    hasMore,
+    setHasMore,
+  } = useHomePageStore();
+  const currentPageRef = useRef(1);
   const {
     filter,
     needFilter,
@@ -187,37 +194,94 @@ const MusicList = () => {
     setTotalCount,
     musicList,
     fetchMusicList,
+    lastFetchCount,
   } = useMusicList();
+
+  // 加载更多的函数
+  const loadMore = useCallback(() => {
+    if (isLoadingMore || !hasMore) return;
+
+    const nextPage = currentPageRef.current + 1;
+    console.log("loadMore 被调用，加载第", nextPage, "页");
+
+    setIsLoadingMore(true);
+    fetchMusicList(
+      nextPage,
+      pageSize,
+      setTotalCount,
+      (loading) => {
+        if (!loading) {
+          setIsLoadingMore(false);
+        }
+      },
+      setError,
+      true // append = true
+    );
+    currentPageRef.current = nextPage;
+  }, [
+    isLoadingMore,
+    hasMore,
+    pageSize,
+    setIsLoadingMore,
+    fetchMusicList,
+    setTotalCount,
+    setError,
+    filter, // 添加 filter 依赖
+  ]);
+
+  // 使用无限滚动 hook
+  useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    isLoading: isLoadingMore,
+    threshold: 300,
+  });
+
+  // 检查是否还有更多数据
+  useEffect(() => {
+    // 通过上次获取的数据量判断：如果少于 pageSize，说明已经没有更多数据
+    if (lastFetchCount === 0) {
+      setHasMore(false);
+    } else if (lastFetchCount > 0 && lastFetchCount < pageSize) {
+      setHasMore(false);
+    } else if (lastFetchCount === pageSize) {
+      setHasMore(true);
+    }
+  }, [lastFetchCount, pageSize, setHasMore]);
 
   useEffect(() => {
     if (initialized) return;
-    fetchMusicList(1, pageSize, setTotalCount, setLoading, setError); // 标签切换时重新获取音乐列表
+    fetchMusicList(1, pageSize, setTotalCount, setLoading, setError); // 初始加载
     setInitialized(true);
 
     // 获取播放列表
     getPlayList(1, 0, (data) => {
-      if (!data || !data.success) {
-        console.error("获取播放列表失败", data);
-        return;
+        if (!data || !data.success) {
+          console.error("获取播放列表失败", data);
+          return;
+        }
+        setAllSongs(data.data.list, true);
+        if (data.data.current_song) {
+          setCurrentSong(data.data.current_song);
+        }
+      },
+      (error) => {
+        console.error("获取播放列表失败", error);
+        setError(error);
       }
-      setAllSongs(data.data.list, true)
-      if (data.data.current_song) {
-        setCurrentSong(data.data.current_song);
-      }
-      
-    }, (error) => { 
-      console.error("获取播放列表失败", error);
-      setError(error);
-    });
-
+    );
   }, []);
 
   useEffect(() => {
     if (!needFilter) return;
-    if (!filter.genres) return;
+
+    // 重置分页状态
+    currentPageRef.current = 1;
+    setHasMore(true);
+
     fetchMusicList(1, pageSize, setTotalCount, setLoading, setError); // 标签切换时重新获取音乐列表
     setNeedFilter(false);
-  }, [filter.genres]);
+  }, [needFilter, pageSize, fetchMusicList, setTotalCount, setLoading, setError, setNeedFilter, setHasMore]);
 
   return (
     <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
@@ -228,53 +292,34 @@ const MusicList = () => {
   );
 };
 
-const HomePagePagination = () => {
-  const { isSmallDevice } = useDevice();
-  const pageSize = isSmallDevice ? 6 : 30;
-  const { totalCount } = useMusicList();
-  const { openPlaylist } = usePlaylist();
-  const { currentPage, setCurrentPage, setLoading, setError } =
-    useHomePageStore();
-  const { setTotalCount, fetchMusicList } = useMusicList();
+// 加载指示器组件
+const LoadingIndicator = () => {
+  const { isLoadingMore, hasMore } = useHomePageStore();
+  const { musicList } = useMusicList();
 
-  // 左右箭头控制翻页
-  useKeyPress("ArrowRight", () => {
-    if (
-      !openPlaylist &&
-      totalCount > 0 &&
-      currentPage < Math.ceil(totalCount / pageSize)
-    ) {
-      onPageChange(currentPage + 1);
-    }
-  });
-  useKeyPress("ArrowLeft", () => {
-    if (!openPlaylist && totalCount > 0 && currentPage > 1) {
-      onPageChange(currentPage - 1);
-    }
-  });
-  const onPageChange = (page: number) => {
-    setCurrentPage(page);
-    fetchMusicList(page, pageSize, setTotalCount, setLoading, setError);
-  };
+  if (isLoadingMore) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">加载中...</div>
+    );
+  }
 
-  if (totalCount <= 0) return null;
+  if (!hasMore && musicList.length > 0) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        已加载全部 {musicList.length} 首歌曲
+      </div>
+    );
+  }
 
-  return (
-    <Pagination
-      currentPage={currentPage}
-      limit={pageSize}
-      total={totalCount}
-      onPageChange={onPageChange}
-    />
-  );
+  return null;
 };
 
 interface NotFoundProps {
   loading: boolean;
 }
 const NotFound = ({ loading }: NotFoundProps) => {
-  const { totalCount } = useMusicList();
-  if (loading || totalCount > 0) return null;
+  const { musicList } = useMusicList();
+  if (loading || musicList.length > 0) return null;
   return (
     <div className="flex flex-col gap-2 justify-center items-center w-full">
       <Rabbit size={64} />

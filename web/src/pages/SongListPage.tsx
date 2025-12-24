@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   addSongToSongList,
   createSongList,
@@ -20,7 +20,6 @@ import { Cover } from "../components/Cover";
 import { usePlaylist } from "../store/playlist";
 import { create } from "zustand";
 import { Option, OptionGroup } from "../components/Option";
-import { Pagination } from "../components/Pagination";
 import { useConfirm } from "../components/confirm";
 
 const buildSongList = (name: string, description?: string): SongList => {
@@ -529,27 +528,48 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
   if (!show) return null;
   const { isSmallDevice } = useDevice();
   const [fmusicList, setfmusicList] = useState<Music[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const currentPageRef = useRef(1);
   const [searchText, setSearchText] = useState("");
   const [selectMusics, setSelectMusics] = useState<Music[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const pageSize = isSmallDevice ? 5 : 10;
   const { musicList } = useSongListStore(); // 拿到当前歌单的歌曲
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const filterMusicList = (page: number) => {
-    setCurrentPage(page);
+  const filterMusicList = useCallback((page: number, append: boolean = false) => {
+    if (append) {
+      setIsLoadingMore(true);
+    }
+
     getMusicList(
       (result) => {
         if (result && result.success) {
-          setfmusicList(result.data.list);
-          setTotal(result.data.total);
+          const newData = result.data.list;
+
+          if (append) {
+            setfmusicList((prev) => [...prev, ...newData]);
+          } else {
+            setfmusicList(newData);
+          }
+
+          // 判断是否还有更多数据
+          if (newData.length < pageSize) {
+            setHasMore(false);
+          } else {
+            setHasMore(true);
+          }
+
+          currentPageRef.current = page;
         }
+        setIsLoadingMore(false);
       },
       (error) => {
         console.log(error);
         toast.error("获取歌曲失败", {
           description: "获取歌曲失败" + error.message || "未知错误",
         });
+        setIsLoadingMore(false);
       },
       page,
       pageSize,
@@ -557,13 +577,49 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
         any: searchText,
       }
     );
-  };
+  }, [pageSize, searchText]);
+
+  const loadMore = useCallback(() => {
+    const nextPage = currentPageRef.current + 1;
+    console.log('loadMore 被调用，加载第', nextPage, '页');
+    filterMusicList(nextPage, true);
+  }, [filterMusicList]);
+
+  // 监听滚动容器的滚动事件
   useEffect(() => {
-    filterMusicList(1);
-  }, [searchText]);
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (isLoadingMore || !hasMore) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // 当滚动到距离底部 100px 时触发加载
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        console.log('触发加载更多');
+        loadMore();
+      }
+    };
+
+    const throttledScroll = throttle(handleScroll, 100);
+    container.addEventListener('scroll', throttledScroll);
+
+    return () => {
+      container.removeEventListener('scroll', throttledScroll);
+    };
+  }, [loadMore, isLoadingMore, hasMore]);
+
+  useEffect(() => {
+    // 搜索文本变化时重置
+    setfmusicList([]);
+    currentPageRef.current = 1;
+    setHasMore(true);
+    filterMusicList(1, false);
+  }, [searchText, filterMusicList]);
+
   useEffect(() => {
     setSelectMusics([...musicList]);
-  }, []);
+  }, [musicList]);
 
   const onSelectSong = (music: Music) => {
     if (selectMusics.includes(music)) {
@@ -601,14 +657,10 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
           value={searchText}
           onChange={(e) => setSearchText(e)}
         />
-        <div>
-          <Pagination
-            total={total}
-            currentPage={currentPage}
-            onPageChange={filterMusicList}
-          />
-        </div>
-        <div className="overflow-scroll hide-scrollbar flex gap-2 justify-center flex-col overflow-y-scroll max-h-[calc(100vh-200px)]">
+        <div
+          ref={scrollContainerRef}
+          className="overflow-scroll hide-scrollbar flex gap-2 justify-center flex-col overflow-y-scroll max-h-[calc(100vh-200px)]"
+        >
           <div
             className={
               "text-sm grid items-center justify-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted " +
@@ -640,7 +692,7 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
                 onChange={() => {}}
               />
               <Cover
-                src={getCoverSmallUrl(item.album_id)}
+                src={getCoverSmallUrl(item.cover_art)}
                 alt={item.title}
                 size={48}
               />
@@ -653,7 +705,17 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
               <span>{item.album}</span>
             </div>
           ))}
-          {fmusicList.length === 0 && (
+          {isLoadingMore && (
+            <div className="text-center py-4 text-muted-foreground">
+              加载中...
+            </div>
+          )}
+          {!hasMore && fmusicList.length > 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+              已加载全部 {fmusicList.length} 项
+            </div>
+          )}
+          {fmusicList.length === 0 && !isLoadingMore && (
             <div className="text-center py-4">没有找到相关歌曲</div>
           )}
         </div>
@@ -661,3 +723,19 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
     </Form>
   );
 };
+
+// 节流函数
+function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let lastTime = 0;
+
+  return function executedFunction(...args: Parameters<T>) {
+    const now = Date.now();
+    if (now - lastTime >= wait) {
+      lastTime = now;
+      func(...args);
+    }
+  };
+}

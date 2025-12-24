@@ -11,12 +11,15 @@ interface MusicListState {
   setMusicList: (musicList: Music[]) => void;
   totalCount: number;
   setTotalCount: (totalCount: number) => void;
+  lastFetchCount: number; // 上次请求返回的数据量
+  setLastFetchCount: (count: number) => void;
   fetchMusicList: (
     currentPage: number,
     pageSize: number,
     setTotalCount: (totalCount: number) => void,
     setLoading: (loading: boolean) => void,
     setError: (error: any) => void,
+    append?: boolean, // 是否追加数据
   ) => void;
 }
 
@@ -29,25 +32,45 @@ export const useMusicList = create<MusicListState>((set, get) => ({
   setMusicList: (musicList) => set(() => ({ musicList })),
   totalCount: 0,
   setTotalCount: (totalCount) => set(() => ({ totalCount })),
+  lastFetchCount: 0,
+  setLastFetchCount: (lastFetchCount) => set(() => ({ lastFetchCount })),
   fetchMusicList: (
     currentPage: number,
     pageSize: number,
     setTotalCount: (totalCount: number) => void,
     setLoading: (loading: boolean) => void,
     setError: (error: any) => void,
+    append: boolean = false,
   ) => {
     const filter = get().filter;
     setLoading(true);
-    get().setMusicList([]);
+    if (!append) {
+      get().setMusicList([]);
+    }
     // console.log(needFilter, filter, filterTags)
     getMusicList(
       (result) => {
         if (!result || !result.success) {
+          setLoading(false);
           return;
         }
+        const fetchedList = result.data.list;
+        const fetchedCount = fetchedList.length;
+
+        // 记录本次获取的数据量
+        get().setLastFetchCount(fetchedCount);
+
         // 更新音乐列表和分页信息
-        get().setMusicList(result.data.list);
-        setTotalCount(result.data.total);
+        if (append) {
+          // 根据id去重
+          const newList = fetchedList.filter((item) =>
+            !get().musicList.some((oldItem) => oldItem.id === item.id)
+          );
+          get().setMusicList([...get().musicList, ...newList]);
+        } else {
+          get().setMusicList(fetchedList);
+        }
+        setTotalCount(get().musicList.length);
         setLoading(false);
       },
       (error) => {

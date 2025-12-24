@@ -38,6 +38,7 @@ pub struct MetadataVo {
     pub comment: String,
     pub album_id: String,
     pub artist_id: String,
+    pub cover_art: String,
 }
 
 pub trait IntoVec<T> {
@@ -129,8 +130,8 @@ impl MetadataVo {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MusicListQuery {
-    page: Option<u32>,
-    page_size: Option<u32>,
+    page: Option<usize>,
+    page_size: Option<usize>,
     genres: Option<Vec<String>>,
     artist: Option<Vec<i64>>,
     album: Option<Vec<i64>>,
@@ -151,13 +152,14 @@ pub async fn handle_get_metadatas(
         ..Default::default()
     };
 
-    let result = app_state.data_source.list_metadata(filter).await;
+    let result = app_state.data_source.list_metadata(filter.clone()).await;
     if let Err(e) = result {
         return HttpResponse::InternalServerError()
             .json(JsonResult::<ListMusic>::error(&e.to_string()));
     }
 
     let mut metadata_list = result.unwrap();
+    // println!("{:?} size={}", filter, metadata_list.len());
 
     // 根据艺术家过滤 (仅本地模式)
     if let Some(artist_ids) = &query.artist {
@@ -231,7 +233,6 @@ pub async fn get_cover_size(song_id: &str, size: &str, app_state: &AppState) -> 
 
     match result {
         Ok(data) => {
-            println!("file size={}", data.len());
             if data.len() == 0 {
                 default_cover()
             } else {

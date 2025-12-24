@@ -126,8 +126,7 @@ impl SubsonicClient {
     /// 获取单个艺术家信息
     pub async fn get_artist(&self, id: &str) -> Result<SubsonicArtistDetail> {
         let params = vec![("id", id.to_string())];
-        let response: SubsonicResponse<ArtistWrapper> =
-            self.get("rest/getArtist", params).await?;
+        let response: SubsonicResponse<ArtistWrapper> = self.get("rest/getArtist", params).await?;
 
         response
             .subsonic_response
@@ -144,14 +143,28 @@ impl SubsonicClient {
         println!("{} {:?}", artist_name, response);
         response
             .subsonic_response
-            .top_songs.song
+            .top_songs
+            .song
             // .map(|t| t.song.unwrap_or_default())
             .ok_or_else(|| anyhow::anyhow!("top songs not found: {}", artist_name))
     }
 
     /// 搜索
-    pub async fn search3(&self, query: &str) -> Result<SubsonicSearchResult> {
-        let params = vec![("query", query.to_string())];
+    pub async fn search3(
+        &self,
+        query: &str,
+        offset: usize,
+        page_size: usize,
+    ) -> Result<SubsonicSearchResult> {
+        let params = vec![
+            ("query", query.to_string()),
+            ("songOffset", offset.to_string()),
+            ("songCount", page_size.to_string()),
+            ("albumOffset", offset.to_string()),
+            ("albumCount", page_size.to_string()),
+            ("artistOffset", offset.to_string()),
+            ("artistCount", page_size.to_string()),
+        ];
         let response: SubsonicResponse<SearchResult3Wrapper> =
             self.get("rest/search3", params).await?;
 
@@ -239,16 +252,19 @@ impl SubsonicClient {
             return Err(anyhow::anyhow!("HTTP error: {}", status));
         }
 
-        // println!("{:?}", self
+        let response = response.json::<T>().await;
+
+        if url.contains("search") {
+            // println!("{}?{}", url, params.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>().join("&"));
+
+            // println!("{:?}", self
         //     .client
         //     .get(&url)
         //     .query(&params)
         //     .send()
         //     .await
         //     .context("Failed to send request to Subsonic server")?.text().await);
-        let response = response.json::<T>().await;
-
-        // println!("{}?{}", url, params.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>().join("&"));
+        }
         match response {
             Ok(json) => Ok(json),
             Err(e) => {

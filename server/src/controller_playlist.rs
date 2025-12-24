@@ -1,10 +1,9 @@
 use actix_web::{web, HttpResponse, Responder};
-use lib_utils::database::service::{self, PlayList};
+use lib_utils::{database::service::{self, PlayList}, datasource::types::Pagination};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    controller_song::{IntoVec, MetadataVo},
-    JsonResult,
+    AppState, JsonResult, adapters, controller_song::MetadataVo
 };
 
 #[derive(Deserialize)]
@@ -14,75 +13,75 @@ pub struct AddPlayListRequest {
 
 #[derive(Deserialize)]
 pub struct GetPlayListRequest {
-    page: Option<u32>,
-    size: Option<u32>,
+    page: Option<usize>,
+    size: Option<usize>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ListMusic {
     list: Vec<MetadataVo>,
-    total: u32,
+    total: usize,
     current_song: Option<MetadataVo>,
 }
 
-pub async fn handle_get_playlist(query: web::Json<GetPlayListRequest>) -> impl Responder {
+pub async fn handle_get_playlist(
+    query: web::Json<GetPlayListRequest>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
     let play_lists = service::get_play_list(1);
     if let Ok(playlist) = play_lists {
-        let current_song_id = playlist
-            .iter()
-            .find_map(|pl| {
-                if pl.status == 1 {
-                    Some(pl.song_id.clone())
-                } else {
-                    None
-                }
-            });
+        let current_song_id = playlist.iter().find_map(|pl| {
+            if pl.status == 1 {
+                Some(pl.song_id.clone())
+            } else {
+                None
+            }
+        });
 
         // 分页
-        let mut current_page = 1;
-        let mut page_size = 10;
-        if let Some(page) = query.page {
-            current_page = page;
-        }
-        if let Some(page_size1) = query.size {
-            page_size = page_size1;
-        }
-        // println!(
-        //     "current_page: {}, page_size: {}, {:?}",
-        //     current_page, page_size, query
-        // );
-        let total = playlist.len() as u32;
+        let page = query.page.unwrap_or(1);
+        let page_size = query.size.unwrap_or(10);
+        let total = playlist.len();
+        let pagination = Pagination::new(page, page_size);
 
-        let start = (current_page - 1) * page_size;
-        let end = start + page_size;
-        let end = end.min(total); // 防止超过总数
-        let playlist_page = if end > start {
-            playlist
-                .get(start as usize..end as usize)
-                .unwrap_or(&[])
-                .to_vec()
+        let start = pagination.safe_start(total);
+        let end = pagination.end(total);
+        let playlist_page = if page_size == 0 {
+            playlist.to_vec()
+        } else if end > start {
+            playlist[start..end].to_vec()
         } else {
-            playlist
+            vec![]
         };
+        // println!(
+        //     "current_page: {}, page_size: {}, len={}, page={}",
+        //     page,
+        //     page_size,
+        //     total,
+        //     playlist_page.len()
+        // );
 
         let mut metalist = Vec::new();
         for pl in playlist_page {
-            let song_id = pl.song_id.clone();
-            if let Ok(Some(metadata)) = service::get_metadata_by_id(&song_id) {
+            if let Ok(metadata) = app_state.data_source.get_metadata(&pl.song_id).await {
                 metalist.push(metadata);
             }
         }
-        let list = metalist.into_vec();
+        let list = adapters::unified_list_to_vo(metalist);
 
         let current_song = if let Some(id) = current_song_id {
-          match service::get_metadata_by_id(&id) {
-              Ok(Some(metadata)) => {Some(MetadataVo::from(&metadata))},
-              _ => None,
-          }
+            match app_state.data_source.get_metadata(&id).await {
+                Ok(metadata) => Some(adapters::unified_to_vo(metadata)),
+                _ => None,
+            }
         } else {
             None
         };
 
-        HttpResponse::Ok().json(JsonResult::success(ListMusic { list, total, current_song }))
+        HttpResponse::Ok().json(JsonResult::success(ListMusic {
+            list,
+            total,
+            current_song,
+        }))
     } else {
         HttpResponse::InternalServerError().json(JsonResult::<()>::error("PlayList not found"))
     }
