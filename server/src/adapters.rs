@@ -70,6 +70,7 @@ pub fn unified_to_vo(metadata: UnifiedMetadata) -> MetadataVo {
         comment: metadata.comment,
         album_id,
         artist_id,
+        cover_art: metadata.cover_art.unwrap_or_default(),
     }
 }
 
@@ -138,6 +139,7 @@ pub fn unified_list_to_vo(metadata_list: Vec<UnifiedMetadata>) -> Vec<MetadataVo
                     comment: m.comment.clone(),
                     album_id: album_id.to_string(),
                     artist_id: artist_id.to_string(),
+                    cover_art: m.cover_art.unwrap_or_default(),
                 }
             })
             .collect()

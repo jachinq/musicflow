@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getAlbumById,
   getAlbumList,
@@ -102,14 +102,14 @@ export const MoreInfoPage = () => {
         drirection={isSmallDevice ? "row" : "column"}
         between
       >
-        <Option value={"genres"} icon={<TagIcon />}>
-          风格
-        </Option>
         <Option value={"albums"} icon={<AlbumIcon />}>
           专辑
         </Option>
         <Option value={"artists"} icon={<User2Icon />}>
           歌手
+        </Option>
+        <Option value={"genres"} icon={<TagIcon />}>
+          风格
         </Option>
       </OptionGroup>
       {tabId == "genres" && <GenreList />}
@@ -183,8 +183,13 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
           const newData = result.data.list;
 
           if (append) {
-            // 追加数据
-            setItems((prevItems) => [...prevItems, ...newData]);
+            setItems((prevItems) => {
+              // 根据id去重
+              const newList = newData.filter((item) =>
+                !prevItems.some((oldItem) => oldItem.id === item.id)
+              );
+              return [...prevItems, ...newList]
+            });
           } else {
             // 替换数据（用于搜索或初始加载）
             setItems(newData);
@@ -320,22 +325,30 @@ const CoverItem = ({
   onSelect?: (item: Artist | Album) => void;
 }) => {
   const { isSmallDevice } = useDevice();
-  const iconSize = isSmallDevice ? 80 : 140;
   const cutSize = isSmallDevice ? 4 : 8;
+  const iconSize = useMemo(() => {
+    if (type === DrawerType.ALBUM) {
+      return isSmallDevice ? 80 : 140;
+    }
+    return isSmallDevice ? 70 : 120;
+    // return isSmallDevice ? 60 : 100;
+  }, [type]);
   const handleClick = () => {
     onSelect && onSelect(item);
   };
   const getSrc = useCallback(() => {
     if (type === DrawerType.ARTIST) {
-      return item.cover;
+      return iconSize > 140
+        ? getCoverMediumUrl(item.cover_art)
+        : getCoverSmallUrl(item.cover_art);
     }
     if (type === DrawerType.ALBUM) {
       return iconSize > 140
-        ? getCoverMediumUrl(item.id)
-        : getCoverSmallUrl(item.id);
+        ? getCoverMediumUrl(item.cover_art)
+        : getCoverSmallUrl(item.cover_art);
     }
     return "";
-  }, [item.cover, type]);
+  }, [item.cover_art, type]);
   const getClass = () => {
     if (type === DrawerType.ALBUM) {
       return "bg-muted rounded-md cursor-pointer group";
@@ -584,7 +597,7 @@ const EditForm = ({ onSussess }: { onSussess: () => void }) => {
 
   useEffect(() => {
     if (!selectedItem) return;
-    setCover(selectedItem.cover);
+    setCover(selectedItem.cover_art);
   }, [selectedItem]);
 
   const handleSubmit = () => {

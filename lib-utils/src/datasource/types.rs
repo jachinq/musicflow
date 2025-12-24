@@ -22,6 +22,13 @@ impl Pagination {
     pub fn start(&self) -> usize {
         (self.page - 1) * self.page_size
     }
+    pub fn safe_start(&self, total: usize) -> usize {
+        if self.page * self.page_size > total {
+            total
+        } else {
+            self.start()
+        }
+    }
     // 结束位置
     pub fn end(&self, total: usize) -> usize {
         if self.page * self.page_size > total {
@@ -74,7 +81,7 @@ pub struct UnifiedMetadata {
     // Subsonic 模式专有字段
     pub subsonic_id: Option<String>,
     pub stream_url: Option<String>,
-    pub cover_art_id: Option<String>,
+    pub cover_art: Option<String>,
     pub album_id: Option<String>,
     pub artist_id: Option<String>,
 }
@@ -101,7 +108,7 @@ impl Default for UnifiedMetadata {
             file_url: None,
             subsonic_id: None,
             stream_url: None,
-            cover_art_id: None,
+            cover_art: None,
             album_id: None,
             artist_id: None,
         }
@@ -145,9 +152,9 @@ impl CoverSize {
 #[derive(Debug, Clone, Default)]
 pub struct MetadataFilter {
     /// 分页 - 页码 (从1开始)
-    pub page: Option<u32>,
+    pub page: Option<usize>,
     /// 分页 - 每页数量
-    pub page_size: Option<u32>,
+    pub page_size: Option<usize>,
     /// 流派过滤
     pub genres: Option<Vec<String>>,
     /// 艺术家ID过滤
@@ -203,7 +210,7 @@ pub struct AlbumInfo {
     pub name: String,
     pub artist: String,
     pub year: String,
-    pub cover_art_id: Option<String>,
+    pub cover_art: Option<String>,
     pub song_count: usize,
 }
 
@@ -213,7 +220,7 @@ pub struct ArtistInfo {
     pub id: String,
     pub name: String,
     pub album_count: usize,
-    pub cover: Option<String>,
+    pub cover_art: Option<String>,
 }
 
 /// 歌词行

@@ -60,6 +60,7 @@ export interface Music {
     album: string;
     album_id: number;
     artist_id: number;
+    cover_art: string;
     year: number;
     duration: number;
     bitrate: number;
@@ -108,7 +109,7 @@ export interface SongList {
 export interface Album {
     id: number;
     name: string;
-    cover: string;
+    cover_art: string;
     description: string;
     year: number;
     artist: string;
@@ -118,7 +119,7 @@ export interface Album {
 export interface Artist {
     id: number;
     name: string;
-    cover: string;
+    cover_art: string;
     description: string;
     year?: number;
 }

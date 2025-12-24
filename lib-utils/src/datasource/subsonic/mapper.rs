@@ -26,7 +26,7 @@ impl From<SubsonicSong> for UnifiedMetadata {
             file_url: None,
             subsonic_id: Some(song.id.clone()),
             stream_url: None, // 会在 DataSource 中设置
-            cover_art_id: song.cover_art.clone(),
+            cover_art: song.cover_art.clone(),
             album_id: song.album_id.clone(),
             artist_id: song.artist_id.clone(),
         }
@@ -40,7 +40,7 @@ impl From<SubsonicAlbum> for AlbumInfo {
             name: album.name,
             artist: album.artist.unwrap_or_default(),
             year: album.year.map(|y| y.to_string()).unwrap_or_default(),
-            cover_art_id: album.cover_art,
+            cover_art: album.cover_art,
             song_count: album.song_count.unwrap_or(0) as usize,
         }
     }
@@ -52,7 +52,7 @@ impl From<SubsonicArtist> for ArtistInfo {
             id: artist.id.unwrap_or_default(),
             name: artist.name.unwrap_or_default(),
             album_count: artist.album_count.unwrap_or(0) as usize,
-            cover: artist.cover_art,
+            cover_art: artist.cover_art,
         }
     }
 }
@@ -63,7 +63,7 @@ impl From<SubsonicArtistDetail> for ArtistInfo {
             id: artist.id.unwrap_or_default(),
             name: artist.name.unwrap_or_default(),
             album_count: artist.album_count.unwrap_or(0) as usize,
-            cover: artist.cover_art,
+            cover_art: artist.cover_art,
         }
     }
 }

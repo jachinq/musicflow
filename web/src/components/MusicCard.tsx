@@ -59,7 +59,7 @@ export const MusicCard = ({ music, onClickTitle, onPlay }: MusicCardProps) => {
       <div className="w-[140px] max-h-[240px]">
         <div className="group relative w-[140px] h-[140px]">
           <Cover
-            src={getCoverSmallUrl(music.album_id)}
+            src={getCoverSmallUrl(music.cover_art)}
             roundType="card_text"
             className="group-hover:opacity-75 transition-all duration-300 ease-in-out"
           />

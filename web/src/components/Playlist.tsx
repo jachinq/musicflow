@@ -107,7 +107,7 @@ const Playlist = ({ clearPlaylist }: Props) => {
               >
                 <div className="rounded-lg overflow-hidden relative">
                   <img
-                    src={getCoverSmallUrl(song.album_id)}
+                    src={getCoverSmallUrl(song.cover_art)}
                     alt=""
                     width={40}
                   />

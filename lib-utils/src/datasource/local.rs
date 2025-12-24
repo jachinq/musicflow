@@ -46,7 +46,7 @@ impl LocalDataSource {
             file_url: Some(metadata.file_url),
             subsonic_id: None,
             stream_url: None,
-            cover_art_id: None,
+            cover_art: None,
             album_id: None,
             artist_id: None,
         }
@@ -185,7 +185,7 @@ impl MusicDataSource for LocalDataSource {
                 name: album.name,
                 artist: album.artist,
                 year: album.year,
-                cover_art_id: None,
+                cover_art: None,
                 song_count: 0,
             })
             .collect())
@@ -204,7 +204,7 @@ impl MusicDataSource for LocalDataSource {
             name: album.name,
             artist: album.artist,
             year: album.year,
-            cover_art_id: None,
+            cover_art: None,
             song_count: 0, // TODO: 查询歌曲数量
         })
     }
@@ -228,7 +228,7 @@ impl MusicDataSource for LocalDataSource {
                 id: artist.id.to_string(),
                 name: artist.name,
                 album_count: 0, // TODO: 查询专辑数量
-                cover: if artist.cover.is_empty() {
+                cover_art: if artist.cover.is_empty() {
                     None
                 } else {
                     Some(artist.cover)
@@ -249,7 +249,7 @@ impl MusicDataSource for LocalDataSource {
             id: artist.id.to_string(),
             name: artist.name,
             album_count: 0, // TODO: 查询专辑数量
-            cover: if artist.cover.is_empty() {
+            cover_art: if artist.cover.is_empty() {
                 None
             } else {
                 Some(artist.cover)
@@ -267,7 +267,7 @@ impl MusicDataSource for LocalDataSource {
         Ok(songs.into_iter().map(|s| self.convert_metadata(s)).collect())
     }
 
-    async fn search(&self, query: &str) -> Result<SearchResult> {
+    async fn search(&self, query: &str, pagination: Pagination) -> Result<SearchResult> {
         // 简单的搜索实现:使用 list_metadata 的关键字过滤
         let songs = self
             .list_metadata(MetadataFilter {
@@ -275,6 +275,11 @@ impl MusicDataSource for LocalDataSource {
                 ..Default::default()
             })
             .await?;
+
+        // 分页
+        let start = pagination.safe_start(songs.len());
+        let end = pagination.end(songs.len());
+        let songs = songs[start..end].to_vec();
 
         // TODO: 实现专辑和艺术家搜索
         Ok(SearchResult {

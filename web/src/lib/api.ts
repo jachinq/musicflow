@@ -6,11 +6,11 @@ const defaultSetting = JSON.parse(defaultSettingStr);
 export const API_URL = defaultSetting.server_url || "";
 export const LOG_API = `${API_URL}/api/log`;
 
-export const getCoverSmallUrl = (id: number) => {
-  return `${API_URL}/api/cover/small/${id || '0'}`;
+export const getCoverSmallUrl = (coverArt: string) => {
+  return `${API_URL}/api/cover/small/${coverArt || ''}`;
 };
-export const getCoverMediumUrl = (id: number) => {
-  return `${API_URL}/api/cover/medium/${id || '0'}`;
+export const getCoverMediumUrl = (coverArt: string) => {
+  return `${API_URL}/api/cover/medium/${coverArt || ''}`;
 };
 
 export const getMusicUrl = (music: Music) => {
