@@ -72,6 +72,10 @@ pub struct UnifiedMetadata {
 
     // 数据源信息
     pub source: DataSourceType,
+    // 封面图片路径
+    pub cover_art: Option<String>,
+    pub album_id: Option<String>,
+    pub artist_id: Option<String>,
 
     // 本地文件模式专有字段
     pub file_name: Option<String>,
@@ -81,9 +85,6 @@ pub struct UnifiedMetadata {
     // Subsonic 模式专有字段
     pub subsonic_id: Option<String>,
     pub stream_url: Option<String>,
-    pub cover_art: Option<String>,
-    pub album_id: Option<String>,
-    pub artist_id: Option<String>,
 }
 
 impl Default for UnifiedMetadata {

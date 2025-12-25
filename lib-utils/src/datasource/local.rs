@@ -122,8 +122,25 @@ impl MusicDataSource for LocalDataSource {
             .parse::<i64>()
             .unwrap_or_else(|_| link_id.parse::<i64>().unwrap_or(0));
 
-        let cover = service::get_cover(id, "song", size.as_str())?
+        if link_id.len() > 150 {
+            let url = base64::engine::general_purpose::STANDARD.decode(link_id.to_string()).unwrap_or_default();
+            let url = String::from_utf8(url).unwrap_or_default();
+            // println!("url={:?}", url);
+            if url.is_empty() {
+                return Err(anyhow::anyhow!("Invalid cover URL: {}", link_id));
+            }
+
+            // 下载图片
+            let response = reqwest::get(url).await?;
+            let bytes = response.bytes().await?;
+
+            return Ok(bytes.to_vec());
+        }
+
+        let cover = service::get_cover(id, "album", size.as_str())?
             .ok_or_else(|| anyhow::anyhow!("Cover not found for song: {}", link_id))?;
+
+        // println!("cover={:?}", cover);
 
         // 解码 base64
         let bytes = general_purpose::STANDARD
@@ -193,7 +210,7 @@ impl MusicDataSource for LocalDataSource {
                 name: album.name,
                 artist: album.artist,
                 year: album.year,
-                cover_art: None,
+                cover_art: Some(album.id.to_string()),
                 song_count: 0,
             })
             .collect())
@@ -212,7 +229,7 @@ impl MusicDataSource for LocalDataSource {
             name: album.name,
             artist: album.artist,
             year: album.year,
-            cover_art: None,
+            cover_art: Some(album.id.to_string()),
             song_count: 0, // TODO: 查询歌曲数量
         })
     }
@@ -242,7 +259,7 @@ impl MusicDataSource for LocalDataSource {
                 cover_art: if artist.cover.is_empty() {
                     None
                 } else {
-                    Some(artist.cover)
+                    Some(base64::engine::general_purpose::STANDARD.encode(artist.cover.to_string()))
                 },
             })
             .collect())
@@ -263,7 +280,7 @@ impl MusicDataSource for LocalDataSource {
             cover_art: if artist.cover.is_empty() {
                 None
             } else {
-                Some(artist.cover)
+                Some(base64::engine::general_purpose::STANDARD.encode(artist.cover.to_string()))
             },
         })
     }
