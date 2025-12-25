@@ -44,7 +44,7 @@ impl LocalDataSource {
             source: DataSourceType::Local,
             file_name: Some(metadata.file_name),
             file_path: Some(metadata.file_path),
-            file_url: Some(metadata.file_url),
+            file_url: Some(format!("/music{}", metadata.file_url)),
             subsonic_id: None,
             stream_url: None,
             cover_art: None,
