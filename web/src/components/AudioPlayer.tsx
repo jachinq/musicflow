@@ -21,6 +21,7 @@ import { checkRoute, Music, MyRoutes } from "../lib/defined";
 import { useKeyPress } from "../hooks/use-keypress";
 import { toast } from "sonner";
 import { audioBufferCache } from "../lib/audio-cache";
+import { StreamingAudioLoader } from "../lib/streaming-loader";
 
 export const AudioPlayer = () => {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -374,8 +375,23 @@ export const AudioPlayer = () => {
 
   const loadFileArrayBuffer = async (song: Music) => {
     song.file_url = getMusicUrl(song);
-    const response = await fetch(song.file_url);
-    return await response.arrayBuffer();
+
+    // 使用流式加载器,带进度显示
+    const loader = new StreamingAudioLoader();
+
+    try {
+      return await loader.loadFull({
+        url: song.file_url,
+        onProgress: (progress) => {
+          setLoadStatus(`加载中... ${Math.floor(progress)}%`);
+        },
+      });
+    } catch (error) {
+      console.error("Streaming load failed, fallback to normal fetch", error);
+      // 如果流式加载失败,降级到传统方式
+      const fallbackResponse = await fetch(song.file_url);
+      return await fallbackResponse.arrayBuffer();
+    }
   };
 
   const coverClick = () => {
