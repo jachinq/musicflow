@@ -128,9 +128,10 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
   getTotal: () => get().allSongs.length,
   playSingleSong: (song) => set(() => {
     const allSongs = get().allSongs;
-    const index = allSongs.findIndex((song) => song.id === song.id);
+    const index = allSongs.findIndex((s) => s.id === song.id);
     if (index === -1) {
       get().setAllSongs([...allSongs, song]);
+      addDbPlaylist([...allSongs, song])
     }
     setDbPlaylist(song)
     return { currentSong: song };
