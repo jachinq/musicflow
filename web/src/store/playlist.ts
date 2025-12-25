@@ -2,16 +2,112 @@ import { create } from "zustand";
 import { Music } from "../lib/defined";
 import { addPlayList, setPlaylist } from "../lib/api";
 
+// 数据库操作防抖管理器
+class DbSyncManager {
+  private playlistSyncTimer: NodeJS.Timeout | null = null;
+  private currentSongSyncTimer: NodeJS.Timeout | null = null;
+  private pendingPlaylist: Music[] | null = null;
+  private pendingCurrentSong: Music | null = null;
+  private readonly DEBOUNCE_DELAY = 500; // 500ms 防抖
+  private readonly MAX_RETRIES = 3;
+
+  /**
+   * 防抖同步播放列表
+   */
+  syncPlaylist(songs: Music[]) {
+    this.pendingPlaylist = songs;
+
+    if (this.playlistSyncTimer) {
+      clearTimeout(this.playlistSyncTimer);
+    }
+
+    this.playlistSyncTimer = setTimeout(() => {
+      this.executePlaylistSync(0);
+    }, this.DEBOUNCE_DELAY);
+  }
+
+  /**
+   * 防抖同步当前歌曲
+   */
+  syncCurrentSong(song: Music) {
+    this.pendingCurrentSong = song;
+
+    if (this.currentSongSyncTimer) {
+      clearTimeout(this.currentSongSyncTimer);
+    }
+
+    this.currentSongSyncTimer = setTimeout(() => {
+      this.executeCurrentSongSync(0);
+    }, this.DEBOUNCE_DELAY);
+  }
+
+  /**
+   * 执行播放列表同步（带重试）
+   */
+  private executePlaylistSync(retryCount: number) {
+    if (!this.pendingPlaylist) return;
+
+    const playlist = this.pendingPlaylist.map((song) => song.id);
+
+    addPlayList(
+      playlist,
+      () => {
+        console.log(`[DbSync] 播放列表同步成功 (${playlist.length} 首歌曲)`);
+        this.pendingPlaylist = null;
+      },
+      (error) => {
+        console.error(`[DbSync] 播放列表同步失败 (尝试 ${retryCount + 1}/${this.MAX_RETRIES})`, error);
+
+        if (retryCount < this.MAX_RETRIES - 1) {
+          // 指数退避重试
+          const delay = Math.pow(2, retryCount) * 1000;
+          setTimeout(() => this.executePlaylistSync(retryCount + 1), delay);
+        } else {
+          console.error("[DbSync] 播放列表同步失败，已达最大重试次数");
+          this.pendingPlaylist = null;
+        }
+      }
+    );
+  }
+
+  /**
+   * 执行当前歌曲同步（带重试）
+   */
+  private executeCurrentSongSync(retryCount: number) {
+    if (!this.pendingCurrentSong) return;
+
+    const songId = this.pendingCurrentSong.id;
+
+    setPlaylist(
+      songId,
+      () => {
+        console.log(`[DbSync] 当前歌曲同步成功: ${this.pendingCurrentSong?.title}`);
+        this.pendingCurrentSong = null;
+      },
+      (error) => {
+        console.error(`[DbSync] 当前歌曲同步失败 (尝试 ${retryCount + 1}/${this.MAX_RETRIES})`, error);
+
+        if (retryCount < this.MAX_RETRIES - 1) {
+          const delay = Math.pow(2, retryCount) * 1000;
+          setTimeout(() => this.executeCurrentSongSync(retryCount + 1), delay);
+        } else {
+          console.error("[DbSync] 当前歌曲同步失败，已达最大重试次数");
+          this.pendingCurrentSong = null;
+        }
+      }
+    );
+  }
+}
+
+const dbSyncManager = new DbSyncManager();
+
 interface PlaylistState {
   openPlaylist: boolean;
   allSongs: Music[];
   pageSongs: Music[];
-  selectedSongs: Music[];
   currentSong: Music | null;
   currentPage: number;
   showPlaylist: boolean;
-  hasMore: boolean;
-  initial: boolean;
   setOpenPlaylist: (show: boolean) => void;
   setShowPlaylist: (show: boolean) => void;
   togglePlaylist: (open?: boolean) => void;
@@ -25,7 +121,6 @@ interface PlaylistState {
   clearPlaylist: () => void;
   getTotal: () => number;
   playSingleSong: (song: Music) => void;
-  setInitial: (initial: boolean) => void;
 }
 
 export const usePlaylist = create<PlaylistState>((set, get) => ({
@@ -33,11 +128,8 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
   showPlaylist: false,
   allSongs: [],
   pageSongs: [],
-  selectedSongs: [],
   currentSong: null,
   currentPage: 1,
-  hasMore: true,
-  initial: false,
   setOpenPlaylist: (show) => set(() => ({ openPlaylist: show })),
   setShowPlaylist: (show) => set(() => ({ showPlaylist: show })),
   togglePlaylist: (open?: boolean) =>
@@ -64,14 +156,13 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
   setAllSongs: (songs, initial = false) =>
     set(() => {
       if (!initial) {
-        addDbPlaylist(songs)
+        dbSyncManager.syncPlaylist(songs);
       }
 
       if (songs.length === 0) {
         return {
           allSongs: [],
           pageSongs: [],
-          selectedSongs: [],
           currentSong: null,
         };
       }
@@ -89,16 +180,16 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
         end = total;
       }
       const pageSongs = get().allSongs.slice(start, end);
-      return { pageSongs, currentPage: page, hasMore: end < total };
+      return { pageSongs, currentPage: page };
     }),
   setCurrentSong: (song) => set(() => {
-    setDbPlaylist(song)
+    dbSyncManager.syncCurrentSong(song);
     return { currentSong: song }
   }),
   addSong: (song) =>
     set((state) => {
       const allSongs = [...state.allSongs, song];
-      addDbPlaylist(allSongs)
+      dbSyncManager.syncPlaylist(allSongs);
       return {
         allSongs,
         pageSongs: [...state.pageSongs, song],
@@ -107,21 +198,19 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
   removeSong: (song) =>
     set((state) => {
       const allSongs = state.allSongs.filter((s) => s.id !== song.id);
-      addDbPlaylist(allSongs)
+      dbSyncManager.syncPlaylist(allSongs);
       return {
         allSongs,
         pageSongs: state.pageSongs.filter((s) => s.id !== song.id),
-        selectedSongs: state.selectedSongs.filter((s) => s.id !== song.id),
         currentSong: null,
       }
     }),
   clearPlaylist: () =>
     set(() => {
-      addDbPlaylist([])
+      dbSyncManager.syncPlaylist([]);
       return {
         allSongs: [],
         pageSongs: [],
-        selectedSongs: [],
         currentSong: null,
       }
     }),
@@ -130,25 +219,11 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
     const allSongs = get().allSongs;
     const index = allSongs.findIndex((s) => s.id === song.id);
     if (index === -1) {
-      get().setAllSongs([...allSongs, song]);
-      addDbPlaylist([...allSongs, song])
+      const newSongs = [...allSongs, song];
+      get().setAllSongs(newSongs);
+      dbSyncManager.syncPlaylist(newSongs);
     }
-    setDbPlaylist(song)
+    dbSyncManager.syncCurrentSong(song);
     return { currentSong: song };
   }),
-  setInitial: (initial: boolean) => set(() => ({ initial })),
 }));
-
-
-const addDbPlaylist = (songs: Music[]) => {
-  const playlist: String[] = songs.map((song) => song.id);
-  addPlayList(playlist, (_data) => { }, (error) => {
-    console.error(error);
-  })
-}
-
-const setDbPlaylist = (song: Music) => {
-  setPlaylist(song.id, (_data) => { }, (error) => {
-    console.error(error);
-  })
-}

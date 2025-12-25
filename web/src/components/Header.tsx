@@ -27,14 +27,9 @@ export const Header = () => {
     navigate(`${MyRoutes.Search}?q=${encodeURIComponent(trimmedText)}`);
   };
 
-    const { setAllSongs, setCurrentSong, initial, setInitial } = usePlaylist();
+    const { setAllSongs, setCurrentSong } = usePlaylist();
 
   useEffect(() => {
-    console.log("playlist initial", initial);
-    if (initial) {
-      return;
-    }
-    setInitial(true);
     // 获取播放列表
     getPlayList(1, 0, (data) => {
       if (!data || !data.success) {

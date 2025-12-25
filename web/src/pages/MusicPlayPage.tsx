@@ -74,7 +74,10 @@ function MusicPlayPage() {
             setAllSongs([...allSongs, music]);
             console.log("add music to playlist", music.title);
           }
-          setCurrentSong(music);
+          // 只有当前歌曲不存在或 ID 不同时才设置
+          if (!currentSong || currentSong.id !== music.id) {
+            setCurrentSong(music);
+          }
         }
       },
       (error) => {

@@ -13,6 +13,8 @@ interface CurrentPlayState {
     volume: number;
     mutedVolume: number;
     lyrics: lyric[];
+    lastLyricIndex: number; // 缓存上次的歌词索引
+    hasUserInteracted: boolean;
     setAudioContext: (audioContent: AudioContext) => void;
     setCurrentTime: (currentTime: number) => void;
     setCurrentLyric: (currentLyric: { time: number, text: string } | null) => void;
@@ -21,7 +23,29 @@ interface CurrentPlayState {
     setVolume: (volume: number) => void;
     setMutedVolume: (mutedVolume: number) => void;
     setLyrics: (lyrics: lyric[]) => void;
+    setHasUserInteracted: (hasUserInteracted: boolean) => void;
 }
+
+// 二分查找歌词索引 (O(log n))
+const findLyricIndexBinarySearch = (lyrics: lyric[], currentTime: number): number => {
+    if (lyrics.length === 0) return -1;
+
+    let left = 0;
+    let right = lyrics.length - 1;
+    let result = 0;
+
+    while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        if (lyrics[mid].time <= currentTime) {
+            result = mid;
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+
+    return result;
+};
 
 export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     audioContext: null,
@@ -32,30 +56,32 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     volume,
     mutedVolume: 0,
     lyrics: [],
+    lastLyricIndex: 0,
+    hasUserInteracted: false,
     setAudioContext: (audioContext) => set(() => ({ audioContext })),
     setCurrentTime: (currentTime) => set(() => {
         const lyrics = get().lyrics;
-        if (lyrics) {
-            // 定位下一行歌词，如果没有下一行歌词，则返回当前歌词
-            // 这里的算法是 遍历歌词数组，找到第一个 time 小于等于当前时间的歌词 并且 下一个 time 大于当前时间的歌词
-            let currentLyric = null;
-            const nextLyricIndex = lyrics.findIndex(lyric => lyric.time > currentTime);
-            if (nextLyricIndex === -1) {
-                // 返回最后一行歌词
-                currentLyric = lyrics[lyrics.length - 1];
-            } else {
-                if (nextLyricIndex === 0) {
-                    // 如果当前时间在第一行歌词之前，则返回第一行歌词
-                    currentLyric = lyrics[0];
-                } else {
-                    // 否则返回当前行歌词
-                    currentLyric = lyrics[nextLyricIndex - 1];
-                }
-            }
+        const lastIndex = get().lastLyricIndex;
 
-            return { currentTime, currentLyric }
+        // 如果没有歌词，直接返回
+        if (!lyrics || lyrics.length === 0) {
+            return { currentTime };
         }
-        return { currentTime }
+
+        // 使用二分查找定位当前歌词 (O(log n))
+        const lyricIndex = findLyricIndexBinarySearch(lyrics, currentTime);
+
+        if (lyricIndex === -1) {
+            return { currentTime, currentLyric: null, lastLyricIndex: 0 };
+        }
+
+        // 只有当歌词索引变化时才更新 currentLyric，避免不必要的渲染
+        if (lyricIndex !== lastIndex) {
+            const currentLyric = lyrics[lyricIndex];
+            return { currentTime, currentLyric, lastLyricIndex: lyricIndex };
+        }
+
+        return { currentTime };
     }),
     setCurrentLyric: (currentLyric) => set(() => ({ currentLyric })),
     setDuration: (duration) => set(() => ({ duration })),
@@ -65,5 +91,9 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
         return { volume }
     }),
     setMutedVolume: (mutedVolume) => set(() => ({ mutedVolume })),
-    setLyrics: (lyrics) => set(() => ({ lyrics })),
+    setLyrics: (lyrics) => set(() => ({ lyrics, lastLyricIndex: 0 })),
+    setHasUserInteracted: (hasUserInteracted) => set(() => {
+        localStorage.setItem("hasUserInteracted", hasUserInteracted.toString());
+        return { hasUserInteracted }
+    }),
 }));

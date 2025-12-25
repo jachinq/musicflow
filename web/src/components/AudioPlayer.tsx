@@ -20,6 +20,7 @@ import {
 import { checkRoute, Music, MyRoutes } from "../lib/defined";
 import { useKeyPress } from "../hooks/use-keypress";
 import { toast } from "sonner";
+import { audioBufferCache } from "../lib/audio-cache";
 
 export const AudioPlayer = () => {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -40,6 +41,7 @@ export const AudioPlayer = () => {
     isPlaying,
     volume,
     mutedVolume,
+    hasUserInteracted,
     setVolume,
     setMutedVolume,
     setAudioContext,
@@ -47,6 +49,7 @@ export const AudioPlayer = () => {
     setDuration,
     setIsPlaying,
     setCurrentLyric,
+    setHasUserInteracted,
   } = useCurrentPlay();
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
 
@@ -115,10 +118,12 @@ export const AudioPlayer = () => {
     if (isDetailPage && audioContext == null) {
       return;
     }
-    if (currentTime > 0) {
-      return;
-    }
+    // 注释掉这个检查，允许在播放过程中切歌
+    // if (currentTime > 0) {
+    //   return;
+    // }
     // console.log("audio buffer or gain node changed");
+    console.log("切换歌曲:", currentSong?.title);
     initStatus();
     loadAudioFile();
     // 等待 10 秒后开始预加载下一首歌曲
@@ -128,28 +133,47 @@ export const AudioPlayer = () => {
   }, [currentSong]);
 
   useEffect(() => {
-    if (audioBuffer) {
+    if (audioBuffer && hasUserInteracted) {
+      // 如果用户已经交互过,自动播放新加载的歌曲
       if (gainNode === null && audioContext) {
         initGainNode(audioContext);
       }
       pauseAudio();
       playAudio(0);
     }
-  }, [audioBuffer, gainNode]);
+  }, [audioBuffer]);
 
   useEffect(() => {
-    if (currentTime >= duration && isPlaying) {
-      console.log("end of song");
+    // 检查歌曲是否播放结束（加 0.5 秒容差，且只在接近结尾时触发一次）
+    if (currentTime >= duration - 0.5 && duration > 0 && isPlaying && currentTime < duration + 1) {
+      console.log("end of song", currentTime, duration);
+      // 立即停止播放，避免多次触发
+      pauseAudio();
       nextSong(1);
     }
-  }, [currentTime]);
+  }, [currentTime, duration, isPlaying]);
 
   const initStatus = () => {
+    // 停止播放并清理所有状态
+    if (source) {
+      try {
+        source.stop();
+      } catch (e) {
+        console.log("source already stopped in initStatus");
+      }
+      setSource(null);
+    }
+
+    if (progressIntevalId) {
+      clearInterval(progressIntevalId);
+      setProgressIntevalId(null);
+    }
+
     setIsPlaying(false);
     setCurrentTime(0);
+    setDuration(0); // 重置 duration，避免误判歌曲结束
     setAudioBuffer(null);
     setCurrentLyric(null);
-    progressIntevalId && clearInterval(progressIntevalId);
   };
 
   const nextSong = (next: number) => {
@@ -182,16 +206,27 @@ export const AudioPlayer = () => {
   };
   const initAudioBuffer = async (song: Music | null) => {
     if (!song) return null;
-    if (audioBuffer) return audioBuffer;
-    if (song.decodedAudioBuffer) {
-      setAudioBuffer(song.decodedAudioBuffer);
-      return song.decodedAudioBuffer;
+
+    // 优先从缓存中获取
+    const cachedBuffer = audioBufferCache.get(song.id);
+    if (cachedBuffer) {
+      console.log(`[AudioPlayer] 从缓存加载: ${song.title}`);
+      setAudioBuffer(cachedBuffer);
+      setDuration(cachedBuffer.duration);
+      return cachedBuffer;
     }
+
+    // 缓存未命中，开始解码
     await decodeAudioBuffer(song, true);
-    return song.decodedAudioBuffer;
+    return audioBufferCache.get(song.id);
   };
 
   const playAudio = async (startTime: number = 0) => {
+    // 标记用户已经交互过
+    if (!hasUserInteracted) {
+      setHasUserInteracted(true);
+    }
+
     initGainNode(initAudioContext());
     const audioBuffer = await initAudioBuffer(currentSong);
     // console.log("play", audioContext.state, startTime);
@@ -238,12 +273,19 @@ export const AudioPlayer = () => {
     // console.log("pause", audioContext.state);
     if (progressIntevalId) {
       clearInterval(progressIntevalId);
+      setProgressIntevalId(null);
     }
     if (audioContext.state === "running") {
       audioContext.suspend();
     }
     if (source) {
-      source.stop();
+      try {
+        source.stop();
+      } catch (e) {
+        // source 可能已经停止，忽略错误
+        console.log("source already stopped");
+      }
+      setSource(null);
       setIsPlaying(false);
     }
   };
@@ -261,19 +303,8 @@ export const AudioPlayer = () => {
     }
     try {
       setLoadStatus("加载中...");
-      let audioContextTmp = audioContext;
-      if (!audioContextTmp) {
-        setLoadStatus("设置音频上下文...");
-        audioContextTmp = new AudioContext();
-        setAudioContext(audioContextTmp);
-        setLoadStatus("创建音量节点...");
-        const gainNodeTmp = audioContextTmp.createGain();
-        gainNodeTmp.connect(audioContextTmp.destination);
-        gainNodeTmp.gain.value = volume;
-        setGainNode(gainNodeTmp);
-      }
-      audioContextTmp.suspend(); // 先暂停，等点击播放按钮后再恢复
-
+      // 不在这里创建 AudioContext,等待用户点击播放按钮时再创建
+      // 只预加载音频数据
       decodeAudioBuffer(currentSong, true);
     } catch (error) {
       console.log("load audio file error", error);
@@ -282,33 +313,45 @@ export const AudioPlayer = () => {
   };
 
   const decodeAudioBuffer = async (song: Music, actuallyDecode: boolean) => {
+    // 检查缓存
+    const cachedBuffer = audioBufferCache.get(song.id);
+    if (cachedBuffer) {
+      if (actuallyDecode) {
+        setLoadStatus("从缓存加载...");
+        setAudioBuffer(cachedBuffer);
+        setDuration(cachedBuffer.duration);
+        setLoadStatus("");
+      }
+      song.samplerate = cachedBuffer.sampleRate;
+      return;
+    }
+
+    // 缓存未命中，加载并解码音频文件
     let fileArrayBuffer = await loadFileArrayBuffer(song);
     if (!fileArrayBuffer) return;
 
-    if (song.decodedAudioBuffer) {
-      actuallyDecode && setLoadStatus("解码音频数据...");
-      actuallyDecode && setAudioBuffer(song.decodedAudioBuffer);
-      actuallyDecode && setDuration(song.decodedAudioBuffer.duration);
-      actuallyDecode && setLoadStatus("");
-      song.samplerate = song.decodedAudioBuffer.sampleRate;
-      song.decodedAudioBuffer = undefined; // 清空缓存，释放内存
-    } else {
-      // 克隆一个新的ArrayBuffer，避免影响到原数组
-      // let copyBuffer = fileArrayBuffer.slice(0);
-      // console.log("start decode audio data", song.name);
-      actuallyDecode && setLoadStatus("解码音频数据...");
-      new AudioContext()
-        .decodeAudioData(fileArrayBuffer)
-        .then((audioBuffer) => {
-          actuallyDecode && setAudioBuffer(audioBuffer);
-          actuallyDecode && setDuration(audioBuffer.duration);
-          song.decodedAudioBuffer = audioBuffer;
-          actuallyDecode && setLoadStatus("");
-        })
-        .catch((error) => {
-          console.log("decode audio data error", error);
-          setLoadStatus("解码音频数据失败...");
-        });
+    actuallyDecode && setLoadStatus("解码音频数据...");
+
+    try {
+      // 复用现有的 audioContext 或创建一个临时的用于解码
+      // 注意:这里创建的 AudioContext 仅用于解码,不会自动播放
+      const decodeContext = audioContext || new AudioContext();
+      const audioBuffer = await decodeContext.decodeAudioData(fileArrayBuffer);
+
+      // 存入缓存
+      audioBufferCache.set(song.id, audioBuffer);
+      console.log(`[AudioPlayer] 缓存音频: ${song.title}`, audioBufferCache.getStats());
+
+      if (actuallyDecode) {
+        setAudioBuffer(audioBuffer);
+        setDuration(audioBuffer.duration);
+        setLoadStatus("");
+      }
+
+      song.samplerate = audioBuffer.sampleRate;
+    } catch (error) {
+      console.log("decode audio data error", error);
+      setLoadStatus("解码音频数据失败...");
     }
   };
 
