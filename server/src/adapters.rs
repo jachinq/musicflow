@@ -28,7 +28,7 @@ pub fn unified_to_vo(metadata: UnifiedMetadata) -> MetadataVo {
         let artist_id = metadata.artist_id
             .unwrap_or_default();
 
-        (album_id, artist_id, metadata.album_id.unwrap_or_default())
+        (album_id, artist_id, metadata.cover_art.unwrap_or_default())
     };
 
     // 生成 file_url
