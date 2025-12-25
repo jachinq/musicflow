@@ -6,7 +6,7 @@ import { Play, Rabbit, X } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
 import { useDevice } from "../hooks/use-device";
-import { useKeyPress } from "../hooks/use-keypress";
+import { useKeyboardShortcut } from "../hooks/use-global-keyboard-shortcuts";
 import { toast } from "sonner";
 import { useInfiniteScroll } from "../hooks/use-infinite-scroll";
 import { useHomePageStore } from "../store/home-page";
@@ -173,7 +173,8 @@ const Control = () => {
     );
   };
 
-  useKeyPress("o", playAllSongs); // o键播放全部歌曲
+  // o键播放全部歌曲
+  useKeyboardShortcut("o", playAllSongs, "musicList", 10, "播放全部歌曲");
 
   return (
     <div className="flex justify-center items-center gap-4 flex-col">

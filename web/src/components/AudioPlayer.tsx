@@ -18,10 +18,14 @@ import {
   VolumeXIcon,
 } from "lucide-react";
 import { checkRoute, Music, MyRoutes } from "../lib/defined";
-import { useKeyPress } from "../hooks/use-keypress";
 import { toast } from "sonner";
 import { audioBufferCache } from "../lib/audio-cache";
 import { StreamingAudioLoader } from "../lib/streaming-loader";
+import {
+  useGlobalKeyboardShortcuts,
+  useKeyboardShortcut,
+  useKeyboardScope,
+} from "../hooks/use-global-keyboard-shortcuts";
 
 export const AudioPlayer = () => {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -63,57 +67,132 @@ export const AudioPlayer = () => {
     setAllSongs,
   } = usePlaylist();
 
+  // 初始化全局键盘监听
+  useGlobalKeyboardShortcuts();
+
+  // 激活播放器作用域
+  useKeyboardScope("player");
+
   // 空格键控制播放暂停
-  useKeyPress(" ", () => {
-    if (isPlaying) {
-      pauseAudio();
-    } else {
-      playAudio(currentTime >= duration ? 0 : currentTime);
-    }
-  });
+  useKeyboardShortcut(
+    "Space",
+    () => {
+      if (isPlaying) {
+        pauseAudio();
+      } else {
+        playAudio(currentTime >= duration ? 0 : currentTime);
+      }
+    },
+    "global",
+    10,
+    "播放/暂停"
+  );
 
   // p 显示/隐藏播放列表
-  useKeyPress("p", () => {
-    togglePlaylist();
-  });
+  useKeyboardShortcut(
+    "p",
+    () => {
+      togglePlaylist();
+    },
+    "global",
+    10,
+    "显示/隐藏播放列表"
+  );
 
   // j 跳到上一首歌曲
-  useKeyPress("j", () => {
-    nextSong(-1);
-  });
+  useKeyboardShortcut(
+    "j",
+    () => {
+      nextSong(-1);
+    },
+    "global",
+    10,
+    "上一首"
+  );
 
   // k 跳到下一首歌曲
-  useKeyPress("k", () => {
-    nextSong(1);
-  });
+  useKeyboardShortcut(
+    "k",
+    () => {
+      nextSong(1);
+    },
+    "global",
+    10,
+    "下一首"
+  );
 
   // b 静音/取消静音
-  useKeyPress("b", () => {
-    let isMuted = volume > 0;
-    if (isMuted) {
-      setMutedVolume(volume);
-      toast.success("开启静音");
-    } else {
-      setMutedVolume(0);
-      toast.success("取消静音");
-    }
-    changeVolume(isMuted? 0 : mutedVolume || 0.5);
-  });
+  useKeyboardShortcut(
+    "b",
+    () => {
+      let isMuted = volume > 0;
+      if (isMuted) {
+        setMutedVolume(volume);
+        toast.success("开启静音");
+      } else {
+        setMutedVolume(0);
+        toast.success("取消静音");
+      }
+      changeVolume(isMuted ? 0 : mutedVolume || 0.5);
+    },
+    "global",
+    10,
+    "静音/取消静音"
+  );
 
   // v 显示/隐藏音量
-  useKeyPress("v", () => {
-    setShowVolume(!showVolume);
-  });
+  useKeyboardShortcut(
+    "v",
+    () => {
+      setShowVolume(!showVolume);
+    },
+    "global",
+    10,
+    "显示/隐藏音量控制"
+  );
 
-  // 音量键调节音量 / 切歌
-  useKeyPress("ArrowUp", () => {
-    if (showVolume && volume < 1) changeVolume(Math.min(volume + 0.005, 1));
-    if (openPlaylist) nextSong(-1);
-  });
-  useKeyPress("ArrowDown", () => {
-    if (showVolume && volume > 0) changeVolume(Math.max(volume - 0.005, 0));
-    if (openPlaylist) nextSong(1);
-  });
+  // ArrowUp: 音量控制优先（优先级 20），播放列表其次（优先级 10）
+  useKeyboardShortcut(
+    "ArrowUp",
+    () => {
+      if (volume < 1) changeVolume(Math.min(volume + 0.005, 1));
+    },
+    "volume",
+    20,
+    "增加音量"
+  );
+
+  useKeyboardShortcut(
+    "ArrowUp",
+    () => {
+      nextSong(-1);
+    },
+    "playlist",
+    10,
+    "播放列表：上一首"
+  );
+
+  // ArrowDown: 音量控制优先（优先级 20），播放列表其次（优先级 10）
+  useKeyboardShortcut(
+    "ArrowDown",
+    () => {
+      if (volume > 0) changeVolume(Math.max(volume - 0.005, 0));
+    },
+    "volume",
+    20,
+    "减少音量"
+  );
+
+  useKeyboardShortcut(
+    "ArrowDown",
+    () => {
+      nextSong(1);
+    },
+    "playlist",
+    10,
+    "播放列表：下一首"
+  );
+
 
   useEffect(() => {
     if (isDetailPage && audioContext == null) {
@@ -384,6 +463,9 @@ export const AudioPlayer = () => {
         url: song.file_url,
         onProgress: (progress) => {
           setLoadStatus(`加载中... ${Math.floor(progress)}%`);
+          if (progress >= 100) {
+            setLoadStatus("");
+          }
         },
       });
     } catch (error) {
@@ -413,6 +495,27 @@ export const AudioPlayer = () => {
   };
 
   const [showVolume, setShowVolume] = useState<boolean>(false);
+
+  // 根据 showVolume 动态激活/停用音量作用域
+  useEffect(() => {
+    const { globalKeyboardManager } = require("../hooks/use-global-keyboard-shortcuts");
+    if (showVolume) {
+      globalKeyboardManager.activateScope("volume");
+    } else {
+      globalKeyboardManager.deactivateScope("volume");
+    }
+  }, [showVolume]);
+
+  // 根据 openPlaylist 动态激活/停用播放列表作用域
+  useEffect(() => {
+    const { globalKeyboardManager } = require("../hooks/use-global-keyboard-shortcuts");
+    if (openPlaylist) {
+      globalKeyboardManager.activateScope("playlist");
+    } else {
+      globalKeyboardManager.deactivateScope("playlist");
+    }
+  }, [openPlaylist]);
+
   const changeVolume = (value: number) => {
     if (!gainNode) {
       return;

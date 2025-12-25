@@ -5,7 +5,7 @@ import { formatTime } from "../lib/utils";
 import { usePlaylist } from "../store/playlist";
 import { Pagination } from "./Pagination";
 import { getCoverSmallUrl } from "../lib/api";
-import { useKeyPress } from "../hooks/use-keypress";
+import { useKeyboardShortcut } from "../hooks/use-global-keyboard-shortcuts";
 import { useCurrentPlay } from "../store/current-play";
 import { useClickAway } from "@uidotdev/usehooks";
 import { useDevice } from "../hooks/use-device";
@@ -36,18 +36,31 @@ const Playlist = ({ clearPlaylist }: Props) => {
     setCurrentSong(song);
   };
 
-  // 左右箭头控制翻页
-  useKeyPress("ArrowRight", () => {
-    const totalPages = Math.ceil(getTotal() / 10);
-    if (getTotal() > 0 && currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  });
-  useKeyPress("ArrowLeft", () => {
-    if (getTotal() > 0 && currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  });
+  // 左右箭头控制翻页 (在 playlist 作用域下)
+  useKeyboardShortcut(
+    "ArrowRight",
+    () => {
+      const totalPages = Math.ceil(getTotal() / 10);
+      if (getTotal() > 0 && currentPage < totalPages) {
+        setCurrentPage(currentPage + 1);
+      }
+    },
+    "playlist",
+    5,
+    "播放列表：下一页"
+  );
+
+  useKeyboardShortcut(
+    "ArrowLeft",
+    () => {
+      if (getTotal() > 0 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
+    },
+    "playlist",
+    5,
+    "播放列表：上一页"
+  );
 
   const adaptiveClass = () => {
     let className = "w-[calc(100vw/3)] ";
