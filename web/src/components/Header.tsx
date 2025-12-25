@@ -3,9 +3,9 @@ import { Input } from "./Input";
 import { Music2Icon, SearchIcon, SettingsIcon, TagIcon } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";
-import { useHomePageStore } from "../pages/HomePage";
 import { useState } from "react";
 import { MyRoutes } from "../lib/defined";
+import { useHomePageStore } from "../store/home-page";
 
 export const Header = () => {
   const { showPlaylist } = usePlaylist();
