@@ -431,3 +431,29 @@ export const scanMusicProgress = (
     method: "GET",
   });
 };
+
+// --- 随机歌曲相关接口 ---//
+/**
+ * 获取随机歌曲列表
+ * @param size 返回的最大歌曲数量,默认 150,最大 500
+ * @param genre 按流派筛选
+ * @param fromYear 只返回此年份之后(含)发布的歌曲
+ * @param toYear 只返回此年份之前(含)发布的歌曲
+ * @param onSuccess 成功回调
+ * @param onError 失败回调
+ */
+export const getRandomSongs = (
+  size: number,
+  genre?: string,
+  fromYear?: string,
+  toYear?: string,
+  onSuccess?: (data: JsonResult<GetList>) => void,
+  onError?: (error: any) => void
+) => {
+  let url = `${API_URL}/api/random_songs?size=${size}`;
+  if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+  if (fromYear) url += `&fromYear=${fromYear}`;
+  if (toYear) url += `&toYear=${toYear}`;
+
+  fetchUtils(url, onSuccess || (() => {}), onError || (() => {}));
+};
