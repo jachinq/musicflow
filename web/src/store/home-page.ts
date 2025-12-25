@@ -13,6 +13,10 @@ interface ContextProps {
   pageSize: number;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
+  randomSongs: any[];
+  setRandomSongs: (songs: any[]) => void;
+  randomSongsLoading: boolean;
+  setRandomSongsLoading: (loading: boolean) => void;
 }
 export const useHomePageStore = create<ContextProps>((set) => ({
   initialized: false,
@@ -28,4 +32,9 @@ export const useHomePageStore = create<ContextProps>((set) => ({
   pageSize: 30,
   setError: (error: string | null) => set((state) => ({ ...state, error })),
   setLoading: (loading: boolean) => set((state) => ({ ...state, loading })),
+  randomSongs: [],
+  setRandomSongs: (songs: any[]) => set((state) => ({ ...state, randomSongs: songs })),
+  randomSongsLoading: false,
+  setRandomSongsLoading: (loading: boolean) =>
+    set((state) => ({ ...state, randomSongsLoading: loading })),
 }));

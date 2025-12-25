@@ -13,7 +13,7 @@ import { useHomePageStore } from "../store/home-page";
 import LoadingIndicator from "../components/LoadingIndicator";
 
 const MusicList = () => {
-  const { playSingleSong, setAllSongs, setCurrentSong } = usePlaylist();
+  const { playSingleSong } = usePlaylist();
   const {
     initialized,
     setInitialized,
@@ -94,22 +94,22 @@ const MusicList = () => {
     fetchMusicList(1, pageSize, setTotalCount, setLoading, setError); // 初始加载
     setInitialized(true);
 
-    // 获取播放列表
-    getPlayList(1, 0, (data) => {
-      if (!data || !data.success) {
-        console.error("获取播放列表失败", data);
-        return;
-      }
-      setAllSongs(data.data.list, true);
-      if (data.data.current_song) {
-        setCurrentSong(data.data.current_song);
-      }
-    },
-      (error) => {
-        console.error("获取播放列表失败", error);
-        setError(error);
-      }
-    );
+    // // 获取播放列表
+    // getPlayList(1, 0, (data) => {
+    //   if (!data || !data.success) {
+    //     console.error("获取播放列表失败", data);
+    //     return;
+    //   }
+    //   setAllSongs(data.data.list, true);
+    //   if (data.data.current_song) {
+    //     setCurrentSong(data.data.current_song);
+    //   }
+    // },
+    //   (error) => {
+    //     console.error("获取播放列表失败", error);
+    //     setError(error);
+    //   }
+    // );
   }, []);
 
   useEffect(() => {
