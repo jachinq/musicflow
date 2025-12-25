@@ -26,6 +26,7 @@ mod controller_song;
 mod controller_songlist;
 mod controller_tool;
 mod controller_user;
+mod controller_search;
 mod adapters;
 
 use controller_album::*;
@@ -33,6 +34,7 @@ use controller_artist::*;
 use controller_genre::*;
 use controller_playlist::*;
 use controller_song::*;
+use controller_search::*;
 use controller_songlist::*;
 use controller_tool::*;
 use controller_user::*;
@@ -196,6 +198,8 @@ async fn main() -> io::Result<()> {
                 "/api/handle_scan_music_progress",
                 web::post().to(handle_scan_music_progress),
             )
+            // 搜索相关接口
+            .route("/api/search", web::get().to(handle_search))
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", &web_dir).index_file("index.html"))

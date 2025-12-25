@@ -10,6 +10,7 @@ export enum MyRoutes {
     ArtistDetail = "/artists/:id",
     Player = "/player/:id",
     Settings = "/settings",
+    Search = "/search",
 }
 export const checkRoute = (location: Location<any>, route: MyRoutes): boolean => {
     const pathname = location.pathname;

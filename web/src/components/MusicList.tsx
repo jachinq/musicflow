@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { MusicCard } from "../components/MusicCard";
 
-import { getMusicList, getPlayList } from "../lib/api";
+import { getMusicList } from "../lib/api";
 import { Play, Rabbit, X } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
 import { useMusicList } from "../store/musicList";

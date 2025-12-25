@@ -78,9 +78,9 @@ export const MoreInfoPage = () => {
   };
   useEffect(() => {
     // console.log("param", param);
-    // console.log("location", location);
     let pathname = location.pathname;
     let parseTabId = pathname.split("/")[1] as TabId;
+    // console.log("location", {location, parseTabId});
     if (parseTabId === "artists") {
       setType(DrawerType.ARTIST);
     } else if (parseTabId === "albums") {
@@ -381,12 +381,16 @@ const DetaialDrawer = () => {
     total: number;
     duration: number;
   }>({ total: 0, duration: 0 });
+  const location = useLocation();
 
   useEffect(() => {
     if (!id) return;
-    const num_id = parseInt(id);
-    if (isNaN(num_id)) return;
-    setSerchId(num_id.toString());
+
+    console.log('init open drawer', {id, location});
+
+    // const num_id = parseInt(id);
+    // if (isNaN(num_id)) return;
+    setSerchId(id);
   }, [id]);
   useEffect(() => {
     if (!selectedItem) return;
@@ -401,6 +405,8 @@ const DetaialDrawer = () => {
     setMusicList([]);
     if (!serchId) return;
     setLoading(true);
+
+    console.log('fetch music list', {type, serchId});
 
     let fetchFunc;
     let fetchSongs;

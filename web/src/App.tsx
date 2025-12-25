@@ -10,6 +10,7 @@ import { AudioPlayer } from "./components/AudioPlayer";
 import { ThemeProvider } from "./components/theme-provider";
 import { MoreInfoPage } from "./pages/MoreInfoPage";
 import { SongListPage } from "./pages/SongListPage";
+import { SearchPage } from "./pages/SearchPage";
 import { Header } from "./components/Header";
 import { MyRoutes } from "./lib/defined";
 
@@ -37,6 +38,7 @@ function App() {
                 <Route path={MyRoutes.ArtistDetail} element={<MoreInfoPage />} />
                 <Route path={MyRoutes.Player} element={<MusicPlayPage />} />
                 <Route path={MyRoutes.Settings} element={<SettingsPage />} />
+                <Route path={MyRoutes.Search} element={<SearchPage />} />
               </Routes>
             </div>
           </div>

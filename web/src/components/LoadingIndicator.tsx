@@ -1,3 +1,5 @@
+import { Loader } from "lucide-react";
+
 interface LoadingProps {
   loading: boolean;
   hasMore?: boolean;
@@ -6,7 +8,7 @@ interface LoadingProps {
 const LoadingIndicator = ({ loading, hasMore = false }: LoadingProps) => {
   if (loading) {
     return (
-      <div className="text-center py-4 text-muted-foreground">加载中...</div>
+      <Loader className="animate-spin" size={36} />
     );
   }
 

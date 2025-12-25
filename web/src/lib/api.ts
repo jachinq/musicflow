@@ -457,3 +457,33 @@ export const getRandomSongs = (
 
   fetchUtils(url, onSuccess || (() => {}), onError || (() => {}));
 };
+
+// --- 搜索相关接口 ---
+
+export interface SearchResult {
+  songs: Music[];
+  albums: Album[];
+  artists: Artist[];
+  total_songs: number;
+  total_albums: number;
+  total_artists: number;
+}
+
+/**
+ * 统一搜索:音乐、专辑、艺术家
+ * @param keyword 搜索关键字
+ * @param page 当前页码
+ * @param pageSize 每页数量
+ * @param onSuccess 成功回调
+ * @param onError 失败回调
+ */
+export const searchAll = (
+  keyword: string,
+  page: number,
+  pageSize: number,
+  onSuccess: (data: JsonResult<SearchResult>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/search?q=${encodeURIComponent(keyword)}&page=${page}&page_size=${pageSize}`;
+  fetchUtils(url, onSuccess, onError, { method: "GET" });
+};

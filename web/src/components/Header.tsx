@@ -1,34 +1,28 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Input } from "./Input";
 import { Music2Icon, SearchIcon, SettingsIcon, TagIcon } from "lucide-react";
 import { usePlaylist } from "../store/playlist";
-import { useMusicList } from "../store/musicList";
 import { useState } from "react";
 import { MyRoutes } from "../lib/defined";
-import { useHomePageStore } from "../store/home-page";
+import { toast } from "sonner";
 
 export const Header = () => {
   const { showPlaylist } = usePlaylist();
-  const { filter, setFilter, setTotalCount, fetchMusicList } = useMusicList();
-  const { pageSize, setLoading, setError } = useHomePageStore();
   const [fitlerText, setFitlerText] = useState("");
   const changeFitlerText = (value: string) => {
     setFitlerText(value);
-    setFilter({ ...filter, any: value });
-    if (value === "") {
-      // 如果搜索框为空，则显示全部
-      search();
-    }
   };
 
-  const location = useLocation();
   const navigate = useNavigate();
   const search = () => {
-    fetchMusicList(1, pageSize, setTotalCount, setLoading, setError);
-    // 如果不是首页，则跳转到首页
-    if (location.pathname !== "/") {
-      navigate(MyRoutes.Home);
+    const trimmedText = fitlerText.trim();
+    if (!trimmedText || trimmedText === "") {
+      toast.error("请输入搜索关键字");
+      return;
     }
+
+    // 跳转到搜索结果页面
+    navigate(`${MyRoutes.Search}?q=${encodeURIComponent(trimmedText)}`);
   };
 
   return (
@@ -54,7 +48,7 @@ export const Header = () => {
           <Input
             value={fitlerText}
             onChange={changeFitlerText}
-            placeholder="搜索音乐/歌手/专辑/年份"
+            placeholder="搜索音乐/歌手/专辑"
             onEnter={search}
           />
           <SearchIcon

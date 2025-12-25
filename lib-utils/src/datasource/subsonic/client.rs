@@ -143,6 +143,7 @@ impl SubsonicClient {
         response
             .subsonic_response
             .top_songs
+            .unwrap_or(TopSongs { song: None })
             .song
             // .map(|t| t.song.unwrap_or_default())
             .ok_or_else(|| anyhow::anyhow!("top songs not found: {}", artist_name))
@@ -170,7 +171,9 @@ impl SubsonicClient {
 
         response
             .subsonic_response
-            .songs_by_genre.song.ok_or_else(|| anyhow::anyhow!("genre songs not found: {}", genre))
+            .songs_by_genre
+            .song
+            .ok_or_else(|| anyhow::anyhow!("genre songs not found: {}", genre))
     }
     /// 搜索
     pub async fn search3(
@@ -270,15 +273,15 @@ impl SubsonicClient {
     }
 
     /// 构建流式URL
-    pub fn get_stream_url(&self, id: &str, max_bitrate: u32, format: &str) -> String {
+    pub fn get_stream_url(&self, id: &str, _max_bitrate: u32, _format: &str) -> String {
         let mut params = self.auth.get_auth_params();
         params.extend(vec![
             ("v", self.api_version.clone()),
             ("c", self.client_name.clone()),
             ("f", "json".to_string()),
             ("id", id.to_string()),
-            ("maxBitRate", max_bitrate.to_string()),
-            ("format", format.to_string()),
+            // ("maxBitRate", max_bitrate.to_string()),
+            // ("format", format.to_string()),
         ]);
 
         let query_string = params
@@ -321,16 +324,24 @@ impl SubsonicClient {
 
         let response = response.json::<T>().await;
 
-        if url.contains("search") {
-            // println!("{}?{}", url, params.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>().join("&"));
+        println!(
+            "{}?{}",
+            url,
+            params
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, v))
+                .collect::<Vec<_>>()
+                .join("&")
+        );
+        if url.contains("getRandomSongs") {
 
-            // println!("{:?}", self
-            //     .client
-            //     .get(&url)
-            //     .query(&params)
-            //     .send()
-            //     .await
-            //     .context("Failed to send request to Subsonic server")?.text().await);
+            println!("{:?}", self
+                .client
+                .get(&url)
+                .query(&params)
+                .send()
+                .await
+                .context("Failed to send request to Subsonic server")?.text().await);
         }
         match response {
             Ok(json) => Ok(json),
@@ -390,7 +401,7 @@ struct SongWrapper {
 struct TopSongsWrapper {
     #[serde(flatten)]
     base: BaseResponse,
-    top_songs: TopSongs,
+    top_songs: Option<TopSongs>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -413,29 +424,31 @@ pub struct SubsonicSong {
     pub artists: Option<Vec<SubsonicArtist>>,
     pub display_album_artist: Option<String>,
     pub display_artist: Option<String>,
-    pub bit_depth: Option<u32>,
-    pub track: Option<String>,
+    // pub bit_depth: Option<u32>,
+    #[serde(default, deserialize_with = "deserialize_year")]
+    pub track: Option<u32>,
     #[serde(default, deserialize_with = "deserialize_year")]
     pub year: Option<u32>,
+    #[serde(default, deserialize_with = "deserialize_year")]
     pub parent: Option<u32>,
     pub genre: Option<String>,
     pub duration: Option<u32>,
     pub bit_rate: Option<u32>,
-    pub sampling_rate: Option<u32>,
-    pub disc_number: Option<u32>,
-    pub channel_count: Option<u32>,
+    // pub sampling_rate: Option<u32>,
+    // pub disc_number: Option<u32>,
+    // pub channel_count: Option<u32>,
     pub cover_art: Option<String>,
-    pub size: Option<u64>,
+    // pub size: Option<u64>,
     pub content_type: Option<String>,
-    pub created: Option<String>,
+    // pub created: Option<String>,
     pub suffix: Option<String>,
     pub path: Option<String>,
-    pub media_type: Option<String>,
-    pub sort_name: Option<String>,
-    pub user_rating: Option<u32>,
-    pub r#type: Option<String>,
-    pub is_dir: Option<bool>,
-    pub is_video: Option<bool>,
+    // pub media_type: Option<String>,
+    // pub sort_name: Option<String>,
+    // pub user_rating: Option<u32>,
+    // pub r#type: Option<String>,
+    // pub is_dir: Option<bool>,
+    // pub is_video: Option<bool>,
 }
 
 /// Subsonic 专辑信息
@@ -564,7 +577,6 @@ pub struct SongsByGenre {
     pub song: Option<Vec<SubsonicSong>>,
 }
 
-
 /// 搜索结果
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -615,7 +627,6 @@ struct RandomSongsWrapper {
 struct RandomSongs {
     song: Option<Vec<SubsonicSong>>,
 }
-
 
 // 自定义反序列化函数，同时支持 String 和 u32 类型的 year 字段
 fn deserialize_year<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
