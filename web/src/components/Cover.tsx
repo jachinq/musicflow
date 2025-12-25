@@ -100,7 +100,7 @@ export const Cover = ({
 
   const getStyle = () => {
     let sizePx = size + "px";
-    const style = {
+    const style_fixed = {
       borderRadius: "8px",
       minWidth: sizePx,
       minHeight: sizePx,
@@ -108,12 +108,13 @@ export const Cover = ({
       maxHeight: sizePx,
     };
     if (roundType === "card_text") {
-      style.borderRadius = "8px 8px 0 0"
+      style_fixed.borderRadius = "8px 8px 0 0"
     }
     if (roundType === "circle") {
-      style.borderRadius = "50%"
+      style_fixed.borderRadius = "50%"
     }
-    return style;
+    
+    return style_fixed;
   };
 
   return (

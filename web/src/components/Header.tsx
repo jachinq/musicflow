@@ -29,7 +29,7 @@ export const Header = () => {
     <nav
       className={
         "px-4 py-3 bg-primary-foreground top-0 w-full sticky" +
-        (showPlaylist ? "" : " z-[1]")
+        (showPlaylist ? " z-[1]" : " z-[10]")
       }
     >
       <div className="flex justify-between gap-2">

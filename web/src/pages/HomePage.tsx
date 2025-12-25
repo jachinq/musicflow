@@ -12,9 +12,11 @@ export const HomePage = () => {
   const { setAllSongs, setCurrentSong, initial, setInitial } = usePlaylist();
 
   useEffect(() => {
+    console.log("HomePage render, playlist initial", initial);
     if (initial) {
       return;
     }
+        setInitial(true);
     // 获取播放列表
     getPlayList(1, 0, (data) => {
       if (!data || !data.success) {
@@ -24,7 +26,6 @@ export const HomePage = () => {
       setAllSongs(data.data.list, true);
       if (data.data.current_song) {
         setCurrentSong(data.data.current_song);
-        setInitial(true);
       }
     },
       (error) => {

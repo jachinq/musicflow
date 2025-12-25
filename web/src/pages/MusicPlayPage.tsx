@@ -9,6 +9,7 @@ import { useCurrentPlay } from "../store/current-play";
 import { Option, OptionGroup } from "../components/Option";
 import { useDevice } from "../hooks/use-device";
 import { DetailInfo } from "../components/DetailInfo";
+import { Cover } from "../components/Cover";
 
 function MusicPlayPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,29 +25,28 @@ function MusicPlayPage() {
     isHugeDevice,
     windowWidth,
   } = useDevice();
-  const gridCols = `${
-    isSmallDevice
-      ? "1fr"
-      : isMediumDevice || isLargeDevice
+  const gridCols = `${isSmallDevice
+    ? "1fr"
+    : isMediumDevice || isLargeDevice
       ? "1fr 1fr"
       : "1fr 2fr"
-  }`;
+    }`;
   // const album_size = isSmallDevice? 250 : isMediumDevice? 300 : 400;
   // const album_border_width = isSmallDevice? 60 : isMediumDevice? 70 : 80;
   const x = windowWidth
     ? isHugeDevice
       ? windowWidth / 2.5
       : isLargeDevice
-      ? windowWidth / 1.5
-      : windowWidth / 1.2
+        ? windowWidth / 1.5
+        : windowWidth / 1.2
     : 0;
   const album_size = windowWidth
     ? 0.00016666 * (x * x) + 0.05 * x + 83.335
     : isSmallDevice
-    ? 250
-    : isMediumDevice
-    ? 300
-    : 400;
+      ? 250
+      : isMediumDevice
+        ? 300
+        : 400;
   const album_border_width = album_size / 3;
   // windowWidth 和 album_size 的关系是一个二次方程。已知公式 ax^2 + bx + c = y, 且 x=500时y=150、x=700时y=200、x=1000时y=300，求公式中的a、b、c，解得 a=0.00016666、b=0.05、c=83.335
 
@@ -97,21 +97,26 @@ function MusicPlayPage() {
       style={{ gridTemplateColumns: gridCols }}
     >
       <div
-        className={`flex justify-center w-full ${
-          !isSmallDevice
-            ? "min-h-[calc(100vh-150px)] items-center sticky top-[60px]"
-            : "p-8 items-start"
-        }`}
+        className={`flex justify-center w-full ${!isSmallDevice
+          ? "min-h-[calc(100vh-150px)] items-center sticky top-[60px]"
+          : "p-8 items-start"
+          }`}
       >
+
         <div
           className="album-spin-wrapper"
           style={{ borderWidth: album_border_width }}
         >
-          <img
+          {/* <img
             src={getCoverMediumUrl(currentSong?.cover_art || '')}
             alt=""
             className={`${isPlaying ? "album-spin" : ""} object-cover object-ce`}
-            style={{ height: album_size + "px", width: album_size + "px" }} 
+            style={{ height: album_size + "px", width: album_size + "px" }}
+          /> */}
+          <Cover
+            src={getCoverMediumUrl(currentSong?.cover_art || '')}
+            className={`${isPlaying ? "album-spin" : ""} object-cover object-center rounded-full`}
+            size={album_size}
           />
         </div>
       </div>
