@@ -11,6 +11,7 @@ interface PlaylistState {
   currentPage: number;
   showPlaylist: boolean;
   hasMore: boolean;
+  initial: boolean;
   setOpenPlaylist: (show: boolean) => void;
   setShowPlaylist: (show: boolean) => void;
   togglePlaylist: (open?: boolean) => void;
@@ -24,6 +25,7 @@ interface PlaylistState {
   clearPlaylist: () => void;
   getTotal: () => number;
   playSingleSong: (song: Music) => void;
+  setInitial: (initial: boolean) => void;
 }
 
 export const usePlaylist = create<PlaylistState>((set, get) => ({
@@ -35,6 +37,7 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
   currentSong: null,
   currentPage: 1,
   hasMore: true,
+  initial: false,
   setOpenPlaylist: (show) => set(() => ({ openPlaylist: show })),
   setShowPlaylist: (show) => set(() => ({ showPlaylist: show })),
   togglePlaylist: (open?: boolean) =>
@@ -132,6 +135,7 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
     setDbPlaylist(song)
     return { currentSong: song };
   }),
+  setInitial: (initial: boolean) => set(() => ({ initial })),
 }));
 
 

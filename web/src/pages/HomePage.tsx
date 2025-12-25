@@ -9,9 +9,12 @@ import { getPlayList } from "../lib/api";
 
 export const HomePage = () => {
   const { error, loading, setError } = useHomePageStore();
-  const { setAllSongs, setCurrentSong } = usePlaylist();
+  const { setAllSongs, setCurrentSong, initial, setInitial } = usePlaylist();
 
   useEffect(() => {
+    if (initial) {
+      return;
+    }
     // 获取播放列表
     getPlayList(1, 0, (data) => {
       if (!data || !data.success) {
@@ -21,6 +24,7 @@ export const HomePage = () => {
       setAllSongs(data.data.list, true);
       if (data.data.current_song) {
         setCurrentSong(data.data.current_song);
+        setInitial(true);
       }
     },
       (error) => {

@@ -24,7 +24,7 @@ import { toast } from "sonner";
 export const AudioPlayer = () => {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [source, setSource] = useState<AudioBufferSourceNode | null>(null);
-  const [progressIntevalId, setProgressIntevalId] = useState<number | null>(
+  const [progressIntevalId, setProgressIntevalId] = useState<NodeJS.Timeout | null>(
     null
   );
   const navigate = useNavigate();
@@ -465,6 +465,7 @@ export const AudioPlayer = () => {
                     <div title={volume.toFixed(2)}>
                       <div className="volume-slider z-10">
                         <input
+                          className="w-[128px]"
                           type="range"
                           dir="btt"
                           min="0"

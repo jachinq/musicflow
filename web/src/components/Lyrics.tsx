@@ -20,7 +20,7 @@ function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean
           setLyrics([]);
           return
         };
-        const limit = 10;
+        const limit = 6; // 前后各显示n行空白
         const empty: lyric = { time: 0, text: "", id: 0, song_id: "" };
         let firstList = [];
         for (let i = 0; i < limit; i++) {
