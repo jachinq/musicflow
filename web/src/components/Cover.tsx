@@ -24,8 +24,53 @@ export const Cover = ({
 }: CoverProps & React.HTMLAttributes<HTMLDivElement>) => {
   const [loaded, setLoaded] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const failedUrlsRef = useRef<Set<string>>(new Set());
+
+  // Intersection Observer 用于检测元素是否可见
   useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            // 一旦可见就不再观察
+            if (containerRef.current) {
+              observer.unobserve(containerRef.current);
+            }
+          }
+        });
+      },
+      {
+        rootMargin: "50px", // 提前50px开始加载
+        threshold: 0.01,
+      }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      if (containerRef.current) {
+        observer.unobserve(containerRef.current);
+      }
+    };
+  }, []);
+
+  // 仅在可见时加载图片
+  useEffect(() => {
+    if (!isVisible) return;
+
+    // 如果该 URL 已经失败过,直接显示 fallback,不再重试
+    if (src && failedUrlsRef.current.has(src)) {
+      setLoaded(true);
+      setShowFallback(true);
+      return;
+    }
+
     setShowFallback(false);
     setLoaded(false);
     if (!src) {
@@ -37,17 +82,17 @@ export const Cover = ({
     img.src = src;
     img.onload = () => {
       setLoaded(true);
-      // console.log(imgRef.current);
       if (imgRef.current) {
         imgRef.current.src = img.src;
         imgRef.current.style.display = "block";
       }
     };
     img.onerror = () => {
+      // 记录失败的 URL,避免重复请求
+      failedUrlsRef.current.add(src);
       setLoaded(true);
       if (imgRef.current) {
         if (fallback) {
-          // console.log(fallback);
           setShowFallback(true);
         } else {
           imgRef.current.src =
@@ -61,7 +106,7 @@ export const Cover = ({
       img.onload = null;
       img.onerror = null;
     };
-  }, [src, defaultSrc]);
+  }, [isVisible, src, defaultSrc, fallback]);
 
   const getStyle = () => {
     let sizePx = size + "px";
@@ -83,6 +128,7 @@ export const Cover = ({
 
   return (
     <div
+      ref={containerRef}
       onClick={onClick}
       style={getStyle()}
       className={"flex items-center justify-center bg-muted shadow-md overflow-hidden " +
