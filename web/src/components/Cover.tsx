@@ -27,7 +27,6 @@ export const Cover = ({
   const [isVisible, setIsVisible] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const failedUrlsRef = useRef<Set<string>>(new Set());
 
   // Intersection Observer 用于检测元素是否可见
   useEffect(() => {
@@ -64,13 +63,6 @@ export const Cover = ({
   useEffect(() => {
     if (!isVisible) return;
 
-    // 如果该 URL 已经失败过,直接显示 fallback,不再重试
-    if (src && failedUrlsRef.current.has(src)) {
-      setLoaded(true);
-      setShowFallback(true);
-      return;
-    }
-
     setShowFallback(false);
     setLoaded(false);
     if (!src) {
@@ -81,16 +73,13 @@ export const Cover = ({
     const img = new Image();
     img.src = src;
     img.onload = () => {
-      setLoaded(true);
       if (imgRef.current) {
         imgRef.current.src = img.src;
         imgRef.current.style.display = "block";
       }
+      setLoaded(true);
     };
     img.onerror = () => {
-      // 记录失败的 URL,避免重复请求
-      failedUrlsRef.current.add(src);
-      setLoaded(true);
       if (imgRef.current) {
         if (fallback) {
           setShowFallback(true);
@@ -101,12 +90,13 @@ export const Cover = ({
           imgRef.current.style.display = "block";
         }
       }
+      setLoaded(true);
     };
     return () => {
       img.onload = null;
       img.onerror = null;
     };
-  }, [isVisible, src, defaultSrc, fallback]);
+  }, [isVisible, src, defaultSrc]);
 
   const getStyle = () => {
     let sizePx = size + "px";
