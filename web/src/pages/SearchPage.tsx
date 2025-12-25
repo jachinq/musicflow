@@ -11,6 +11,7 @@ import { Option, OptionGroup } from "../components/Option";
 import { Cover } from "../components/Cover";
 import { getCoverSmallUrl } from "../lib/api";
 import LoadingIndicator from "../components/LoadingIndicator";
+import { VirtualGrid } from "../components/VirtualGrid";
 
 // 标签页 ID
 type TabId = "songs" | "albums" | "artists";
@@ -145,6 +146,24 @@ const SongsTab = ({ songs, onPlay }: { songs: Music[]; onPlay: (music: Music) =>
     );
   }
 
+  // 使用虚拟滚动优化大列表渲染
+  if (songs.length > 50) {
+    return (
+      <div style={{ height: "calc(100vh - 300px)" }}>
+        <VirtualGrid
+          items={songs}
+          itemHeight={220}
+          itemWidth={140}
+          gap={16}
+          overscan={2}
+          renderItem={(music) => (
+            <MusicCard key={music.id} music={music} onPlay={onPlay} />
+          )}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
       {songs.map((music) => (
@@ -160,6 +179,28 @@ const AlbumsTab = ({ albums, navigate }: { albums: Album[]; navigate: any }) => 
     return (
       <div className="text-center text-muted-foreground py-10">
         没有找到相关专辑
+      </div>
+    );
+  }
+
+  // 使用虚拟滚动优化大列表渲染
+  if (albums.length > 50) {
+    return (
+      <div style={{ height: "calc(100vh - 300px)" }}>
+        <VirtualGrid
+          items={albums}
+          itemHeight={170}
+          itemWidth={120}
+          gap={40}
+          overscan={2}
+          renderItem={(album) => (
+            <AlbumCoverItem
+              key={album.id}
+              album={album}
+              onClick={() => navigate(`${MyRoutes.Albums}/${album.id}`)}
+            />
+          )}
+        />
       </div>
     );
   }
@@ -183,6 +224,28 @@ const ArtistsTab = ({ artists, navigate }: { artists: Artist[]; navigate: any })
     return (
       <div className="text-center text-muted-foreground py-10">
         没有找到相关歌手
+      </div>
+    );
+  }
+
+  // 使用虚拟滚动优化大列表渲染
+  if (artists.length > 50) {
+    return (
+      <div style={{ height: "calc(100vh - 300px)" }}>
+        <VirtualGrid
+          items={artists}
+          itemHeight={150}
+          itemWidth={120}
+          gap={40}
+          overscan={2}
+          renderItem={(artist) => (
+            <ArtistCoverItem
+              key={artist.id}
+              artist={artist}
+              onClick={() => navigate(`${MyRoutes.Artists}/${artist.id}`)}
+            />
+          )}
+        />
       </div>
     );
   }
