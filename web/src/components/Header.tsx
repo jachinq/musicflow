@@ -1,10 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Input } from "./Input";
 import { Music2Icon, SearchIcon, SettingsIcon, TagIcon } from "lucide-react";
-import { usePlaylist } from "../store/playlist";
 import { useState } from "react";
 import { MyRoutes } from "../lib/defined";
 import { toast } from "sonner";
+import { useEffect } from "react";
+import { usePlaylist } from "../store/playlist";
+import { getPlayList } from "../lib/api";
 
 export const Header = () => {
   const { showPlaylist } = usePlaylist();
@@ -24,6 +26,31 @@ export const Header = () => {
     // 跳转到搜索结果页面
     navigate(`${MyRoutes.Search}?q=${encodeURIComponent(trimmedText)}`);
   };
+
+    const { setAllSongs, setCurrentSong, initial, setInitial } = usePlaylist();
+
+  useEffect(() => {
+    console.log("playlist initial", initial);
+    if (initial) {
+      return;
+    }
+    setInitial(true);
+    // 获取播放列表
+    getPlayList(1, 0, (data) => {
+      if (!data || !data.success) {
+        console.error("获取播放列表失败", data);
+        return;
+      }
+      setAllSongs(data.data.list, true);
+      if (data.data.current_song) {
+        setCurrentSong(data.data.current_song);
+      }
+    },
+      (error) => {
+        console.error("获取播放列表失败", error);
+      }
+    );
+  }, [])
 
   return (
     <nav

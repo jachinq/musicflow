@@ -115,6 +115,10 @@ export const AudioPlayer = () => {
     if (isDetailPage && audioContext == null) {
       return;
     }
+    if (currentTime > 0) {
+      return;
+    }
+    // console.log("audio buffer or gain node changed");
     initStatus();
     loadAudioFile();
     // 等待 10 秒后开始预加载下一首歌曲
@@ -317,6 +321,7 @@ export const AudioPlayer = () => {
       (music) => music.id === currentSong.id
     );
     const nextIndex = (currentIndex + 1) % allSongs.length;
+    if (currentIndex === nextIndex) return;
     const nextSong = allSongs[nextIndex];
     if (nextSong.id === currentSong.id) {
       return;

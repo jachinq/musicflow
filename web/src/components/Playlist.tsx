@@ -64,91 +64,88 @@ const Playlist = ({ clearPlaylist }: Props) => {
     return null;
   }
 
-  return (
-    <>
-      <div
-        className="mask"
-        style={{ opacity: 0 }}
-        // style={{ opacity: showPlaylist ? 0.5 : 0 }}
-      ></div>
-      <div className="fixed inset-0 top-[68px] z-50 flex overflow-y-scroll overflow-x-hidden">
-        <div className="flex-1"></div>
+  return <>
+    <div
+      className="mask"
+      style={{ opacity: 0 }}
+    // style={{ opacity: showPlaylist ? 0.5 : 0 }}
+    ></div>
+    <div className="fixed inset-0 top-[68px] z-50 flex overflow-y-scroll overflow-x-hidden">
+      <div className="flex-1"></div>
 
-        <div
-          ref={playlistRef as any}
-          className={`min-w-[320px] h-[calc(100vh-180px)] bg-secondary text-secondary-foreground rounded-md overflow-y-scroll overflow-x-hidden transform transition-transform duration-300 ease-in-out ${adaptiveClass()}`}
-          style={{ overscrollBehavior: "contain" }}
-        >
-          <div className="p-4 flex justify-between items-center">
-            <span className="font-bold">播放列表</span>
-            <Trash
-              size={18}
-              className="text-muted-foreground hover:text-destructive cursor-pointer"
-              onClick={clearPlaylist}
+      <div
+        ref={playlistRef as any}
+        className={`min-w-[320px] h-[calc(100vh-180px)] bg-secondary text-secondary-foreground rounded-md overflow-y-scroll overflow-x-hidden transform transition-transform duration-300 ease-in-out ${adaptiveClass()}`}
+        style={{ overscrollBehavior: "contain" }}
+      >
+        <div className="p-4 flex justify-between items-center">
+          <span className="font-bold">播放列表</span>
+          <Trash
+            size={18}
+            className="text-muted-foreground hover:text-destructive cursor-pointer"
+            onClick={clearPlaylist}
+          />
+        </div>
+        {getTotal() > 0 && (
+          <div className="px-4">
+            <Pagination
+              showTotal={false}
+              currentPage={currentPage}
+              total={getTotal()}
+              onPageChange={setCurrentPage}
+              className="justify-start"
             />
           </div>
-          {getTotal() > 0 && (
-            <div className="px-4">
-              <Pagination
-                showTotal={false}
-                currentPage={currentPage}
-                total={getTotal()}
-                onPageChange={setCurrentPage}
-                className="justify-start"
-              />
-            </div>
-          )}
-          <div className="mt-4 flex flex-col gap-2">
-            {pageSongs.map((song) => (
-              <div
-                key={song.id}
-                onClick={() => playSong(song)}
-                className="flex items-center justify-center cursor-pointer hover:bg-muted gap-2 px-4 py-2"
-              >
-                <div className="rounded-lg overflow-hidden relative">
-                  <img
-                    src={getCoverSmallUrl(song.cover_art)}
-                    alt=""
-                    width={40}
-                  />
-                  {currentSong?.id === song.id && isPlaying && (
-                    <>
-                      <AudioLines
-                        size={22}
-                        className="absolute animate-pulse text-sidebar-ring z-50"
-                        style={{
-                          top: "50%",
-                          left: "50%",
-                          transform: "translate(-50%, -50%)",
-                        }}
-                      />
-                    </>
-                  )}
-                </div>
-                <div
-                  className={`flex justify-between items-center w-full ${
-                    currentSong?.id === song.id ? "text-sidebar-ring" : ""
-                  }`}
-                >
-                  <div className="flex flex-col gap-1">
-                    <span>{song.title || "unknown"}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {song.artist || song.artist}
-                    </span>
-                  </div>
-                  {song.duration && (
-                    <div className="text-xs text-muted-foreground">
-                      {formatTime(song.duration)}
-                    </div>
-                  )}
-                </div>
+        )}
+        <div className="mt-4 flex flex-col gap-2">
+          {pageSongs.map((song) => (
+            <div
+              key={song.id}
+              onClick={() => playSong(song)}
+              className="flex items-center justify-center cursor-pointer hover:bg-muted gap-2 px-4 py-2"
+            >
+              <div className="rounded-lg overflow-hidden relative">
+                <img
+                  src={getCoverSmallUrl(song.cover_art)}
+                  alt=""
+                  width={40}
+                />
+                {currentSong?.id === song.id && isPlaying && (
+                  <>
+                    <AudioLines
+                      size={22}
+                      className="absolute animate-pulse text-sidebar-ring z-50"
+                      style={{
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    />
+                  </>
+                )}
               </div>
-            ))}
-          </div>
+              <div
+                className={`flex justify-between items-center w-full ${currentSong?.id === song.id ? "text-sidebar-ring" : ""
+                  }`}
+              >
+                <div className="flex flex-col gap-1">
+                  <span>{song.title || "unknown"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {song.artist || song.artist}
+                  </span>
+                </div>
+                {song.duration && (
+                  <div className="text-xs text-muted-foreground">
+                    {formatTime(song.duration)}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    </>
-  );
+    </div>
+  </>
 };
 
 export default Playlist;

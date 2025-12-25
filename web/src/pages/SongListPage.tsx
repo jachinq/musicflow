@@ -346,7 +346,7 @@ const SongListHeader = () => {
       }
     );
   };
-  const handleImportSong = () => {};
+  const handleImportSong = () => { };
 
   if (!selectSongList) return null;
   return (
@@ -371,11 +371,7 @@ const SongListHeader = () => {
           </div>
         </div>
 
-        <div
-          className={`${
-            isSmallDevice ? "grid grid-cols-2 grid-rows-2" : "flex"
-          } gap-4`}
-        >
+        <div className={`${isSmallDevice ? "grid grid-cols-2 grid-rows-2" : "flex"} gap-4`}>
           <div className="button" onClick={handlePlayAll}>
             播放全部
           </div>
@@ -434,20 +430,11 @@ const SongListItem = ({
 }: { songList: SongList } & React.HTMLAttributes<HTMLDivElement>) => {
   // const { selectSongList } = useSongListStore();
   // if (!selectSongList) return null;
-  return (
-    <div
-      key={songList.id}
-      className={
-        "card hover:text-primary py-2 rounded-lg min-w-[150px] cursor-pointer flex gap-1 items-center " +
-        className
-      }
-      onClick={(e) => onClick && onClick(e)}
-    >
-      {/* <img src={item.coverUrl} alt={item.name} /> */}
-      <div className="songlist-name">{songList.name}</div>
-      {children}
-    </div>
-  );
+  return <div key={songList.id} className={"card hover:text-primary py-2 rounded-lg min-w-[150px] cursor-pointer flex gap-1 items-center " + className } onClick={(e) => onClick && onClick(e)}>
+    {/* <img src={item.coverUrl} alt={item.name} /> */}
+    <div className="songlist-name">{songList.name}</div>
+    {children}
+  </div>
 };
 
 // 创建、修改歌单表单
@@ -523,7 +510,7 @@ const SongListForm = ({
 };
 
 // 添加歌曲对话框
-interface AddSongDialogProps extends DialogProps {}
+interface AddSongDialogProps extends DialogProps { }
 const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
   if (!show) return null;
   const { isSmallDevice } = useDevice();
@@ -689,7 +676,7 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
               <input
                 type="checkbox"
                 checked={isSelected(item)}
-                onChange={() => {}}
+                onChange={() => { }}
               />
               <Cover
                 src={getCoverSmallUrl(item.cover_art)}

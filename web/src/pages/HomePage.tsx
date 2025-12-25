@@ -3,36 +3,10 @@
 import { FlameKindling, Loader } from "lucide-react";
 import { useHomePageStore } from "../store/home-page";
 import RandomSongs from "../components/RandomSongs";
-import { useEffect } from "react";
-import { usePlaylist } from "../store/playlist";
-import { getPlayList } from "../lib/api";
+
 
 export const HomePage = () => {
-  const { error, loading, setError } = useHomePageStore();
-  const { setAllSongs, setCurrentSong, initial, setInitial } = usePlaylist();
-
-  useEffect(() => {
-    if (initial) {
-      return;
-    }
-    setInitial(true);
-    // 获取播放列表
-    getPlayList(1, 0, (data) => {
-      if (!data || !data.success) {
-        console.error("获取播放列表失败", data);
-        return;
-      }
-      setAllSongs(data.data.list, true);
-      if (data.data.current_song) {
-        setCurrentSong(data.data.current_song);
-      }
-    },
-      (error) => {
-        console.error("获取播放列表失败", error);
-        setError(error);
-      }
-    );
-  }, [])
+  const { error, loading } = useHomePageStore();
 
   if (loading) {
     return (
