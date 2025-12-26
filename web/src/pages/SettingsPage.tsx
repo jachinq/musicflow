@@ -14,12 +14,16 @@ import {
   Sun,
 } from "lucide-react";
 import { toast } from "sonner";
+import { KeyboardShortcutViewer } from "../components/KeyboardShortcutViewer";
+import { PerformanceMonitor } from "../components/PerformanceMonitor";
+import { useState } from "react";
 
 function SettingsPage() {
   const { play_mode, server_url, online_engine, setPlayMode, setServerUrl, setOnlineEngine, is_running_scan, setIsRunningScan } =
     useSettingStore();
 
   const { theme, setTheme } = useTheme();
+  const [visible, setVisible] = useState(false);
 
   const handleScanMusic = () => {
     if (is_running_scan) {
@@ -49,12 +53,21 @@ function SettingsPage() {
   return (
     <div className="p-4 overflow-y-scroll flex justify-center items-center">
       <div className="max-w-[860px] w-full gap-4 flex flex-col">
-      
+
         <FormLayout label="当前版本">
           <div className="flex items-center gap-4">
             <span>v1.2.0</span>
             <span className="text-sm text-gray-400">2025-11-15</span>
           </div>
+        </FormLayout>
+
+        <FormLayout label="系统">
+          <>
+            <span className="button" onClick={() => setVisible(true)}>快捷键</span>
+            {/* 性能监控工具 */}
+            <KeyboardShortcutViewer visible={visible} setVisible={() => setVisible(false)} />
+            <PerformanceMonitor />
+          </>
         </FormLayout>
 
         <FormLayout label="主题">

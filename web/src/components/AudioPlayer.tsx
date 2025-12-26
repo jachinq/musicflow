@@ -198,10 +198,6 @@ export const AudioPlayer = () => {
     if (isDetailPage && audioContext == null) {
       return;
     }
-    // 注释掉这个检查，允许在播放过程中切歌
-    // if (currentTime > 0) {
-    //   return;
-    // }
     // console.log("audio buffer or gain node changed");
     console.log("切换歌曲:", currentSong?.title);
     initStatus();
@@ -221,7 +217,7 @@ export const AudioPlayer = () => {
       pauseAudio();
       playAudio(0);
     }
-  }, [audioBuffer]);
+  }, [audioBuffer, audioContext]);
 
   useEffect(() => {
     // 检查歌曲是否播放结束（加 0.5 秒容差，且只在接近结尾时触发一次）
