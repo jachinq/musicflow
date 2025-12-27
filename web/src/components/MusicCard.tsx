@@ -1,8 +1,9 @@
 // components/MusicCard.tsx
+import React from 'react';
 import { Music } from "../lib/defined";
 import { delLyric, getCoverSmallUrl } from "../lib/api";
 import { Cover } from "./Cover";
-import { PlayIcon } from "lucide-react";
+import { PlayIcon, MoreVertical } from "lucide-react";
 import { useState } from "react";
 import { Drawer } from "./Drawer";
 import { DetailInfo } from "./DetailInfo";
@@ -13,22 +14,60 @@ interface MusicCardProps {
   music: Music;
   onClickTitle?: (music: Music) => void;
   onPlay?: (music: Music) => void;
+  size?: 'small' | 'medium' | 'large';
+  showActions?: boolean;
 }
 
-export const MusicCard = ({ music, onClickTitle, onPlay }: MusicCardProps) => {
-  const handleOnPlay = () => {
+export const MusicCard = ({
+  music,
+  onClickTitle,
+  onPlay,
+  size = 'medium',
+  showActions = true
+}: MusicCardProps) => {
+  const sizeClasses = {
+    small: 'w-[120px] h-[120px]',
+    medium: 'w-[140px] h-[140px]',
+    large: 'w-[180px] h-[180px]',
+  };
+
+  const containerWidth = {
+    small: 'w-[120px]',
+    medium: 'w-[140px]',
+    large: 'w-[180px]',
+  };
+
+  const textWidth = {
+    small: 'w-[104px]',
+    medium: 'w-[124px]',
+    large: 'w-[164px]',
+  };
+
+  const [isHovered, setIsHovered] = useState(false);
+  // const [isFavorite, setIsFavorite] = useState(false);
+
+  const handleOnPlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
     console.log("play music", music);
     onPlay && onPlay(music);
   };
+
   const handleOnClickTitle = () => {
     onClickTitle && onClickTitle(music);
     setShowDetail(true);
   };
 
-  const [showDetail, setShowDetail] = useState(false);
+  // // TODO 接入后端接口
+  // const handleToggleFavorite = (e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   setIsFavorite(!isFavorite);
+  //   toast.success(isFavorite ? "已取消收藏" : "已添加到收藏");
+  // };
 
+  const [showDetail, setShowDetail] = useState(false);
   const [confirmDeleteLyrics, setConfirmDeleteLyrics] = useState(false);
   const [deleteLyricsBtnText, setDeleteLyricsBtnText] = useState("删除歌词");
+
   const onDeleteLyrics = async (song_id: string) => {
     if (confirmDeleteLyrics) {
       delLyric(song_id,
@@ -54,43 +93,85 @@ export const MusicCard = ({ music, onClickTitle, onPlay }: MusicCardProps) => {
       }, 3000);
     }
   };
+
   return (
     <>
-      <div className="w-[140px] max-h-[240px]">
-        <div className="group relative w-[140px] h-[140px]">
+      <div
+        className={`${containerWidth[size]} max-h-[240px] flex-shrink-0`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div className={`group relative ${sizeClasses[size]} rounded-lg overflow-hidden`}>
           <Cover
             src={getCoverSmallUrl(music.cover_art)}
             roundType="card_text"
-            className="group-hover:opacity-75 transition-all duration-300 ease-in-out"
+            className="group-hover:opacity-75 group-hover:scale-105 transition-all duration-300 ease-in-out"
           />
-          <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out">
-            <div
+
+          {/* 悬浮操作层 */}
+          <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ease-in-out ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          }`}>
+            {/* 播放按钮 */}
+            <button
               onClick={handleOnPlay}
-              className="cursor-pointer rounded-full p-4 flex items-center justify-center bg-card text-card-foreground hover:text-primary-hover"
+              className="rounded-full p-3 flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary-hover hover:scale-110 transition-all duration-200 shadow-lg"
+              aria-label="播放"
             >
-              <PlayIcon />
-            </div>
+              <PlayIcon className="w-6 h-6" fill="currentColor" />
+            </button>
           </div>
+
+          {/* 右上角操作按钮 */}
+          {showActions && (
+            <div className={`absolute top-2 right-2 flex gap-1 transition-all duration-300 ${
+              isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+            }`}>
+              {/* <button
+                onClick={handleToggleFavorite}
+                className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all duration-200"
+                aria-label={isFavorite ? "取消收藏" : "收藏"}
+              >
+                <Heart
+                  className="w-4 h-4"
+                  fill={isFavorite ? "currentColor" : "none"}
+                />
+              </button> */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDetail(true);
+                }}
+                className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all duration-200"
+                aria-label="更多选项"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* 卡片信息 */}
         <div
-          className="p-2 shadow-md bg-card text-card-foreground flex flex-col"
+          className="p-2 bg-card text-card-foreground flex flex-col shadow-sm hover:shadow-md transition-shadow duration-200"
           style={{ borderRadius: "0 0 8px 8px" }}
         >
           <div
             onClick={handleOnClickTitle}
-            className="cursor-pointer break-keep overflow-hidden overflow-ellipsis w-[124px] hover:underline"
+            className={`cursor-pointer break-keep overflow-hidden overflow-ellipsis ${textWidth[size]} hover:text-primary-hover transition-colors duration-200`}
           >
-            <span className="whitespace-nowrap" title={music.title}>
+            <span className="whitespace-nowrap font-medium" title={music.title}>
               {music.title || "unknown"}
             </span>
           </div>
-          <div className="w-[124px] overflow-hidden overflow-ellipsis">
-            <span className="whitespace-nowrap text-sm" title={music.artist}>
+          <div className={`${textWidth[size]} overflow-hidden overflow-ellipsis`}>
+            <span className="whitespace-nowrap text-sm text-muted-foreground" title={music.artist}>
               {music.artist}
             </span>
           </div>
         </div>
       </div>
+
       <Drawer isOpen={showDetail} onClose={() => setShowDetail(false)} title="歌曲详情">
         <div className="p-4">
           <div className="flex flex-col gap-2">

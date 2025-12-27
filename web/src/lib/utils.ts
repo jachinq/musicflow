@@ -1,5 +1,29 @@
 import { OnlineEngine } from "../store/setting";
 
+/**
+ * 合并 className 的工具函数
+ * 支持字符串、数组、对象等多种格式
+ */
+export function cn(...inputs: (string | undefined | null | boolean | Record<string, boolean>)[]): string {
+  const classes: string[] = [];
+
+  for (const input of inputs) {
+    if (!input) continue;
+
+    if (typeof input === 'string') {
+      classes.push(input);
+    } else if (typeof input === 'object') {
+      for (const [key, value] of Object.entries(input)) {
+        if (value) {
+          classes.push(key);
+        }
+      }
+    }
+  }
+
+  return classes.join(' ');
+}
+
 export const formatTime = (time: number, format?: string) => {
   format = format || ":";
   const hours = Math.floor(time / 3600);

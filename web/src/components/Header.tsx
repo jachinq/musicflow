@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Input } from "./Input";
-import { Music2Icon, SearchIcon, SettingsIcon, TagIcon } from "lucide-react";
+import { Music2Icon, SettingsIcon, TagIcon } from "lucide-react";
 import { useState } from "react";
 import { MyRoutes } from "../lib/defined";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { usePlaylist } from "../store/playlist";
 import { getPlayList } from "../lib/api";
+import { SearchInput } from "./SearchInput";
 
 export const Header = () => {
   const { showPlaylist } = usePlaylist();
@@ -16,8 +16,8 @@ export const Header = () => {
   };
 
   const navigate = useNavigate();
-  const search = () => {
-    const trimmedText = fitlerText.trim();
+  const search = (query: string) => {
+    const trimmedText = query.trim();
     if (!trimmedText || trimmedText === "") {
       toast.error("请输入搜索关键字");
       return;
@@ -67,15 +67,12 @@ export const Header = () => {
           </div>
         </Link>
         <div className="w-1/2 flex justify-end items-center gap-2">
-          <Input
+          <SearchInput
             value={fitlerText}
             onChange={changeFitlerText}
+            onSearch={search}
             placeholder="搜索音乐/歌手/专辑"
-            onEnter={search}
-          />
-          <SearchIcon
-            onClick={search}
-            className="cursor-pointer hover:text-primary-hover"
+            className="flex-1"
           />
         </div>
         <div className="flex space-x-4 items-center">

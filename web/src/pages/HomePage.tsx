@@ -3,6 +3,8 @@
 import { FlameKindling, Loader } from "lucide-react";
 import { useHomePageStore } from "../store/home-page";
 import RandomSongs from "../components/RandomSongs";
+// import { MusicStatsCards } from "../components/MusicStatsCards";
+// import { RecentlyPlayed, TopPlayed } from "../components/RecommendationSections";
 
 
 export const HomePage = () => {
@@ -31,8 +33,19 @@ export const HomePage = () => {
   }
 
   return (
-    <div className="p-4 grid gap-4">
+    <div className="p-4 space-y-8">
+      {/* 音乐库统计 */}
+      {/* <MusicStatsCards /> */}
+
+      {/* 随机歌曲 */}
       <RandomSongs />
+
+      {/* 最近播放 */}
+      {/* <RecentlyPlayed /> */}
+
+      {/* 热门推荐 */}
+      {/* <TopPlayed /> */}
+
     </div>
   );
 };
