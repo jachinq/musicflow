@@ -26,6 +26,7 @@ import {
   useKeyboardShortcut,
   useKeyboardScope,
 } from "../hooks/use-global-keyboard-shortcuts";
+import { useSettingStore } from "../store/setting";
 
 export const AudioPlayer = () => {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -66,6 +67,8 @@ export const AudioPlayer = () => {
     togglePlaylist,
     setAllSongs,
   } = usePlaylist();
+
+  const { play_mode } = useSettingStore();
 
   // 初始化全局键盘监听
   useGlobalKeyboardShortcuts();
@@ -254,16 +257,68 @@ export const AudioPlayer = () => {
 
   const nextSong = (next: number) => {
     console.log("current song", currentSong?.title || "unknown");
-    if (currentSong) {
-      const index = allSongs.findIndex((music) => music.id === currentSong.id);
-      const nextIndex = (index + next + allSongs.length) % allSongs.length;
-      const nextSong = allSongs[nextIndex];
-      setCurrentSong(nextSong);
-      console.log("next song", nextSong.title || "unknown");
-      if (currentSong.id === nextSong.id) {
-        initStatus();
-        loadAudioFile(); // 重新加载当前歌曲
+    if (!currentSong || allSongs.length === 0) {
+      return;
+    }
+
+    const index = allSongs.findIndex((music) => music.id === currentSong.id);
+    let nextIndex: number;
+    let nextSongItem: Music;
+
+    // 根据播放模式决定下一首歌曲
+    if (play_mode === 2) {
+      // 单曲循环模式
+      nextIndex = index;
+      nextSongItem = currentSong;
+    } else if (play_mode === 3) {
+      // 随机播放模式
+      if (allSongs.length === 1) {
+        nextIndex = 0;
+      } else {
+        // 生成一个不等于当前索引的随机索引
+        do {
+          nextIndex = Math.floor(Math.random() * allSongs.length);
+        } while (nextIndex === index);
       }
+      nextSongItem = allSongs[nextIndex];
+    } else {
+      // 顺序播放模式 (play_mode === 1)
+      nextIndex = (index + next + allSongs.length) % allSongs.length;
+      nextSongItem = allSongs[nextIndex];
+    }
+
+    console.log(`播放模式: ${play_mode === 1 ? '顺序播放' : play_mode === 2 ? '单曲循环' : '随机播放'}, next song:`, nextSongItem.title);
+
+    if (currentSong.id === nextSongItem.id) {
+      // 单曲循环：重置播放位置并重新播放
+      console.log("单曲循环：重新播放");
+
+      // 停止当前播放
+      if (source) {
+        try {
+          source.stop();
+        } catch (e) {
+          console.log("source already stopped in nextSong");
+        }
+        setSource(null);
+      }
+      if (progressIntevalId) {
+        clearInterval(progressIntevalId);
+        setProgressIntevalId(null);
+      }
+
+      // 立即重置时间，避免触发结束检测
+      setCurrentTime(0);
+      setIsPlaying(false);
+
+      // 延迟一下再播放，确保状态已更新
+      setTimeout(() => {
+        playAudio(0);
+      }, 50);
+    } else {
+      // 切换到不同的歌曲
+      setCurrentSong(nextSongItem);
+      console.log("next song", nextSongItem.title || "unknown");
     }
   };
   const initAudioContext = () => {
