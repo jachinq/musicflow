@@ -114,7 +114,7 @@ impl MusicDataSource for SubsonicDataSource {
         // let cover_art = album.cover_art.unwrap();
 
         let size = match size {
-            CoverSize::Small => "280",
+            CoverSize::Small => "300",
             CoverSize::Medium => "600",
             CoverSize::Large => "1000",
         };

@@ -3,7 +3,7 @@ import { Input } from "../components/Input";
 import { Option, OptionGroup } from "../components/Option";
 import { useTheme } from "../components/theme-provider";
 import { useDevice } from "../hooks/use-device";
-import { scanMusic } from "../lib/api";
+import { scanMusic, scanMusicProgress } from "../lib/api";
 import { OnlineEngine, useSettingStore } from "../store/setting";
 import {
   ListMusic,
@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { KeyboardShortcutViewer } from "../components/KeyboardShortcutViewer";
 import { PerformanceMonitor } from "../components/PerformanceMonitor";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 function SettingsPage() {
   const { play_mode, server_url, online_engine, setPlayMode, setServerUrl, setOnlineEngine, is_running_scan, setIsRunningScan } =
@@ -24,31 +24,62 @@ function SettingsPage() {
 
   const { theme, setTheme } = useTheme();
   const [visible, setVisible] = useState(false);
+  const scanIntervalRef = useRef<number | null>(null);
 
   const handleScanMusic = () => {
     if (is_running_scan) {
-      return
+      return;
     }
     setIsRunningScan(true);
     console.log('scanMusic');
 
-    toast.success("启动扫描，等待完成....")
-    // 轮询获取扫描进度
-    setInterval(() => {
+    toast.success("启动扫描，等待完成....");
 
-    }, 1500);
-
+    // 启动扫描
     scanMusic(
-      () => {
-        toast.success("扫描完成")
-        setIsRunningScan(false)
+      (result) => {
+        if (result.success) {
+          toast.success("扫描完成");
+          setIsRunningScan(false);
+          // 清除轮询
+          if (scanIntervalRef.current) {
+            clearInterval(scanIntervalRef.current);
+            scanIntervalRef.current = null;
+          }
+        } else {
+          toast.error(`扫描失败：${result.message}`);
+          setIsRunningScan(false);
+          // 清除轮询
+          if (scanIntervalRef.current) {
+            clearInterval(scanIntervalRef.current);
+            scanIntervalRef.current = null;
+          }
+        }
       },
       (error) => {
-        toast.error(`启动扫描线程失败：${error}`)
+        toast.error(`启动扫描线程失败：${error}`);
+        setIsRunningScan(false);
+        // 清除轮询
+        if (scanIntervalRef.current) {
+          clearInterval(scanIntervalRef.current);
+          scanIntervalRef.current = null;
+        }
       }
-    )
+    );
 
-  }
+    // 轮询获取扫描进度
+    scanIntervalRef.current = window.setInterval(() => {
+      scanMusicProgress(
+        (result) => {
+          console.log('扫描进度:', result);
+          // 这里可以根据返回的进度信息更新 UI
+        },
+        (error) => {
+          console.error('获取扫描进度失败:', error);
+        }
+      );
+    }, 1500);
+  };
 
   return (
     <div className="p-4 overflow-y-scroll flex justify-center items-center">

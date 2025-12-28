@@ -426,9 +426,9 @@ export const scanMusicProgress = (
   onSuccess: (data: JsonResult<any>) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/scan_music_progress`;
+  const url = `${API_URL}/api/scan_status`;
   fetchUtils(url, onSuccess, onError, {
-    method: "GET",
+    method: "POST",
   });
 };
 

@@ -21,8 +21,12 @@ pub async fn handle_scan_music(app_state: web::Data<AppState>) -> impl Responder
     }
 }
 
-pub async fn handle_scan_music_progress() -> impl Responder {
-    HttpResponse::Ok().json(JsonResult::success(0))
+pub async fn handle_scan_status(app_state: web::Data<AppState>) -> impl Responder {
+     match app_state.data_source.scan_status().await {
+        Ok(_) => HttpResponse::Ok().json(JsonResult::success(0)),
+        Err(e) => HttpResponse::InternalServerError()
+            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
+    }
 }
 
 // 前端日志记录
