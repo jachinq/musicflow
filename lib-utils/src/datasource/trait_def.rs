@@ -174,4 +174,10 @@ pub trait MusicDataSource: Send + Sync {
 
     /// 扫描音乐
     async fn scan_music(&self) -> Result<()>;
+
+    /// 获取扫描状态
+    ///
+    /// # 返回
+    /// * `Ok(ScanProgress)` - 扫描进度信息
+    async fn scan_status(&self) -> Result<ScanProgress>;
 }

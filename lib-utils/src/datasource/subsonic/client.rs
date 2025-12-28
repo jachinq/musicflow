@@ -72,6 +72,16 @@ impl SubsonicClient {
         }
     }
 
+    /// 获取扫描状态
+    pub async fn get_scan_status(&self) -> Result<SubsonicScanStatus> {
+        let response: SubsonicResponse<ScanStatusWrapper> = self.get("rest/getScanStatus", vec![]).await?;
+
+        response
+            .subsonic_response
+            .scan_status
+            .ok_or_else(|| anyhow::anyhow!("Failed to get scan status"))
+    }
+
     /// 获取单个歌曲信息
     pub async fn get_song(&self, id: &str) -> Result<SubsonicSong> {
         let params = vec![("id", id.to_string())];
@@ -675,4 +685,22 @@ mod urlencoding {
     pub fn encode(s: &str) -> String {
         url::form_urlencoded::byte_serialize(s.as_bytes()).collect()
     }
+}
+
+/// Subsonic 扫描状态
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubsonicScanStatus {
+    pub scanning: bool,
+    pub count: Option<u32>,
+}
+
+/// 扫描状态响应包装
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct ScanStatusWrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    scan_status: Option<SubsonicScanStatus>,
 }

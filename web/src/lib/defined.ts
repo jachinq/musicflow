@@ -130,3 +130,19 @@ export interface Genre {
     cover_art: string;
     year?: number;
 }
+// 扫描状态枚举
+export enum ScanStatusEnum {
+    Idle = "Idle",
+    Scanning = "Scanning",
+    Completed = "Completed",
+    Failed = "Failed",
+}
+
+// 扫描进度信息
+export interface ScanProgress {
+    status: ScanStatusEnum;
+    processed: number;
+    total: number;
+    current_file?: string;
+    error?: string;
+}

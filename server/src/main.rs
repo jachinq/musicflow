@@ -191,7 +191,7 @@ async fn main() -> io::Result<()> {
             .route("/api/log", web::post().to(frontend_log))
             .route("/api/del/{song_id}", web::get().to(handle_delete_meta))
             .route("/api/scan_music", web::post().to(handle_scan_music))
-            .route("/api/scan_status", web::post().to(handle_scan_status))
+            .route("/api/scan_status", web::get().to(handle_scan_status))
             // 搜索相关接口
             .route("/api/search", web::get().to(handle_search))
             // 添加静态文件服务

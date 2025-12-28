@@ -22,8 +22,8 @@ pub async fn handle_scan_music(app_state: web::Data<AppState>) -> impl Responder
 }
 
 pub async fn handle_scan_status(app_state: web::Data<AppState>) -> impl Responder {
-     match app_state.data_source.scan_status().await {
-        Ok(_) => HttpResponse::Ok().json(JsonResult::success(0)),
+    match app_state.data_source.scan_status().await {
+        Ok(progress) => HttpResponse::Ok().json(JsonResult::success(progress)),
         Err(e) => HttpResponse::InternalServerError()
             .json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }

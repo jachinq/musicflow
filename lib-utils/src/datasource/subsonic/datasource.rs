@@ -370,4 +370,20 @@ impl MusicDataSource for SubsonicDataSource {
     async fn scan_music(&self) -> Result<()> {
         self.client.scan_music().await
     }
+
+    async fn scan_status(&self) -> Result<ScanProgress> {
+        let status = self.client.get_scan_status().await?;
+
+        Ok(ScanProgress {
+            status: if status.scanning {
+                ScanStatus::Scanning
+            } else {
+                ScanStatus::Completed
+            },
+            processed: status.count.unwrap_or(0) as usize,
+            total: status.count.unwrap_or(0) as usize,
+            current_file: None,
+            error: None,
+        })
+    }
 }

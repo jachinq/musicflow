@@ -1,4 +1,4 @@
-import { Album, Artist, GetAlbumList, GetArtistList, GetList, JsonResult, Music, MusicFilter, SongList } from "./defined";
+import { Album, Artist, GetAlbumList, GetArtistList, GetList, JsonResult, Music, MusicFilter, ScanProgress, SongList } from "./defined";
 
 const defaultSettingStr = localStorage.getItem("musicflow_setting") || "{}"
 const defaultSetting = JSON.parse(defaultSettingStr);
@@ -423,12 +423,12 @@ export const scanMusic = (
   });
 };
 export const scanMusicProgress = (
-  onSuccess: (data: JsonResult<any>) => void,
+  onSuccess: (data: JsonResult<ScanProgress>) => void,
   onError: (error: any) => void
 ) => {
   const url = `${API_URL}/api/scan_status`;
   fetchUtils(url, onSuccess, onError, {
-    method: "POST",
+    method: "GET",
   });
 };
 

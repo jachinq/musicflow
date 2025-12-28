@@ -417,4 +417,16 @@ impl MusicDataSource for LocalDataSource {
         log::log_info("start scan music");
         Ok(())
     }
+
+    async fn scan_status(&self) -> Result<ScanProgress> {
+        // 本地模式暂时返回空闲状态
+        // TODO: 实现真正的扫描进度跟踪
+        Ok(ScanProgress {
+            status: ScanStatus::Idle,
+            processed: 0,
+            total: 0,
+            current_file: None,
+            error: None,
+        })
+    }
 }
