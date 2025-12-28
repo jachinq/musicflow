@@ -11,6 +11,9 @@
 /metadata/*.db
 /metadata/node_modules
 
+docs/tmp.*
+config/config.json
+
 /build
 /target
 *.mp3

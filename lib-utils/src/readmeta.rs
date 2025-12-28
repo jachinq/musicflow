@@ -1,6 +1,8 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Error, Result};
 use image::GenericImageView;
 use regex::Regex;
+use walkdir::WalkDir;
+use std::collections::HashMap;
 use std::fs::File;
 use symphonia::core::formats::FormatOptions;
 use symphonia::core::io::MediaSourceStream;
@@ -9,10 +11,11 @@ use symphonia::core::probe::{Hint, ProbeResult};
 
 use crate::comm::is_music_file;
 use crate::config::get_config;
-use crate::database::service::Metadata;
+use crate::database::service::{self, Metadata};
 use crate::database::service::*;
 use crate::image::{compress_img, resize_image};
-use crate::log::log_file;
+use crate::log::{self, log_file};
+use crate::readmeta;
 use std::path::Path;
 
 // 用于数据预处理的meta结构
@@ -609,4 +612,114 @@ pub fn check_lost_lyric(metadata: &Metadata, music_dir: &str) -> Result<(), Erro
     let (premetadata, _) = proc_metadata(&metadata.file_path, music_dir, true)?;
     insert_lyrics(&premetadata, &metadata.id)?;
     Ok(())
+}
+
+
+// 检查音乐文件是否缺失metadata，如果有缺失文件，启动后台线程重新扫描
+pub async fn check_lost_file(music_dir: &str) {
+    log::log_info("Start check lost file");
+    let metas = service::get_metadata_list();
+    let metas = metas.unwrap_or_default();
+    let mut path_metadata_map = HashMap::new();
+    for metadata in &metas {
+        path_metadata_map.insert(metadata.file_path.to_string(), metadata);
+    }
+
+    let mut lost_files = Vec::new();
+    // 第一种情况：遍历音乐目录，如果文件路径在metas中不存在，则认为是缺失文件
+    for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
+        if entry.file_type().is_file() {
+            let path = entry.path().display().to_string().replace("\\", "/");
+            if !is_music_file(&path) {
+                continue;
+            }
+            let path2 = path.clone().replace(music_dir, "/mnt/data/music");
+            let metadata = path_metadata_map.get(&path);
+            let metadata2 = path_metadata_map.get(&path2);
+            if metadata.is_none() && metadata2.is_none() {
+                println!("lost file: {}", path);
+                lost_files.push(path);
+                continue;
+            }
+        }
+    }
+
+    // 第二种情况：对应路径存在metadata，但是关联的封面、歌词等缺失，也需要重新扫描
+    let album_list = if let Ok(list) = service::get_album_list() {
+        list.iter().map(|album| album.name.to_string()).collect()
+    } else {
+        Vec::new()
+    };
+    let lyric_song_ids = if let Ok(list) = service::get_lyric_song_ids() {
+        list
+    } else {
+        Vec::new()
+    };
+    // let mut lost_album = Vec::new();
+    // let mut lost_lyric = Vec::new();
+    for metadata in &metas {
+        let path = metadata.file_path.to_string();
+        let path = path.replace("\\", "/");
+        if lost_files.contains(&path) {
+            // 如果路径已经在待扫描列表，则跳过
+            continue;
+        }
+        if !is_music_file(&path) {
+            continue;
+        }
+
+        // 遍历metadata的封面、歌词等文件，如果文件不存在，则认为是缺失文件
+        if !album_list.contains(&metadata.album) {
+            log::log_info(&format!(
+                "check lost Album {}; path={path}",
+                &metadata.album
+            ));
+            lost_files.push(path.clone());
+        }
+
+        if !lyric_song_ids.contains(&metadata.id) {
+            log::log_info(&format!(
+                "check lost Lyric; path={path} sond_id={}",
+                metadata.id
+            ));
+            lost_files.push(path.clone());
+        }
+    }
+
+    let meta_cnt = metas.len();
+    let lost_cnt = lost_files.len();
+    log::log_info(&format!(
+        "Music count: {meta_cnt}, Lost files count: {lost_cnt}"
+    ));
+
+    if lost_cnt > 0 {
+        // 后台线程把缺失metadata的文件重新扫描到数据库中
+        let _ = std::thread::spawn(move || {
+            let start = std::time::Instant::now();
+            log::log_info(&format!("Start scan lost files..."));
+            let mut count = 0.0;
+            for file_path in lost_files {
+                let config = get_config();
+                let music_dir = config.music_dir.clone();
+                let start = std::time::Instant::now();
+                if let Err(e) = readmeta::read_metadata_into_db(&file_path, &music_dir) {
+                    log::log_info(&format!("path: {file_path}, read_meta error: {e:?}"));
+                } else {
+                    log::log_info(&format!("path: {file_path}, read_metad_into_db ok"));
+                }
+
+                count += 1.0;
+                let elapsed = start.elapsed();
+                println!(
+                    "------ {}/{} done, progress: {:.2}%, cost: {:.2?} ------",
+                    count,
+                    lost_cnt,
+                    count / lost_cnt as f64 * 100.0,
+                    elapsed
+                );
+            }
+            let elapsed = start.elapsed();
+            log::log_info(&format!("Scan lost files done. Elapsed: {:.2?}", elapsed));
+        });
+    }
 }

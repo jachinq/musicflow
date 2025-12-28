@@ -5,18 +5,15 @@ use actix_files::NamedFile;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use env_logger::Env;
-use lib_utils::comm::is_music_file;
 use lib_utils::config::get_config;
 use lib_utils::database::table;
 use lib_utils::datasource::factory::create_data_source;
 use lib_utils::datasource::MusicDataSource;
-use lib_utils::{database, log, readmeta};
+use lib_utils::{log, readmeta};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 use std::sync::Arc;
-use walkdir::WalkDir; // 引入 CORS 中间件
 
 mod controller_album;
 mod controller_artist;
@@ -75,7 +72,7 @@ async fn main() -> io::Result<()> {
     let music_dir = music_dir.replace("\\", "/");
     log::log_info(&format!("Music dir: {}, Web dir: {}", music_dir, web_dir));
 
-    check_lost_file(&music_dir).await;
+    readmeta::check_lost_file(&music_dir).await;
     // 映射音乐文件的静态路径
     let music_path = "/music";
 
@@ -226,114 +223,6 @@ fn handle_server_error(
     let err2 = serde_json::to_string(&err2).unwrap_or_default();
 
     actix_web::error::ErrorInternalServerError(err2)
-}
-// 检查音乐文件是否缺失metadata，如果有缺失文件，启动后台线程重新扫描
-async fn check_lost_file(music_dir: &str) {
-    log::log_info("Start check lost file");
-    let metas = lib_utils::database::service::get_metadata_list();
-    let metas = metas.unwrap_or_default();
-    let mut path_metadata_map = HashMap::new();
-    for metadata in &metas {
-        path_metadata_map.insert(metadata.file_path.to_string(), metadata);
-    }
-
-    let mut lost_files = Vec::new();
-    // 第一种情况：遍历音乐目录，如果文件路径在metas中不存在，则认为是缺失文件
-    for entry in WalkDir::new(music_dir).into_iter().filter_map(|e| e.ok()) {
-        if entry.file_type().is_file() {
-            let path = entry.path().display().to_string().replace("\\", "/");
-            if !is_music_file(&path) {
-                continue;
-            }
-            let path2 = path.clone().replace(music_dir, "/mnt/data/music");
-            let metadata = path_metadata_map.get(&path);
-            let metadata2 = path_metadata_map.get(&path2);
-            if metadata.is_none() && metadata2.is_none() {
-                println!("lost file: {}", path);
-                lost_files.push(path);
-                continue;
-            }
-        }
-    }
-
-    // 第二种情况：对应路径存在metadata，但是关联的封面、歌词等缺失，也需要重新扫描
-    let album_list = if let Ok(list) = database::service::get_album_list() {
-        list.iter().map(|album| album.name.to_string()).collect()
-    } else {
-        Vec::new()
-    };
-    let lyric_song_ids = if let Ok(list) = database::service::get_lyric_song_ids() {
-        list
-    } else {
-        Vec::new()
-    };
-    // let mut lost_album = Vec::new();
-    // let mut lost_lyric = Vec::new();
-    for metadata in &metas {
-        let path = metadata.file_path.to_string();
-        let path = path.replace("\\", "/");
-        if lost_files.contains(&path) {
-            // 如果路径已经在待扫描列表，则跳过
-            continue;
-        }
-        if !is_music_file(&path) {
-            continue;
-        }
-
-        // 遍历metadata的封面、歌词等文件，如果文件不存在，则认为是缺失文件
-        if !album_list.contains(&metadata.album) {
-            log::log_info(&format!(
-                "check lost Album {}; path={path}",
-                &metadata.album
-            ));
-            lost_files.push(path.clone());
-        }
-
-        if !lyric_song_ids.contains(&metadata.id) {
-            log::log_info(&format!(
-                "check lost Lyric; path={path} sond_id={}",
-                metadata.id
-            ));
-            lost_files.push(path.clone());
-        }
-    }
-
-    let meta_cnt = metas.len();
-    let lost_cnt = lost_files.len();
-    log::log_info(&format!(
-        "Music count: {meta_cnt}, Lost files count: {lost_cnt}"
-    ));
-
-    if lost_cnt > 0 {
-        // 后台线程把缺失metadata的文件重新扫描到数据库中
-        let _ = std::thread::spawn(move || {
-            let start = std::time::Instant::now();
-            log::log_info(&format!("Start scan lost files..."));
-            let mut count = 0.0;
-            for file_path in lost_files {
-                let config = get_config();
-                let music_dir = config.music_dir.clone();
-                let start = std::time::Instant::now();
-                if let Err(e) = readmeta::read_metadata_into_db(&file_path, &music_dir) {
-                    log::log_info(&format!("path: {file_path}, read_meta error: {e:?}"));
-                } else {
-                    log::log_info(&format!("path: {file_path}, read_metad_into_db ok"));
-                }
-
-                count += 1.0;
-                let elapsed = start.elapsed();
-                println!(
-                    "------ {}/{} done, progress: {:.2}%, cost: {:.2?} ------",
-                    count,
-                    lost_cnt,
-                    count / lost_cnt as f64 * 100.0,
-                    elapsed
-                );
-            }
-            let elapsed = start.elapsed();
-            log::log_info(&format!("Scan lost files done. Elapsed: {:.2?}", elapsed));
-        });
-    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

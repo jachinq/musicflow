@@ -1,13 +1,14 @@
 // 本地文件数据源实现
 // 封装现有的本地文件系统访问逻辑
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use crate::database;
+use crate::config::get_config;
+use crate::{database, log, readmeta};
 use crate::database::service;
 use crate::datasource::trait_def::MusicDataSource;
 use crate::datasource::types::*;
@@ -407,6 +408,13 @@ impl MusicDataSource for LocalDataSource {
             ));
         }
 
+        Ok(())
+    }
+
+    async fn scan_music(&self) -> Result<()> {
+        let config = get_config();
+        readmeta::check_lost_file(&config.music_dir).await;
+        log::log_info("start scan music");
         Ok(())
     }
 }

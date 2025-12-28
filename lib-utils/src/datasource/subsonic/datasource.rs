@@ -366,4 +366,8 @@ impl MusicDataSource for SubsonicDataSource {
     async fn health_check(&self) -> Result<()> {
         self.client.ping().await
     }
+
+    async fn scan_music(&self) -> Result<()> {
+        self.client.scan_music().await
+    }
 }

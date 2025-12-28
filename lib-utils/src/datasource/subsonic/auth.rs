@@ -52,25 +52,25 @@ impl SubsonicAuth {
         }
     }
 
-    /// 生成随机 salt
-    fn generate_salt(&self) -> String {
-        thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(16)
-            .map(char::from)
-            .collect()
-    }
+        /// 生成随机 salt
+        fn generate_salt(&self) -> String {
+            thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(16)
+                .map(char::from)
+                .collect()
+        }
 
-    /// 生成认证 token
-    ///
-    /// token = MD5(password + salt)
-    fn generate_token(&self, salt: &str) -> String {
-        let raw = format!("{}{}", self.password, salt);
-        let mut hasher = Md5::new();
-        hasher.update(raw.as_bytes());
-        let result = hasher.finalize();
-        hex::encode(result)
-    }
+        /// 生成认证 token
+        ///
+        /// token = MD5(password + salt)
+        fn generate_token(&self, salt: &str) -> String {
+            let raw = format!("{}{}", self.password, salt);
+            let mut hasher = Md5::new();
+            hasher.update(raw.as_bytes());
+            let result = hasher.finalize();
+            hex::encode(result)
+        }
 }
 
 #[cfg(test)]

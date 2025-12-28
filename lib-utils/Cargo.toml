@@ -25,3 +25,4 @@ hex = { workspace = true }
 url = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }
+walkdir = { workspace = true }

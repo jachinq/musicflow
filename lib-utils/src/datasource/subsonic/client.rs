@@ -60,6 +60,18 @@ impl SubsonicClient {
         }
     }
 
+    /// 扫描音乐库
+    pub async fn scan_music(&self) -> Result<()> {
+        let response: SubsonicResponse<BaseResponse> = self.get("rest/startScan", vec![]).await?;
+        match response.subsonic_response.status == "ok" {
+            true => Ok(()),
+            false => Err(anyhow::anyhow!(
+                "Scan music failed: {:?}",
+                response.subsonic_response.error
+            )),
+        }
+    }
+
     /// 获取单个歌曲信息
     pub async fn get_song(&self, id: &str) -> Result<SubsonicSong> {
         let params = vec![("id", id.to_string())];
@@ -308,6 +320,15 @@ impl SubsonicClient {
         params.push(("f", "json".to_string()));
 
         let url = format!("{}/{}", self.base_url, endpoint);
+        println!(
+            "send {}?{}",
+            url,
+            params
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, v))
+                .collect::<Vec<_>>()
+                .join("&")
+        );
 
         let response = self
             .client
@@ -324,24 +345,18 @@ impl SubsonicClient {
 
         let response = response.json::<T>().await;
 
-        println!(
-            "{}?{}",
-            url,
-            params
-                .iter()
-                .map(|(k, v)| format!("{}={}", k, v))
-                .collect::<Vec<_>>()
-                .join("&")
-        );
         if url.contains("getRandomSongs") {
-
-            println!("{:?}", self
-                .client
-                .get(&url)
-                .query(&params)
-                .send()
-                .await
-                .context("Failed to send request to Subsonic server")?.text().await);
+            println!(
+                "{:?}",
+                self.client
+                    .get(&url)
+                    .query(&params)
+                    .send()
+                    .await
+                    .context("Failed to send request to Subsonic server")?
+                    .text()
+                    .await
+            );
         }
         match response {
             Ok(json) => Ok(json),

@@ -7,7 +7,9 @@
   "debug": true,
   "data_source": {
     "mode": "subsonic",
-    "local": null,
+    "local": {
+      "music_dir": "../music"
+    },
     "subsonic": {
       "server_url": "http://music.example.com",
       "username": "your_username",

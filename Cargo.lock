@@ -1495,6 +1495,7 @@ dependencies = [
  "symphonia-metadata",
  "tokio",
  "url",
+ "walkdir",
  "webp",
 ]
 

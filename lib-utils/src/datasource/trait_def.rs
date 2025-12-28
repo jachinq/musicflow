@@ -171,4 +171,7 @@ pub trait MusicDataSource: Send + Sync {
     /// * `Ok(())` - 数据源健康
     /// * `Err` - 数据源不可用
     async fn health_check(&self) -> Result<()>;
+
+    /// 扫描音乐
+    async fn scan_music(&self) -> Result<()>;
 }

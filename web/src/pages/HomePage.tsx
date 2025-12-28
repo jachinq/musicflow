@@ -1,6 +1,6 @@
 // pages/HomePage.tsx
 
-import { FlameKindling, Loader } from "lucide-react";
+import { FlameKindling, Loader, Rabbit } from "lucide-react";
 import { useHomePageStore } from "../store/home-page";
 import RandomSongs from "../components/RandomSongs";
 // import { MusicStatsCards } from "../components/MusicStatsCards";
@@ -8,7 +8,7 @@ import RandomSongs from "../components/RandomSongs";
 
 
 export const HomePage = () => {
-  const { error, loading } = useHomePageStore();
+  const { error, loading, randomSongs } = useHomePageStore();
 
   if (loading) {
     return (
@@ -45,6 +45,16 @@ export const HomePage = () => {
 
       {/* 热门推荐 */}
       {/* <TopPlayed /> */}
+
+      {randomSongs?.length === 0 && <>
+    
+<div className="flex flex-col gap-2 justify-center items-center p-4">
+        <div className="flex flex-col gap-2 justify-center items-center">
+          <Rabbit size={64} />
+          暂无推荐歌曲
+        </div>
+      </div>
+      </>}
 
     </div>
   );
