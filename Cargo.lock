@@ -2204,6 +2204,7 @@ dependencies = [
  "actix-web",
  "base64 0.22.1",
  "env_logger",
+ "futures",
  "lib-utils",
  "serde",
  "serde_json",

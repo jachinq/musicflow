@@ -429,4 +429,9 @@ impl MusicDataSource for LocalDataSource {
             error: None,
         })
     }
+
+    async fn stream_song(&self, _song_id: &str, _range: Option<String>) -> Result<reqwest::Response> {
+        // 本地数据源不支持流式传输,应该使用静态文件服务
+        Err(anyhow::anyhow!("Local data source does not support streaming. Use file_url instead."))
+    }
 }

@@ -56,6 +56,17 @@ pub trait MusicDataSource: Send + Sync {
     /// * `Ok(AudioStream)` - 音频流(本地文件路径或网络流URL)
     async fn get_audio_stream(&self, song_id: &str) -> Result<AudioStream>;
 
+    /// 代理音频流(用于从远程服务器流式传输音频)
+    ///
+    /// # 参数
+    /// * `song_id` - 歌曲ID
+    /// * `range` - 可选的 HTTP Range 请求头(用于断点续传)
+    ///
+    /// # 返回
+    /// * `Ok(reqwest::Response)` - HTTP 响应流
+    async fn stream_song(&self, song_id: &str, range: Option<String>) -> Result<reqwest::Response>;
+
+
     /// 扫描音乐库
     ///
     /// 触发音乐库扫描,更新元数据数据库

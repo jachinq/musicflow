@@ -21,6 +21,7 @@ mod controller_genre;
 mod controller_playlist;
 mod controller_song;
 mod controller_songlist;
+mod controller_stream;
 mod controller_tool;
 mod controller_user;
 mod controller_search;
@@ -33,6 +34,7 @@ use controller_playlist::*;
 use controller_song::*;
 use controller_search::*;
 use controller_songlist::*;
+use controller_stream::*;
 use controller_tool::*;
 use controller_user::*;
 
@@ -97,6 +99,7 @@ async fn main() -> io::Result<()> {
             .route("/api/list", web::post().to(handle_get_metadatas))
             .route("/api/single/{song_id}", web::get().to(handle_get_metadata))
             .route("/api/random_songs", web::get().to(handle_get_random_songs))
+            .route("/api/stream/{song_id}", web::get().to(stream_song))
             .route("/api/cover/small/{song_id}", web::get().to(get_cover_small))
             .route(
                 "/api/cover/medium/{song_id}",

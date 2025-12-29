@@ -294,25 +294,37 @@ impl SubsonicClient {
             .unwrap_or_default())
     }
 
-    /// 构建流式URL
-    pub fn get_stream_url(&self, id: &str, _max_bitrate: u32, _format: &str) -> String {
+    /// 获取音频流(返回 Response 供代理使用)
+    pub async fn stream_song(&self, id: &str, range: Option<String>) -> Result<reqwest::Response> {
         let mut params = self.auth.get_auth_params();
         params.extend(vec![
             ("v", self.api_version.clone()),
             ("c", self.client_name.clone()),
             ("f", "json".to_string()),
             ("id", id.to_string()),
-            // ("maxBitRate", max_bitrate.to_string()),
-            // ("format", format.to_string()),
         ]);
 
-        let query_string = params
-            .iter()
-            .map(|(k, v)| format!("{}={}", k, urlencoding::encode(v)))
-            .collect::<Vec<_>>()
-            .join("&");
+        let url = format!("{}/rest/stream", self.base_url);
 
-        format!("{}/rest/stream?{}", self.base_url, query_string)
+        let mut request = self.client.get(&url).query(&params);
+
+        // 如果有 Range 请求头,转发给 Subsonic
+        if let Some(range) = range {
+            request = request.header("Range", range);
+        }
+
+        let response = request
+            .send()
+            .await
+            .context("Failed to stream from Subsonic server")?;
+
+        Ok(response)
+    }
+
+    /// 构建流式URL(返回本地代理URL)
+    pub fn get_stream_url(&self, id: &str, _max_bitrate: u32, _format: &str) -> String {
+        // 返回本地代理端点,而不是直接的 Subsonic URL
+        format!("/api/stream/{}", id)
     }
 
     /// 发送 GET 请求

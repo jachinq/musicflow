@@ -391,4 +391,8 @@ impl MusicDataSource for SubsonicDataSource {
             error: None,
         })
     }
+
+    async fn stream_song(&self, song_id: &str, range: Option<String>) -> Result<reqwest::Response> {
+        self.client.stream_song(song_id, range).await
+    }
 }
