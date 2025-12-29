@@ -230,6 +230,7 @@ pub async fn get_cover_size(song_id: &str, size: &str, app_state: &AppState) -> 
 
     // 使用 DataSource 获取封面
     let result = app_state.data_source.get_cover(song_id, cover_size).await;
+    // println!("get_cover_size: {} {} {:?}", song_id, size, result);
 
     match result {
         Ok(data) => {

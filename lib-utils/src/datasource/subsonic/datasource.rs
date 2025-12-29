@@ -120,9 +120,14 @@ impl MusicDataSource for SubsonicDataSource {
         };
         // 获取封面 URL
         let cover_url = self.client.get_cover_art_url(&cover_art, size);
+        // println!("Downloading cover art from {}", cover_url);
 
         // 下载图片
         let response = reqwest::get(&cover_url).await?;
+        if response.status() != 200 {
+            return Err(anyhow::anyhow!("Failed to download cover art"));
+        }
+        
         let bytes = response.bytes().await?;
 
         Ok(bytes.to_vec())

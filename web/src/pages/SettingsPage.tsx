@@ -123,11 +123,11 @@ function SettingsPage() {
             // 延迟清除进度显示
             setTimeout(() => {
               setScanProgress(null);
-            }, 3000);
+            }, 5000); // 5秒后清除进度显示
           }
         }
       );
-    }, 1500);
+    }, 5000); // 5秒轮询一次
   };
 
   return (

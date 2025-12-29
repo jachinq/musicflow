@@ -7,10 +7,10 @@ export const API_URL = defaultSetting.server_url || "";
 export const LOG_API = `${API_URL}/api/log`;
 
 export const getCoverSmallUrl = (coverArt: string) => {
-  return `${API_URL}/api/cover/small/${coverArt || ''}`;
+  return `${API_URL}/api/cover/small/${coverArt || '-'}`;
 };
 export const getCoverMediumUrl = (coverArt: string) => {
-  return `${API_URL}/api/cover/medium/${coverArt || ''}`;
+  return `${API_URL}/api/cover/medium/${coverArt || '-'}`;
 };
 
 export const getMusicUrl = (music: Music) => {
