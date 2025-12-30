@@ -367,23 +367,20 @@ impl SubsonicClient {
 
         let response = response.json::<T>().await;
 
-        if url.contains("getRandomSongs") {
-            println!(
-                "{:?}",
-                self.client
-                    .get(&url)
-                    .query(&params)
-                    .send()
-                    .await
-                    .context("Failed to send request to Subsonic server")?
-                    .text()
-                    .await
-            );
-        }
         match response {
             Ok(json) => Ok(json),
             Err(e) => {
                 println!("url={} response={:?}", url, e);
+
+                let response = self
+                    .client
+                    .get(&url)
+                    .query(&params)
+                    .send()
+                    .await
+                    .context("Failed to send request to Subsonic server")?;
+                println!("json fail={:?}", response.text().await);
+
                 return Err(anyhow::anyhow!("Failed to parse Subsonic response"));
             }
         }
@@ -466,8 +463,8 @@ pub struct SubsonicSong {
     pub track: Option<u32>,
     #[serde(default, deserialize_with = "deserialize_year")]
     pub year: Option<u32>,
-    #[serde(default, deserialize_with = "deserialize_year")]
-    pub parent: Option<u32>,
+    // #[serde(default, deserialize_with = "deserialize_year")]
+    // pub parent: Option<u32>,
     pub genre: Option<String>,
     pub duration: Option<u32>,
     pub bit_rate: Option<u32>,
