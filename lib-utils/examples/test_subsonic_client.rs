@@ -186,8 +186,8 @@ async fn main() {
     }
 
     // 9. 搜索测试
-    println!("\n9. 搜索测试 (关键词: 'love')...");
-    match client.search3("love", 0, 10).await {
+    println!("\n9. 搜索测试 (关键词: '偏爱')...");
+    match client.search3("偏爱", 0, 10).await {
         Ok(result) => {
             if let Some(songs) = result.song {
                 println!("   ✓ 找到 {} 首歌曲", songs.len());
