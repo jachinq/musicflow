@@ -248,6 +248,37 @@ impl Default for LyricLine {
     }
 }
 
+/// 播放列表信息
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PlaylistInfo {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub cover: Option<String>,
+    pub owner: Option<String>,
+    pub public: Option<bool>,
+    pub song_count: usize,
+    pub duration: Option<u32>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+/// 播放列表详情(包含歌曲列表)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PlaylistDetail {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub cover: Option<String>,
+    pub owner: Option<String>,
+    pub public: Option<bool>,
+    pub song_count: usize,
+    pub duration: Option<u32>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub songs: Vec<UnifiedMetadata>,
+}
+
 impl UnifiedMetadata {
     /// 分割 genre 字符串为列表
     /// 本地模式使用逗号分隔,Subsonic 也使用逗号分隔

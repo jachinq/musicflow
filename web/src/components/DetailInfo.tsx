@@ -15,7 +15,7 @@ export const DetailInfo = ({ song, contentH = false }: { song?: Music, contentH?
   const [genres, setGenres] = useState<string[]>([]);
   useEffect(() => {
     if (song) {
-      setGenres(song.genres);
+      setGenres(song.genres || []);
     }
   }, [song]);
 
@@ -30,7 +30,7 @@ export const DetailInfo = ({ song, contentH = false }: { song?: Music, contentH?
     <div className={`flex flex-col items-center px-8 py-4 ${contentH? "h-full" : "min-h-[calc(100vh-260px)]"}`}>
       <div className="flex flex-col gap-4">
         <ShowItem name="名称" value={song.title} />
-        <ShowItem name="歌手" value={song.artists && song.artists.join(" / ")} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
+        <ShowItem name="歌手" value={song.artist || (song.artists && song.artists.join(" / "))} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
         <ShowItem name="专辑" value={song.album} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoAlbum() }} />
         {song.bitrate && <ShowItem name="比特率" value={song.bitrate} />}
         {song.samplerate && <ShowItem name="采样率" value={song.samplerate} />}

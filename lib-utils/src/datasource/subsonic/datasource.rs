@@ -395,4 +395,117 @@ impl MusicDataSource for SubsonicDataSource {
     async fn stream_song(&self, song_id: &str, range: Option<String>) -> Result<reqwest::Response> {
         self.client.stream_song(song_id, range).await
     }
+
+    async fn list_playlists(&self) -> Result<Vec<PlaylistInfo>> {
+        let playlists = self.client.get_playlists().await?;
+
+        Ok(playlists
+            .into_iter()
+            .map(|p| PlaylistInfo {
+                id: p.id,
+                name: p.name,
+                description: p.comment,
+                cover: p.cover_art,
+                owner: p.owner,
+                public: p.public,
+                song_count: p.song_count.unwrap_or(0) as usize,
+                duration: p.duration,
+                created_at: p.created,
+                updated_at: p.changed,
+            })
+            .collect())
+    }
+
+    async fn get_playlist(&self, playlist_id: &str) -> Result<PlaylistDetail> {
+        let playlist = self.client.get_playlist(playlist_id).await?;
+
+        // 转换歌曲列表
+        let songs: Vec<UnifiedMetadata> = playlist
+            .entry
+            .unwrap_or_default()
+            .into_iter()
+            .map(|s| {
+                let mut meta: UnifiedMetadata = s.into();
+                meta.file_url = Some(self.client.get_stream_url(
+                    &meta.id,
+                    self.max_bitrate,
+                    &self.prefer_format,
+                ));
+                meta
+            })
+            .collect();
+
+        Ok(PlaylistDetail {
+            id: playlist.id,
+            name: playlist.name,
+            description: playlist.comment,
+            cover: playlist.cover_art,
+            owner: playlist.owner,
+            public: playlist.public,
+            song_count: songs.len(),
+            duration: playlist.duration,
+            created_at: playlist.created,
+            updated_at: playlist.changed,
+            songs,
+        })
+    }
+
+    async fn create_playlist(
+        &self,
+        name: &str,
+        _description: Option<&str>,
+        song_ids: &[String],
+    ) -> Result<()> {
+        self.client.create_playlist(name, song_ids).await
+    }
+
+    async fn update_playlist(
+        &self,
+        playlist_id: &str,
+        name: Option<&str>,
+        description: Option<&str>,
+        song_ids: Option<&[String]>,
+    ) -> Result<()> {
+        // 如果提供了新的歌曲列表,需要先获取现有歌曲,计算差异
+        let (song_ids_to_add, song_indexes_to_remove) = if let Some(new_ids) = song_ids {
+            // 获取现有播放列表
+            let existing = self.client.get_playlist(playlist_id).await?;
+            let existing_songs = existing.entry.unwrap_or_default();
+
+            // 计算要添加的歌曲 (新列表中有,旧列表中没有)
+            let existing_ids: Vec<String> = existing_songs.iter().map(|s| s.id.clone()).collect();
+            let to_add: Vec<String> = new_ids
+                .iter()
+                .filter(|id| !existing_ids.contains(id))
+                .cloned()
+                .collect();
+
+            // 计算要删除的歌曲索引 (旧列表中有,新列表中没有)
+            let to_remove: Vec<u32> = existing_songs
+                .iter()
+                .enumerate()
+                .filter(|(_, s)| !new_ids.contains(&s.id))
+                .map(|(i, _)| i as u32)
+                .collect();
+
+            (to_add, to_remove)
+        } else {
+            (vec![], vec![])
+        };
+
+        self.client
+            .update_playlist(
+                playlist_id,
+                name,
+                description,
+                None,
+                &song_ids_to_add,
+                &song_indexes_to_remove,
+            )
+            .await
+    }
+
+    async fn delete_playlist(&self, playlist_id: &str) -> Result<()> {
+        self.client.delete_playlist(playlist_id).await
+    }
 }

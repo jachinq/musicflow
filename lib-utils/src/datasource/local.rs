@@ -434,4 +434,170 @@ impl MusicDataSource for LocalDataSource {
         // 本地数据源不支持流式传输,应该使用静态文件服务
         Err(anyhow::anyhow!("Local data source does not support streaming. Use file_url instead."))
     }
+
+    async fn list_playlists(&self) -> Result<Vec<PlaylistInfo>> {
+        let song_lists = service::get_song_list()?;
+
+        Ok(song_lists
+            .into_iter()
+            .map(|sl| PlaylistInfo {
+                id: sl.id.to_string(),
+                name: sl.name,
+                description: if sl.description.is_empty() {
+                    None
+                } else {
+                    Some(sl.description)
+                },
+                cover: if sl.cover.is_empty() {
+                    None
+                } else {
+                    Some(sl.cover)
+                },
+                owner: None,
+                public: None,
+                song_count: 0, // 需要额外查询
+                duration: None,
+                created_at: Some(sl.created_at),
+                updated_at: None,
+            })
+            .collect())
+    }
+
+    async fn get_playlist(&self, playlist_id: &str) -> Result<PlaylistDetail> {
+        let playlist_id_i64 = playlist_id
+            .parse::<i64>()
+            .map_err(|_| anyhow::anyhow!("Invalid playlist id: {}", playlist_id))?;
+
+        // 获取歌单信息
+        let song_list = service::get_song_list()?
+            .into_iter()
+            .find(|sl| sl.id == playlist_id_i64)
+            .ok_or_else(|| anyhow::anyhow!("Playlist not found: {}", playlist_id))?;
+
+        // 获取歌曲列表 (返回的直接是 Vec<Metadata>)
+        let metadata_list = service::get_song_list_songs(playlist_id_i64)?;
+        let songs: Vec<UnifiedMetadata> = metadata_list
+            .into_iter()
+            .map(|m| self.convert_metadata(m))
+            .collect();
+
+        Ok(PlaylistDetail {
+            id: song_list.id.to_string(),
+            name: song_list.name,
+            description: if song_list.description.is_empty() {
+                None
+            } else {
+                Some(song_list.description)
+            },
+            cover: if song_list.cover.is_empty() {
+                None
+            } else {
+                Some(song_list.cover)
+            },
+            owner: None,
+            public: None,
+            song_count: songs.len(),
+            duration: None,
+            created_at: Some(song_list.created_at),
+            updated_at: None,
+            songs,
+        })
+    }
+
+    async fn create_playlist(
+        &self,
+        name: &str,
+        description: Option<&str>,
+        song_ids: &[String],
+    ) -> Result<()> {
+        let song_list = service::SongList {
+            id: 0, // 数据库自动生成
+            user_id: 1,
+            name: name.to_string(),
+            description: description.unwrap_or("").to_string(),
+            cover: String::new(),
+            created_at: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        };
+
+        service::add_song_list(&song_list)?;
+
+        // 获取刚创建的歌单
+        let created_playlist = service::get_song_list()?
+            .into_iter()
+            .find(|sl| sl.name == name)
+            .ok_or_else(|| anyhow::anyhow!("Failed to find created playlist"))?;
+
+        // 添加歌曲
+        if !song_ids.is_empty() {
+            let song_list_songs: Vec<_> = song_ids
+                .iter()
+                .enumerate()
+                .map(|(i, id)| service::SongListSong {
+                    user_id: 1,
+                    song_list_id: created_playlist.id,
+                    song_id: id.clone(),
+                    order_num: i as i64,
+                })
+                .collect();
+
+            service::add_song_list_song(created_playlist.id, &song_list_songs)?;
+        }
+
+        Ok(())
+    }
+
+    async fn update_playlist(
+        &self,
+        playlist_id: &str,
+        name: Option<&str>,
+        description: Option<&str>,
+        song_ids: Option<&[String]>,
+    ) -> Result<()> {
+        let playlist_id_i64 = playlist_id
+            .parse::<i64>()
+            .map_err(|_| anyhow::anyhow!("Invalid playlist id: {}", playlist_id))?;
+
+        // 获取现有歌单
+        let mut song_list = service::get_song_list()?
+            .into_iter()
+            .find(|sl| sl.id == playlist_id_i64)
+            .ok_or_else(|| anyhow::anyhow!("Playlist not found: {}", playlist_id))?;
+
+        // 更新名称和描述
+        if let Some(n) = name {
+            song_list.name = n.to_string();
+        }
+        if let Some(d) = description {
+            song_list.description = d.to_string();
+        }
+
+        service::update_song_list(&song_list)?;
+
+        // 更新歌曲列表(如果提供)
+        if let Some(ids) = song_ids {
+            let song_list_songs: Vec<_> = ids
+                .iter()
+                .enumerate()
+                .map(|(i, id)| service::SongListSong {
+                    user_id: 1,
+                    song_list_id: playlist_id_i64,
+                    song_id: id.clone(),
+                    order_num: i as i64,
+                })
+                .collect();
+
+            service::add_song_list_song(playlist_id_i64, &song_list_songs)?;
+        }
+
+        Ok(())
+    }
+
+    async fn delete_playlist(&self, playlist_id: &str) -> Result<()> {
+        let playlist_id_i64 = playlist_id
+            .parse::<i64>()
+            .map_err(|_| anyhow::anyhow!("Invalid playlist id: {}", playlist_id))?;
+
+        service::delete_song_list(playlist_id_i64)?;
+        Ok(())
+    }
 }

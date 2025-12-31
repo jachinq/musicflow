@@ -1,3 +1,5 @@
+/// 和播放列表相关的接口，注意与歌单的接口区别，歌单接口在 controller_songlist.rs 中
+
 use actix_web::{web, HttpResponse, Responder};
 use lib_utils::{database::service::{self, PlayList}, datasource::types::Pagination};
 use serde::{Deserialize, Serialize};

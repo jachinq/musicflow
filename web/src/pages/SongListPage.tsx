@@ -90,8 +90,9 @@ const useSongListStore = create<SongListState>((set, get) => ({
     }
 
     const songList = get().formValues as SongList;
-    const operation = songList.id > 0 ? "更新" : "创建";
-    const operationFunc = songList.id > 0 ? updateSongList : createSongList;
+
+    const operation = songList.id ? "更新" : "创建";
+    const operationFunc = songList.id ? updateSongList : createSongList;
 
     operationFunc(
       songList,

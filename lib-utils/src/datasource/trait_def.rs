@@ -191,4 +191,62 @@ pub trait MusicDataSource: Send + Sync {
     /// # 返回
     /// * `Ok(ScanProgress)` - 扫描进度信息
     async fn scan_status(&self) -> Result<ScanProgress>;
+
+    /// 获取所有播放列表
+    ///
+    /// # 返回
+    /// * `Ok(Vec<PlaylistInfo>)` - 播放列表信息列表
+    async fn list_playlists(&self) -> Result<Vec<PlaylistInfo>>;
+
+    /// 获取播放列表详情
+    ///
+    /// # 参数
+    /// * `playlist_id` - 播放列表 ID
+    ///
+    /// # 返回
+    /// * `Ok(PlaylistDetail)` - 播放列表详情(包含歌曲列表)
+    async fn get_playlist(&self, playlist_id: &str) -> Result<PlaylistDetail>;
+
+    /// 创建播放列表
+    ///
+    /// # 参数
+    /// * `name` - 播放列表名称
+    /// * `description` - 描述(可选)
+    /// * `song_ids` - 要添加的歌曲 ID 列表
+    ///
+    /// # 返回
+    /// * `Ok(PlaylistInfo)` - 新创建的播放列表信息
+    async fn create_playlist(
+        &self,
+        name: &str,
+        description: Option<&str>,
+        song_ids: &[String],
+    ) -> Result<()>;
+
+    /// 更新播放列表
+    ///
+    /// # 参数
+    /// * `playlist_id` - 播放列表 ID
+    /// * `name` - 新名称(可选)
+    /// * `description` - 新描述(可选)
+    /// * `song_ids` - 完整的歌曲 ID 列表(替换现有歌曲)
+    ///
+    /// # 返回
+    /// * `Ok(())` - 更新成功
+    async fn update_playlist(
+        &self,
+        playlist_id: &str,
+        name: Option<&str>,
+        description: Option<&str>,
+        song_ids: Option<&[String]>,
+    ) -> Result<()>;
+
+    /// 删除播放列表
+    ///
+    /// # 参数
+    /// * `playlist_id` - 播放列表 ID
+    ///
+    /// # 返回
+    /// * `Ok(())` - 删除成功
+    async fn delete_playlist(&self, playlist_id: &str) -> Result<()>;
 }

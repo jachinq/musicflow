@@ -327,6 +327,109 @@ impl SubsonicClient {
         format!("/api/stream/{}", id)
     }
 
+    /// 获取所有播放列表
+    pub async fn get_playlists(&self) -> Result<Vec<SubsonicPlaylist>> {
+        let response: SubsonicResponse<PlaylistsWrapper> =
+            self.get("rest/getPlaylists", vec![]).await?;
+
+        Ok(response
+            .subsonic_response
+            .playlists)
+    }
+
+    /// 获取播放列表详情
+    pub async fn get_playlist(&self, id: &str) -> Result<SubsonicPlaylist> {
+        let params = vec![("id", id.to_string())];
+        let response: SubsonicResponse<PlaylistWrapper> =
+            self.get("rest/getPlaylist", params).await?;
+
+        response
+            .subsonic_response
+            .playlist
+            .ok_or_else(|| anyhow::anyhow!("Playlist not found: {}", id))
+    }
+
+    /// 创建播放列表
+    pub async fn create_playlist(&self, name: &str, song_ids: &[String]) -> Result<()> {
+        let mut params = vec![("name", name.to_string())];
+
+        // 添加歌曲 ID
+        for song_id in song_ids {
+            params.push(("songId", song_id.clone()));
+        }
+
+        let response: SubsonicResponse<BaseResponse> =
+            self.get("rest/createPlaylist", params).await?;
+
+        if response.subsonic_response.status != "ok" {
+            return Err(anyhow::anyhow!("Failed to create playlist: {:?}", response.subsonic_response.error));
+        }
+        Ok(())
+    }
+
+    /// 更新播放列表
+    pub async fn update_playlist(
+        &self,
+        playlist_id: &str,
+        name: Option<&str>,
+        comment: Option<&str>,
+        public: Option<bool>,
+        song_ids_to_add: &[String],
+        song_indexes_to_remove: &[u32],
+    ) -> Result<()> {
+        let mut params = vec![("playlistId", playlist_id.to_string())];
+
+        if let Some(n) = name {
+            params.push(("name", n.to_string()));
+        }
+
+        if let Some(c) = comment {
+            params.push(("comment", c.to_string()));
+        }
+
+        if let Some(p) = public {
+            params.push(("public", p.to_string()));
+        }
+
+        // 添加要添加的歌曲
+        for song_id in song_ids_to_add {
+            params.push(("songIdToAdd", song_id.clone()));
+        }
+
+        // 添加要删除的歌曲索引
+        for index in song_indexes_to_remove {
+            params.push(("songIndexToRemove", index.to_string()));
+        }
+
+        let response: SubsonicResponse<BaseResponse> =
+            self.get("rest/updatePlaylist", params).await?;
+
+        if response.subsonic_response.status == "ok" {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Update playlist failed: {:?}",
+                response.subsonic_response.error
+            ))
+        }
+    }
+
+    /// 删除播放列表
+    pub async fn delete_playlist(&self, id: &str) -> Result<()> {
+        let params = vec![("id", id.to_string())];
+        let response: SubsonicResponse<BaseResponse> =
+            self.get("rest/deletePlaylist", params).await?;
+
+        if response.subsonic_response.status == "ok" {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Delete playlist failed: {:?}",
+                response.subsonic_response.error
+            ))
+        }
+    }
+
     /// 发送 GET 请求
     async fn get<T>(&self, endpoint: &str, mut params: Vec<(&str, String)>) -> Result<T>
     where
@@ -712,4 +815,39 @@ struct ScanStatusWrapper {
     #[serde(flatten)]
     base: BaseResponse,
     scan_status: Option<SubsonicScanStatus>,
+}
+
+/// Subsonic 播放列表信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubsonicPlaylist {
+    pub id: String,
+    pub name: String,
+    pub owner: Option<String>,
+    pub public: Option<bool>,
+    pub song_count: Option<u32>,
+    pub duration: Option<u32>,
+    pub created: Option<String>,
+    pub changed: Option<String>,
+    pub comment: Option<String>,
+    pub cover_art: Option<String>,
+    pub entry: Option<Vec<SubsonicSong>>,
+}
+
+/// 播放列表列表响应包装
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct PlaylistsWrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    playlists: Vec<SubsonicPlaylist>,
+}
+
+/// 单个播放列表响应包装
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct PlaylistWrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    playlist: Option<SubsonicPlaylist>,
 }

@@ -1,34 +1,49 @@
 #![allow(dead_code, unused_variables)]
+
+/// 歌单相关接口
 use std::str;
 
 use actix_web::{web, HttpResponse, Responder};
-use lib_utils::database::service::{self, SongList, SongListSong};
 use serde::Deserialize;
 
-use crate::{IntoVec, JsonResult};
+use crate::{AppState, JsonResult};
 
-pub async fn handle_song_list() -> impl Responder {
-    let result = service::get_song_list();
+pub async fn handle_song_list(data: web::Data<AppState>) -> impl Responder {
+    let data_source = &data.data_source;
+    let result = data_source.list_playlists().await;
+    println!("handle_song_list. result:{:?}", result);
+
     match result {
-        Ok(list) => HttpResponse::Ok().json(JsonResult::<Vec<SongList>>::success(list)),
+        Ok(list) => HttpResponse::Ok().json(JsonResult::success(list)),
         Err(e) => HttpResponse::InternalServerError()
             .json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
 }
 
-pub async fn handle_song_list_songs(song_list_id: web::Path<i64>) -> impl Responder {
-    let result = service::get_song_list_songs(song_list_id.into_inner());
-    if result.is_err() {
-        println!(
-            "<handle_song_list_songs>get_song_list_songs error: {}",
-            result.err().unwrap()
-        );
-        return HttpResponse::InternalServerError().json(JsonResult::<()>::error("检查歌单失败"));
+pub async fn handle_song_list_songs(
+    song_list_id: web::Path<String>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    let data_source = &data.data_source;
+    let result = data_source.get_playlist(&song_list_id.into_inner()).await;
+
+    match result {
+        Ok(playlist_detail) => {
+            HttpResponse::Ok().json(JsonResult::success(playlist_detail.songs))
+        }
+        Err(e) => HttpResponse::InternalServerError()
+            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
-    HttpResponse::Ok().json(JsonResult::success(result.unwrap().into_vec()))
 }
 
-pub async fn handle_song_song_list(song_id: web::Path<String>) -> impl Responder {
+pub async fn handle_song_song_list(
+    song_id: web::Path<String>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    // 这个接口需要查询某个歌曲属于哪些歌单
+    // 暂时使用原有的数据库实现
+    use lib_utils::database::service;
+
     let result = service::get_song_song_list(&song_id.into_inner());
     match result {
         Ok(list) => HttpResponse::Ok().json(JsonResult::success(list)),
@@ -37,93 +52,124 @@ pub async fn handle_song_song_list(song_id: web::Path<String>) -> impl Responder
     }
 }
 
-pub async fn handle_delete_song_list(song_list_id: web::Path<i64>) -> impl Responder {
-    let result = service::delete_song_list(song_list_id.into_inner());
+pub async fn handle_delete_song_list(
+    song_list_id: web::Path<String>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    let data_source = &data.data_source;
+    let result = data_source.delete_playlist(&song_list_id.into_inner()).await;
+
     match result {
-        Ok(size) => HttpResponse::Ok().json(JsonResult::success(size)),
+        Ok(()) => HttpResponse::Ok().json(JsonResult::success(())),
         Err(e) => HttpResponse::Ok().json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
 }
 
-pub async fn handle_create_song_list(song_list: web::Json<SongList>) -> impl Responder {
-    let song_list = song_list.into_inner();
-    let result = service::add_song_list(&song_list);
+#[derive(Deserialize, Debug)]
+pub struct CreateSongListBody {
+    name: String,
+    description: Option<String>,
+}
+
+pub async fn handle_create_song_list(
+    body: web::Json<CreateSongListBody>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    let data_source = &data.data_source;
+    let body = body.into_inner();
+
+    let result = data_source
+        .create_playlist(&body.name, body.description.as_deref(), &[])
+        .await;
+
     match result {
-        Ok(_) => HttpResponse::Ok().json(JsonResult::<()>::success(())),
+        Ok(playlist) => HttpResponse::Ok().json(JsonResult::success(playlist)),
         Err(e) => HttpResponse::Ok().json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
 }
 
-pub async fn handle_update_song_list(song_list: web::Json<SongList>) -> impl Responder {
-    let song_list = song_list.into_inner();
-    let result = service::update_song_list(&song_list);
+#[derive(Deserialize, Debug)]
+pub struct UpdateSongListBody {
+    id: String,
+    name: Option<String>,
+    description: Option<String>,
+}
+
+pub async fn handle_update_song_list(
+    body: web::Json<UpdateSongListBody>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    let data_source = &data.data_source;
+    let body = body.into_inner();
+
+    let result = data_source
+        .update_playlist(
+            &body.id,
+            body.name.as_deref(),
+            body.description.as_deref(),
+            None,
+        )
+        .await;
+
     match result {
-        Ok(size) => HttpResponse::Ok().json(JsonResult::success(size)),
+        Ok(()) => HttpResponse::Ok().json(JsonResult::success(())),
         Err(e) => HttpResponse::Ok().json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
 }
 
-pub async fn handle_remove_song_from_songlist(path: web::Path<(i64, String)>) -> impl Responder {
+pub async fn handle_remove_song_from_songlist(
+    path: web::Path<(String, String)>,
+    data: web::Data<AppState>,
+) -> impl Responder {
     let (song_list_id, song_id) = path.into_inner();
-    let result = service::delete_song_list_song(song_list_id, &song_id);
+    let data_source = &data.data_source;
+
+    // 获取现有播放列表
+    let playlist_result = data_source.get_playlist(&song_list_id).await;
+    if let Err(e) = playlist_result {
+        return HttpResponse::InternalServerError()
+            .json(JsonResult::<()>::error(&format!("Error: {}", e)));
+    }
+
+    let playlist = playlist_result.unwrap();
+    // 过滤掉要删除的歌曲
+    let new_song_ids: Vec<String> = playlist
+        .songs
+        .into_iter()
+        .filter(|s| s.id != song_id)
+        .map(|s| s.id)
+        .collect();
+
+    let result = data_source
+        .update_playlist(&song_list_id, None, None, Some(&new_song_ids))
+        .await;
+
     match result {
-        Ok(_) => HttpResponse::Ok().json(JsonResult::<()>::success(())),
+        Ok(()) => HttpResponse::Ok().json(JsonResult::success(())),
         Err(e) => HttpResponse::Ok().json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
 }
 
 #[derive(Deserialize, Debug)]
 pub struct SongListSongBody {
-    song_list_id: i64,
+    song_list_id: String,
     song_ids: Vec<String>,
 }
-pub async fn handle_add_song_list_song(body: web::Json<SongListSongBody>) -> impl Responder {
-    let body = body.into_inner();
-    if body.song_list_id <= 0 {
-        return HttpResponse::BadRequest().json(JsonResult::<()>::error("歌单id错误"));
-    }
-    // println!("body: {:?}", body);
-    let songs = service::get_song_list_songs(body.song_list_id);
-    if songs.is_err() {
-        println!(
-            "<handle_add_song_list_song>get_song_list_songs error: {}",
-            songs.err().unwrap()
-        );
-        return HttpResponse::InternalServerError().json(JsonResult::<()>::error("检查歌单失败"));
-    }
-    let songs = songs.unwrap();
-    let song_ids = songs.iter().map(|s| s.id.clone()).collect::<Vec<_>>();
-    // 过滤掉已经存在的歌曲，只添加不存在的歌曲
-    let diff_add = body
-        .song_ids
-        .iter()
-        .filter(|id| !song_ids.contains(id))
-        .collect::<Vec<_>>();
-    // exist 1 2 3 4 5
-    // body 3 4 5 6 7 8
-    // diff_add 6 7 8
-    // diff_remove 1 2
-    let diff_remove = song_ids
-        .iter()
-        .filter(|id| !body.song_ids.contains(id))
-        .collect::<Vec<_>>();
 
-    let song_list_song = body
-        .song_ids
-        .iter()
-        .map(|id| SongListSong {
-            song_list_id: body.song_list_id,
-            song_id: id.to_string(),
-            user_id: 1,
-            order_num: 0,
-        })
-        .collect::<Vec<_>>();
-    // println!("song_list_song: {:?}", song_list_song);
-    let result = service::add_song_list_song(body.song_list_id, &song_list_song);
+pub async fn handle_add_song_list_song(
+    body: web::Json<SongListSongBody>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    let data_source = &data.data_source;
+    let body = body.into_inner();
+
+    // 使用新的歌曲列表更新播放列表
+    let result = data_source
+        .update_playlist(&body.song_list_id, None, None, Some(&body.song_ids))
+        .await;
+
     match result {
-        Ok(size) => {
-            HttpResponse::Ok().json(JsonResult::success(diff_add.len() + diff_remove.len()))
-        }
+        Ok(()) => HttpResponse::Ok().json(JsonResult::success(body.song_ids.len())),
         Err(e) => HttpResponse::Ok().json(JsonResult::<()>::error(&format!("Error: {}", e))),
     }
 }
