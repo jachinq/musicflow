@@ -6,7 +6,7 @@ import {
   getCoverSmallUrl,
   getMusicList,
   getSongList,
-  getSongListSongs,
+  getSongListDetail,
   updateSongList,
 } from "../lib/api";
 import { Music, SongList } from "../lib/defined";
@@ -42,15 +42,13 @@ interface SongListState {
   setFormValues: (formValues: SongList) => void;
   showForm: boolean;
   setShowForm: (show: boolean) => void;
-  musicList: Music[];
-  setMusicList: (musicList: Music[]) => void;
   currentPage: number;
   setCurrentPage: (page: number) => void;
   tabId: "songlist" | "music";
   setTabId: (tabId: "songlist" | "music") => void;
   handleOperateSongList: () => void;
   fetchSongList: (autoSelect?: boolean) => void;
-  fetchSongListSongs: () => void;
+  fetchSongListDetail: () => void;
 }
 
 const useSongListStore = create<SongListState>((set, get) => ({
@@ -63,8 +61,6 @@ const useSongListStore = create<SongListState>((set, get) => ({
   setFormValues: (formValues: SongList) => set(() => ({ formValues })),
   showForm: false,
   setShowForm: (show: boolean) => set(() => ({ showForm: show })),
-  musicList: [],
-  setMusicList: (musicList: Music[]) => set(() => ({ musicList })),
   currentPage: 1,
   setCurrentPage: (page: number) => set(() => ({ currentPage: page })),
   fetchSongList: (autoSelect?: boolean) => {
@@ -112,14 +108,14 @@ const useSongListStore = create<SongListState>((set, get) => ({
       }
     );
   },
-  fetchSongListSongs: () => {
+  fetchSongListDetail: () => {
     const { selectSongList } = get();
     if (!selectSongList) return;
-    getSongListSongs(
+    getSongListDetail(
       selectSongList.id,
       (result) => {
         if (result && result.success) {
-          get().setMusicList(result.data);
+          get().setSelectSongList(result.data);
         }
       },
       (error) => {
@@ -134,7 +130,7 @@ const useSongListStore = create<SongListState>((set, get) => ({
 
 export const SongListPage = () => {
   const { isSmallDevice } = useDevice();
-  const { selectSongList, fetchSongListSongs, fetchSongList, tabId, setTabId } =
+  const { selectSongList, fetchSongListDetail, fetchSongList, tabId, setTabId } =
     useSongListStore();
 
   useEffect(() => {
@@ -142,8 +138,8 @@ export const SongListPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchSongListSongs();
-  }, [selectSongList]);
+    fetchSongListDetail();
+  }, [selectSongList?.id]);
 
   if (isSmallDevice) {
     return (
@@ -333,9 +329,10 @@ const SongListHeader = () => {
     formValues,
     setFormValues,
     setShowForm,
-    fetchSongListSongs,
+    fetchSongListDetail,
     handleOperateSongList, // 保存歌单
   } = useSongListStore();
+  
   const [showAddSongDialog, setShowAddSongDialog] = useState(false);
 
   const handleUpdateSongList = () => {
@@ -356,7 +353,7 @@ const SongListHeader = () => {
           toast.success("歌单操作成功", {
             description: `影响歌曲 ${result.data} 条`,
           });
-          fetchSongListSongs();
+          fetchSongListDetail();
           setShowAddSongDialog(false);
         } else {
           toast.error("歌单操作失败", {
@@ -374,13 +371,17 @@ const SongListHeader = () => {
 
   const handlePlayAll = () => {
     if (!selectSongList) return;
-    getSongListSongs(
+    getSongListDetail(
       selectSongList.id,
       (result) => {
         if (!result || !result.success) {
           return;
         }
-        const randomList = result.data;
+        const randomList = result.data.songs || [];
+        if (randomList.length === 0) {
+          toast.error("歌单为空");
+          return;
+        }
         setAllSongs(randomList);
         setCurrentSong(randomList[0]);
       },
@@ -393,6 +394,7 @@ const SongListHeader = () => {
   const handleImportSong = () => { };
 
   if (!selectSongList) return null;
+  console.log(selectSongList);
   return (
     <>
       <div className="px-4 w-full flex flex-col gap-4">
@@ -401,7 +403,7 @@ const SongListHeader = () => {
           <div className="relative group">
             {selectSongList.cover ? (
               <Cover
-                src={selectSongList.cover}
+                src={getCoverSmallUrl(selectSongList.cover)}
                 alt={selectSongList.name}
                 size={isSmallDevice ? 120 : 160}
                 className="shadow-2xl"
@@ -493,7 +495,7 @@ const SongListHeader = () => {
 
 // 歌单内容
 const SongListContent = () => {
-  const { musicList, selectSongList } = useSongListStore();
+  const { selectSongList } = useSongListStore();
   const { playSingleSong } = usePlaylist();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -517,7 +519,7 @@ const SongListContent = () => {
     );
   }
 
-  if (musicList.length === 0) {
+  if (selectSongList?.songs?.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4">
         <div className="flex flex-col items-center gap-4 text-muted-foreground max-w-sm">
@@ -535,7 +537,7 @@ const SongListContent = () => {
 
   return (
     <div className="flex flex-wrap gap-4 w-full px-4 pb-4">
-      {musicList.map((item) => (
+      {selectSongList?.songs?.map((item) => (
         <MusicCard key={item.id} music={item} onPlay={playSingleSong} />
       ))}
     </div>
@@ -699,7 +701,7 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const pageSize = isSmallDevice ? 5 : 10;
-  const { musicList } = useSongListStore(); // 拿到当前歌单的歌曲
+  const { selectSongList } = useSongListStore(); // 拿到当前歌单的歌曲
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const filterMusicList = useCallback((page: number, append: boolean = false) => {
@@ -783,8 +785,8 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
   }, [searchText, filterMusicList]);
 
   useEffect(() => {
-    setSelectMusics([...musicList]);
-  }, [musicList]);
+    setSelectMusics([...selectSongList?.songs || []]);
+  }, [selectSongList?.songs]);
 
   const onSelectSong = (music: Music) => {
     if (selectMusics.includes(music)) {

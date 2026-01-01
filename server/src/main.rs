@@ -123,9 +123,9 @@ async fn main() -> io::Result<()> {
             )
             .route("/api/songs_by_genre/{genre}", web::get().to(handle_get_songs_by_genre))
             // 歌单相关接口
-            .route("/api/songlist", web::get().to(handle_song_list))
+            .route("/api/songlists", web::get().to(handle_song_list))
             .route(
-                "/api/songlist_songs/{songlist_id}",
+                "/api/songlist/{songlist_id}",
                 web::get().to(handle_song_list_songs),
             )
             .route(

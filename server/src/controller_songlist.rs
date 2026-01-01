@@ -29,7 +29,7 @@ pub async fn handle_song_list_songs(
 
     match result {
         Ok(playlist_detail) => {
-            HttpResponse::Ok().json(JsonResult::success(playlist_detail.songs))
+            HttpResponse::Ok().json(JsonResult::success(playlist_detail))
         }
         Err(e) => HttpResponse::InternalServerError()
             .json(JsonResult::<()>::error(&format!("Error: {}", e))),

@@ -435,11 +435,18 @@ impl MusicDataSource for SubsonicDataSource {
             })
             .collect();
 
+        // 特殊获取封面，拿歌曲列表中的第一首歌的专辑封面
+        let cover = if let Some(first_song) = songs.first() {
+            first_song.cover_art.clone()
+        } else {
+            None
+        };
+
         Ok(PlaylistDetail {
             id: playlist.id,
             name: playlist.name,
             description: playlist.comment,
-            cover: playlist.cover_art,
+            cover,
             owner: playlist.owner,
             public: playlist.public,
             song_count: songs.len(),

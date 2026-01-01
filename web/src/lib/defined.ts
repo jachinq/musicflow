@@ -105,6 +105,7 @@ export interface SongList {
     description: string;
     cover: string;
     created_at: string;
+    songs?: Music[]; // songs in the playlist
 }
 
 export interface Album {

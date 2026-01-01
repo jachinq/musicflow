@@ -10,6 +10,7 @@ export const getCoverSmallUrl = (coverArt: string) => {
   return `${API_URL}/api/cover/small/${coverArt || '-'}`;
 };
 export const getCoverMediumUrl = (coverArt: string) => {
+  if (coverArt.startsWith("http")) return coverArt;
   return `${API_URL}/api/cover/medium/${coverArt || '-'}`;
 };
 
@@ -237,7 +238,7 @@ export const getSongList = (
   onSuccess: (data: JsonResult<SongList[]>) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/songlist`;
+  const url = `${API_URL}/api/songlists`;
   fetchUtils(url, onSuccess, onError);
 };
 
@@ -304,13 +305,13 @@ export const removeSongFromSongList = (
   });
 };
 
-// 获取歌单歌曲列表
-export const getSongListSongs = (
+// 获取歌单详情
+export const getSongListDetail = (
   songlist_id: number,
-  onSuccess: (data: JsonResult<any>) => void,
+  onSuccess: (data: JsonResult<SongList>) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/songlist_songs/${songlist_id}`;
+  const url = `${API_URL}/api/songlist/${songlist_id}`;
   fetchUtils(url, onSuccess, onError);
 };
 
