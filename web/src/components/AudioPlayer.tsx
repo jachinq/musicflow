@@ -48,7 +48,6 @@ export const AudioPlayer = () => {
     isPlaying,
     volume,
     mutedVolume,
-    hasUserInteracted,
     setVolume,
     setMutedVolume,
     setAudioContext,
@@ -56,7 +55,6 @@ export const AudioPlayer = () => {
     setDuration,
     setIsPlaying,
     setCurrentLyric,
-    setHasUserInteracted,
     setLyrics,
   } = useCurrentPlay();
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
@@ -200,6 +198,7 @@ export const AudioPlayer = () => {
 
 
   useEffect(() => {
+    console.log("AudioPlayer mounted", currentSong);
     if (isDetailPage && audioContext == null) {
       return;
     }
@@ -215,6 +214,10 @@ export const AudioPlayer = () => {
   }, [currentSong]);
 
   useEffect(() => {
+    const userInteract = localStorage.getItem("userInteract");
+    // From True/False to Boolean
+    const hasUserInteracted = userInteract === "true";
+
     if (audioBuffer && hasUserInteracted) {
       // 如果用户已经交互过,自动播放新加载的歌曲
       if (gainNode === null && audioContext) {
@@ -356,10 +359,7 @@ export const AudioPlayer = () => {
   };
 
   const playAudio = async (startTime: number = 0) => {
-    // 标记用户已经交互过
-    if (!hasUserInteracted) {
-      setHasUserInteracted(true);
-    }
+    localStorage.setItem("userInteract", "true"); // 用户交互过，记录状态
 
     initGainNode(initAudioContext());
     const audioBuffer = await initAudioBuffer(currentSong);

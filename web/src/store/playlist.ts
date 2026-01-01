@@ -172,7 +172,7 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
       return {
         allSongs: songs,
         displaySongs,
-        currentSong: displaySongs[0],
+        // currentSong: displaySongs[0],
         loadedCount: displaySongs.length,
       };
     }),
@@ -233,6 +233,7 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
     }),
   getTotal: () => get().allSongs.length,
   playSingleSong: (song) => set(() => {
+    localStorage.setItem("userInteract", "true");
     const allSongs = get().allSongs;
     const index = allSongs.findIndex((s) => s.id === song.id);
     if (index === -1) {

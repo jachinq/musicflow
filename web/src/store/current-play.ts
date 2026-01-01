@@ -92,8 +92,5 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     }),
     setMutedVolume: (mutedVolume) => set(() => ({ mutedVolume })),
     setLyrics: (lyrics) => set(() => ({ lyrics, lastLyricIndex: 0 })),
-    setHasUserInteracted: (hasUserInteracted) => set(() => {
-        localStorage.setItem("hasUserInteracted", hasUserInteracted.toString());
-        return { hasUserInteracted }
-    }),
+    setHasUserInteracted: (hasUserInteracted) => set({ hasUserInteracted }),
 }));
