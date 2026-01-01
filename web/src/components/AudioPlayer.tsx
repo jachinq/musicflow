@@ -27,6 +27,7 @@ import {
   useKeyboardScope,
 } from "../hooks/use-global-keyboard-shortcuts";
 import { useSettingStore } from "../store/setting";
+import "../styles/AudioPlayer.css";
 
 export const AudioPlayer = () => {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -590,113 +591,114 @@ export const AudioPlayer = () => {
   }, [openPlaylist]);
 
   const changeVolume = (value: number) => {
+    setVolume(value);
     if (!gainNode) {
       return;
     }
     gainNode.gain.value = value;
-    setVolume(value);
-    setGainNode(gainNode);
+    // setGainNode(gainNode);
   };
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-playstatus text-playstatus-foreground min-h-[88px] max-h-[88px] flex justify-center items-center">
-      <div className="grid grid-cols-[64px,1fr] gap-4 w-full h-full relative px-4 py-2">
+    <>
+      <div className="audio-player-container">
+        {/* 进度条 */}
         {currentSong && (
-          <input
-            className="play-progress w-full absolute top-[-6px] left-0"
-            type="range"
-            min="0"
-            max={duration}
-            value={currentTime}
-            onChange={handleSeekChange}
-          />
-        )}
-        {currentSong && (
-          <div className="flex gap-4 justify-center items-center min-w-[64px]">
-            <div
-              className="cursor-pointer album-spin-wrapper border-[10px] "
-              onClick={coverClick}
-            >
-              <img
-                src={getCoverSmallUrl(currentSong.cover_art)}
-                alt=""
-                // width={42}
-                className={isPlaying ? "album-spin" : ""}
-                style={{width: 42, height: 42}}
-              />
-            </div>
+          <div className="progress-wrapper">
+            <input
+              className="play-progress w-full absolute top-[-6px] left-0"
+              type="range"
+              min="0"
+              max={duration}
+              value={currentTime}
+              onChange={handleSeekChange}
+              aria-label="播放进度"
+            />
           </div>
         )}
+
         {currentSong && (
-          <div className="gap-2 w-full grid grid-rows-2">
-            <div
-              className={`song-title flex flex-row gap-1 justify-center items-center overflow-hidden`}
-            >
-              <ShowLoader loadStatus={loadStatus} />
-              {isDetailPage ? (
-                <ShowTitle currentSong={currentSong} loadStatus={loadStatus} />
-              ) : (
-                <ShowCurrentLyric currentSong={currentSong} loadStatus={loadStatus} />
-              )}
-            </div>
-
-            <div
-              className={`play-controls flex gap-2 flex-row justify-center items-center`}
-            >
-              {isDetailPage && (
-                // <div
-                //   className="hover:text-primary-hover cursor-pointer"
-                //   onClick={groupSong}
-                // >
-                //   <Star />
-                // </div>
-                <></>
-              )}
-
+          <div className="player-content">
+            {/* 左侧：封面 + 歌曲信息 */}
+            <div className="player-left">
               <div
-                className="prevsong hover:text-primary-hover cursor-pointer"
-                onClick={() => nextSong(-1)}
+                className="album-cover-wrapper cursor-pointer album-spin-wrapper border-[10px]"
+                onClick={coverClick}
+                role="button"
+                tabIndex={0}
+                aria-label={isDetailPage ? "返回上一页" : "查看歌曲详情"}
               >
-                <ChevronFirst />
+                <img
+                  src={getCoverSmallUrl(currentSong.cover_art)}
+                  alt={`${currentSong.title} 封面`}
+                  className={`album-cover-image ${isPlaying ? "album-cover-spinning" : ""}`}
+                />
               </div>
 
-              <div
-                className="play-pause hover:text-primary-hover cursor-pointer "
-                onClick={() => {
-                  isPlaying
-                    ? pauseAudio()
-                    : playAudio(currentTime >= duration ? 0 : currentTime);
-                }}
-              >
-                {isPlaying ? (
-                  <PauseCircle size={32} />
+              <div className="song-info">
+                {loadStatus ? (
+                  <div className="loading-indicator">
+                    <Loader2 className="loading-spinner" size={16} />
+                    <span>{loadStatus}</span>
+                  </div>
+                ) : isDetailPage ? (
+                  <>
+                    <div className="song-title">{currentSong.title || "未知标题"}</div>
+                    <div className="song-artist">{currentSong.artist || "未知艺术家"}</div>
+                  </>
                 ) : (
-                  <PlayCircle size={32} />
+                  <ShowCurrentLyric currentSong={currentSong} loadStatus={loadStatus} />
                 )}
               </div>
+            </div>
 
-              <div
-                className="nextsong hover:text-primary-hover cursor-pointer"
-                onClick={() => nextSong(1)}
-              >
-                <ChevronLast />
+            {/* 中间：播放控制 */}
+            <div className="player-center">
+              <div className="controls-group">
+                <button
+                  className="control-button"
+                  onClick={() => nextSong(-1)}
+                  aria-label="上一首"
+                >
+                  <ChevronFirst size={24} />
+                </button>
+
+                <button
+                  className={`play-button control-button ${isPlaying ? "playing" : ""}`}
+                  onClick={() => {
+                    isPlaying
+                      ? pauseAudio()
+                      : playAudio(currentTime >= duration ? 0 : currentTime);
+                  }}
+                  aria-label={isPlaying ? "暂停" : "播放"}
+                >
+                  {isPlaying ? (
+                    <PauseCircle size={28} />
+                  ) : (
+                    <PlayCircle size={28} />
+                  )}
+                </button>
+
+                <button
+                  className="control-button"
+                  onClick={() => nextSong(1)}
+                  aria-label="下一首"
+                >
+                  <ChevronLast size={24} />
+                </button>
               </div>
 
-              <span className="text-sm text-muted-foreground">
-                {formatTime(currentTime)}/{formatTime(duration)}
-              </span>
-
-              <div
-                className="cursor-pointer hover:text-primary-hover"
-                onClick={()=>togglePlaylist(true)}
-              >
-                <ListMusic />
+              <div className="time-display">
+                {formatTime(currentTime)} / {formatTime(duration)}
               </div>
+            </div>
 
+            {/* 右侧：音量 + 播放列表 */}
+            <div className="player-right">
               <div className="volume-control relative">
                 <div className="flex justify-center items-center gap-2">
                   <div
-                    className="hover:text-primary-hover volume-icon"
+                    className="control-button volume-icon"
                     onClick={() => setShowVolume(!showVolume)}
                   >
                     {volume > 0.5 && <Volume2Icon />}
@@ -729,45 +731,21 @@ export const AudioPlayer = () => {
                   </>
                 )}
               </div>
+
+              <button
+                className={`control-button ${openPlaylist ? "active" : ""}`}
+                onClick={() => togglePlaylist(true)}
+                aria-label="播放列表"
+              >
+                <ListMusic size={20} />
+              </button>
             </div>
           </div>
         )}
       </div>
 
       <Playlist clearPlaylist={clearPlaylist} />
-    </div>
-  );
-};
-
-const ShowLoader = ({ loadStatus }: { loadStatus: string }) => {
-  if (loadStatus.length === 0) {
-    return null;
-  }
-  return (
-    <div className="flex gap-2 justify-center items-center w-full h-full">
-      <Loader2 className="animate-spin" />
-      <span className="text-sm text-muted-foreground">{loadStatus}</span>
-    </div>
-  );
-};
-
-const ShowTitle = ({
-  currentSong,
-  loadStatus,
-}: {
-  currentSong: Music;
-  loadStatus: string;
-}) => {
-  if (loadStatus.length > 0) return null;
-  return (
-    <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
-      <span className=" whitespace-nowrap overflow-hidden text-ellipsis ">
-        {currentSong.title || "未知标题"}
-      </span>
-      <span className="ml-2 text-sm text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis ">
-        {currentSong.artist}
-      </span>
-    </span>
+    </>
   );
 };
 
@@ -783,14 +761,15 @@ const ShowCurrentLyric = ({
   if (loadStatus.length > 0) return null;
 
   return (
-    <div className="whitespace-nowrap overflow-hidden text-ellipsis text-center w-full">
+    <>
       {currentLyric && currentLyric.text ? (
-        <span className="text-sm">{currentLyric.text}</span>
+        <div className="song-lyric">{currentLyric.text}</div>
       ) : (
-        <span className="text-sm text-muted-foreground">
-          {currentSong.title || "未知标题"} - {currentSong.artist}
-        </span>
+        <>
+          <div className="song-title">{currentSong.title || "未知标题"}</div>
+          <div className="song-artist">{currentSong.artist || "未知艺术家"}</div>
+        </>
       )}
-    </div>
+    </>
   );
 };

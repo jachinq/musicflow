@@ -1,11 +1,16 @@
 import { ImageIcon, Loader } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
+enum RoundType {
+  circle = "circle",
+  card_text = "card_text",
+}
+
 interface CoverProps {
   src: string;
   defaultSrc?: string;
   alt?: string;
-  roundType?: string;
+  roundType?: RoundType | string;
   size?: number;
   fallback?: React.ReactNode;
   onClick?: () => void;

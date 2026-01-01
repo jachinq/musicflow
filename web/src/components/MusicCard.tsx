@@ -101,7 +101,7 @@ export const MusicCard = ({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className={`group relative ${sizeClasses[size]} rounded-lg overflow-hidden`}>
+        <div className={`group relative ${sizeClasses[size]} overflow-hidden`}>
           <Cover
             src={getCoverSmallUrl(music.cover_art)}
             roundType="card_text"

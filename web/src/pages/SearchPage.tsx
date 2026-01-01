@@ -268,7 +268,7 @@ const AlbumCoverItem = ({ album, onClick }: { album: Album; onClick: () => void 
   return (
     <div
       onClick={onClick}
-      className="cursor-pointer hover:opacity-80 transition-opacity"
+      className="cursor-pointer hover:opacity-80 transition-opacity flex flex-col justify-center items-center bg-background"
     >
       <Cover
         src={getCoverSmallUrl(album.cover_art)}
