@@ -3,7 +3,7 @@ import { useEffect, useCallback, RefObject } from 'react';
 interface UseInfiniteScrollOptions {
   onLoadMore: () => void;
   hasMore: boolean;
-  isLoading: boolean;
+  isLoading: boolean; // 是否正在加载更多
   threshold?: number; // 距离底部多少像素时触发加载,默认 300px
   containerRef?: RefObject<HTMLElement | null>; // 可选的滚动容器引用
 }

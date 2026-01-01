@@ -343,7 +343,7 @@ const CoverItem = ({
         : getCoverSmallUrl(item.cover_art);
     }
     return "";
-  }, [item.cover_art, type]);
+  }, [item.cover_art, type, iconSize]);
   const getClass = () => {
     if (type === DrawerType.ALBUM) {
       return "bg-muted rounded-md cursor-pointer group";
@@ -381,15 +381,9 @@ const DetaialDrawer = () => {
     total: number;
     duration: number;
   }>({ total: 0, duration: 0 });
-  const location = useLocation();
 
   useEffect(() => {
     if (!id) return;
-
-    console.log('init open drawer', {id, location});
-
-    // const num_id = parseInt(id);
-    // if (isNaN(num_id)) return;
     setSerchId(id);
   }, [id]);
   useEffect(() => {
@@ -405,8 +399,6 @@ const DetaialDrawer = () => {
     setMusicList([]);
     if (!serchId) return;
     setLoading(true);
-
-    console.log('fetch music list', {type, serchId});
 
     let fetchFunc;
     let fetchSongs;

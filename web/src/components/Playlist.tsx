@@ -3,12 +3,13 @@ import { AudioLines, Trash } from "lucide-react";
 import { Music } from "../lib/defined";
 import { formatTime } from "../lib/utils";
 import { usePlaylist } from "../store/playlist";
-import { Pagination } from "./Pagination";
 import { getCoverSmallUrl } from "../lib/api";
-import { useKeyboardShortcut } from "../hooks/use-global-keyboard-shortcuts";
 import { useCurrentPlay } from "../store/current-play";
 import { useClickAway } from "@uidotdev/usehooks";
 import { useDevice } from "../hooks/use-device";
+import { useInfiniteScroll } from "../hooks/use-infinite-scroll";
+import { useRef } from "react";
+import LoadingIndicator from "./LoadingIndicator";
 
 interface Props {
   clearPlaylist: () => void;
@@ -17,50 +18,40 @@ const Playlist = ({ clearPlaylist }: Props) => {
   const {
     showPlaylist,
     openPlaylist, // 外部控制是否要打开播放列表
-    pageSongs,
+    displaySongs,
     currentSong,
-    currentPage,
-    setCurrentPage,
     getTotal,
     setCurrentSong,
     togglePlaylist,
+    isLoadMore,
+    loadMore,
+    loadedCount,
   } = usePlaylist();
+
   const { isPlaying } = useCurrentPlay();
-  // 使用 useClickAway 控制点击播放列表外面关闭播放列表
-  const playlistRef = useClickAway(() => {
-    return togglePlaylist(false)
+
+  // 独立的 ref：用于无限滚动
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 用于点击外部关闭
+  const clickAwayRef = useClickAway(() => {
+    return togglePlaylist(false);
   });
+
   const { isSmallDevice, isMediumDevice, isLargeDevice } = useDevice();
+
+  // 无限滚动
+  useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore: loadedCount < getTotal(),
+    isLoading: isLoadMore,
+    threshold: 300,
+    containerRef,
+  });
 
   const playSong = (song: Music) => {
     setCurrentSong(song);
   };
-
-  // 左右箭头控制翻页 (在 playlist 作用域下)
-  useKeyboardShortcut(
-    "ArrowRight",
-    () => {
-      const totalPages = Math.ceil(getTotal() / 10);
-      if (getTotal() > 0 && currentPage < totalPages) {
-        setCurrentPage(currentPage + 1);
-      }
-    },
-    "playlist",
-    5,
-    "播放列表：下一页"
-  );
-
-  useKeyboardShortcut(
-    "ArrowLeft",
-    () => {
-      if (getTotal() > 0 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      }
-    },
-    "playlist",
-    5,
-    "播放列表：上一页"
-  );
 
   const adaptiveClass = () => {
     let className = "w-[calc(100vw/3)] ";
@@ -83,35 +74,34 @@ const Playlist = ({ clearPlaylist }: Props) => {
       style={{ opacity: 0 }}
     // style={{ opacity: showPlaylist ? 0.5 : 0 }}
     ></div>
-    <div className="fixed inset-0 top-[68px] z-50 flex overflow-y-scroll overflow-x-hidden">
+    <div className="fixed inset-0 top-[68px] z-50 flex">
       <div className="flex-1"></div>
 
       <div
-        ref={playlistRef as any}
-        className={`min-w-[320px] h-[calc(100vh-180px)] bg-secondary text-secondary-foreground rounded-md overflow-y-scroll overflow-x-hidden transform transition-transform duration-300 ease-in-out ${adaptiveClass()}`}
+        ref={clickAwayRef as any}
+        className={`min-w-[320px] h-[calc(100vh-180px)] bg-secondary overflow-hidden text-secondary-foreground rounded-md transform transition-transform duration-300 ease-in-out ${adaptiveClass()}`}
         style={{ overscrollBehavior: "contain" }}
       >
-        <div className="p-4 flex justify-between items-center">
-          <span className="font-bold">播放列表</span>
+        <div className="p-4 flex justify-between items-center sticky top-0 bg-secondary z-10">
+          <div className="flex items-center">
+            <span className="font-bold">播放列表</span>
+            {getTotal() > 0 && (
+              <div className="px-4 text-xs text-muted-foreground">
+                已加载 {loadedCount}/{getTotal()} 首歌曲
+              </div>
+            )}
+          </div>
           <Trash
             size={18}
             className="text-muted-foreground hover:text-destructive cursor-pointer"
             onClick={clearPlaylist}
           />
         </div>
-        {getTotal() > 0 && (
-          <div className="px-4">
-            <Pagination
-              showTotal={false}
-              currentPage={currentPage}
-              total={getTotal()}
-              onPageChange={setCurrentPage}
-              className="justify-start"
-            />
-          </div>
-        )}
-        <div className="mt-4 flex flex-col gap-2">
-          {pageSongs.map((song) => (
+        <div ref={containerRef}
+          onScroll={(e) => { e.stopPropagation() }}
+          className="flex flex-col gap-2 overflow-y-scroll h-[calc(100vh-280px)]"
+          style={{ overscrollBehavior: "contain" }} >
+          {displaySongs.map((song) => (
             <div
               key={song.id}
               onClick={() => playSong(song)}
@@ -155,6 +145,17 @@ const Playlist = ({ clearPlaylist }: Props) => {
               </div>
             </div>
           ))}
+          {loadedCount < getTotal() && (
+            <div className="flex justify-center items-center h-16">
+              <button
+                className="bg-secondary text-secondary-foreground font-bold rounded-md px-4 py-2"
+                onClick={loadMore}
+              >
+                {isLoadMore ? "正在加载..." : "加载更多"}
+              </button>
+            </div>
+          )}
+          <LoadingIndicator loading={isLoadMore} hasMore={loadedCount < getTotal()} />
         </div>
       </div>
     </div>

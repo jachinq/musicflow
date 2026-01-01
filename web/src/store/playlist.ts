@@ -104,17 +104,16 @@ const dbSyncManager = new DbSyncManager();
 interface PlaylistState {
   openPlaylist: boolean;
   allSongs: Music[];
-  pageSongs: Music[];
+  displaySongs: Music[];
   currentSong: Music | null;
-  currentPage: number;
+  loadedCount: number;
   showPlaylist: boolean;
+  isLoadMore: boolean
+  loadMore: () => void;
   setOpenPlaylist: (show: boolean) => void;
   setShowPlaylist: (show: boolean) => void;
   togglePlaylist: (open?: boolean) => void;
-
   setAllSongs: (songs: Music[], initial?: boolean) => void;
-  setCurrentPage: (page: number) => void;
-
   setCurrentSong: (song: Music) => void;
   addSong: (song: Music) => void;
   removeSong: (song: Music) => void;
@@ -127,11 +126,12 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
   openPlaylist: false,
   showPlaylist: false,
   allSongs: [],
-  pageSongs: [],
+  displaySongs: [],
   currentSong: null,
-  currentPage: 1,
+  loadedCount: 0,
   setOpenPlaylist: (show) => set(() => ({ openPlaylist: show })),
   setShowPlaylist: (show) => set(() => ({ showPlaylist: show })),
+  isLoadMore: false,
   togglePlaylist: (open?: boolean) =>
     set(() => {
       let targertValue = false;
@@ -162,26 +162,37 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
       if (songs.length === 0) {
         return {
           allSongs: [],
-          pageSongs: [],
+          displaySongs: [],
           currentSong: null,
+          loadedCount: 0,
         };
       }
 
-      const pageSongs = songs.slice(0, 10);
-      return { allSongs: songs, pageSongs, currentSong: pageSongs[0] };
+      const displaySongs = songs.slice(0, 20);
+      return {
+        allSongs: songs,
+        displaySongs,
+        currentSong: displaySongs[0],
+        loadedCount: displaySongs.length,
+      };
     }),
-  setCurrentPage: (page) =>
-    set(() => {
-      const pageSize = 10;
-      const total = get().getTotal();
-      const start = (page - 1) * pageSize;
-      let end = start + pageSize;
-      if (end > total) {
-        end = total;
-      }
-      const pageSongs = get().allSongs.slice(start, end);
-      return { pageSongs, currentPage: page };
-    }),
+  loadMore: () => {
+    set({isLoadMore: true});
+    console.log("set isLoadMore true");
+
+    setTimeout(() => {
+      console.log("start load more");
+      const { allSongs, loadedCount } = get();
+      const pageSize = 20;
+      const newLoadedCount = Math.min(loadedCount + pageSize, allSongs.length);
+      const displaySongs = allSongs.slice(0, newLoadedCount);
+      set({
+        displaySongs,
+        loadedCount: newLoadedCount,
+        isLoadMore: false,
+      });
+    }, 300);
+  },
   setCurrentSong: (song) => set(() => {
     dbSyncManager.syncCurrentSong(song);
     return { currentSong: song }
@@ -190,29 +201,35 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
     set((state) => {
       const allSongs = [...state.allSongs, song];
       dbSyncManager.syncPlaylist(allSongs);
+      const newLoadedCount = state.loadedCount + 1;
+      const displaySongs = allSongs.slice(0, newLoadedCount);
       return {
         allSongs,
-        pageSongs: [...state.pageSongs, song],
-      }
+        displaySongs,
+        loadedCount: newLoadedCount,
+      };
     }),
   removeSong: (song) =>
     set((state) => {
       const allSongs = state.allSongs.filter((s) => s.id !== song.id);
       dbSyncManager.syncPlaylist(allSongs);
+      const displaySongs = state.displaySongs.filter((s) => s.id !== song.id);
       return {
         allSongs,
-        pageSongs: state.pageSongs.filter((s) => s.id !== song.id),
+        displaySongs,
         currentSong: null,
-      }
+        loadedCount: displaySongs.length,
+      };
     }),
   clearPlaylist: () =>
     set(() => {
       dbSyncManager.syncPlaylist([]);
       return {
         allSongs: [],
-        pageSongs: [],
+        displaySongs: [],
         currentSong: null,
-      }
+        loadedCount: 0,
+      };
     }),
   getTotal: () => get().allSongs.length,
   playSingleSong: (song) => set(() => {

@@ -131,7 +131,7 @@ export const SearchPage = () => {
           )}
         </>
       )}
-      <LoadingIndicator loading={loading} />
+      {searchResult && searchResult.songs.length > 0 && <LoadingIndicator loading={loading} />}
     </div>
   );
 };

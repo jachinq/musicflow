@@ -8,7 +8,9 @@ interface LoadingProps {
 const LoadingIndicator = ({ loading, hasMore = false }: LoadingProps) => {
   if (loading) {
     return (
-      <Loader className="animate-spin" size={36} />
+      <div className="flex justify-center items-center py-4">
+        <Loader className="animate-spin text-muted-foreground" size={36} />
+      </div>
     );
   }
 
