@@ -10,6 +10,7 @@ import { Option, OptionGroup } from "../components/Option";
 import { useDevice } from "../hooks/use-device";
 import { DetailInfo } from "../components/DetailInfo";
 import { Cover } from "../components/Cover";
+import { ImageViewer } from "../components/ImageViewer";
 
 function MusicPlayPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,7 @@ function MusicPlayPage() {
   const [song_id, setSongId] = useState<string>("");
   const [detailSong, setDetailSong] = useState<Music>();
   const [tabId, setTabId] = useState<number>(1);
+  const [showImageViewer, setShowImageViewer] = useState<boolean>(false);
   const {
     isSmallDevice,
     isMediumDevice,
@@ -118,8 +120,9 @@ function MusicPlayPage() {
           /> */}
           <Cover
             src={getCoverMediumUrl(currentSong?.cover_art || '')}
-            className={`${isPlaying ? "album-spin" : ""} object-cover object-center rounded-full`}
+            className={`${isPlaying ? "album-spin" : ""} object-cover object-center rounded-full cursor-pointer`}
             size={album_size}
+            onClick={() => setShowImageViewer(true)}
           />
         </div>
       </div>
@@ -142,6 +145,14 @@ function MusicPlayPage() {
         {tabId === 1 && <Lyrics song_id={song_id} />}
         {tabId === 2 && <DetailInfo song={detailSong} />}
       </div>
+
+      {showImageViewer && (
+        <ImageViewer
+          src={getCoverMediumUrl(currentSong?.cover_art || '')}
+          alt={detailSong?.title || '专辑封面'}
+          onClose={() => setShowImageViewer(false)}
+        />
+      )}
     </div>
   );
 }
