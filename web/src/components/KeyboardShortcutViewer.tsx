@@ -52,7 +52,7 @@ export const KeyboardShortcutViewer = ({ visible, setVisible }: Props) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-background text-foreground rounded-lg shadow-lg max-w-3xl w-full max-h-[80vh] overflow-auto">
         <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">快捷键列表</h2>
+          <h2 className="text-xl font-bold">快捷键列表</h2>
           <button
             onClick={() => setVisible(false)}
             className="hover:bg-primary-hover p-2 rounded-md transition-colors"

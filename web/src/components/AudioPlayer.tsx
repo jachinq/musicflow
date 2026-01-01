@@ -131,7 +131,7 @@ export const AudioPlayer = () => {
       let isMuted = volume > 0;
       if (isMuted) {
         setMutedVolume(volume);
-        toast.success("开启静音");
+        toast.success("已静音");
       } else {
         setMutedVolume(0);
         toast.success("取消静音");

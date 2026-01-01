@@ -143,7 +143,7 @@ function SettingsPage() {
 
         <FormLayout label="系统">
           <>
-            <span className="button" onClick={() => setVisible(true)}>快捷键</span>
+            <span className="cursor-pointer hover:text-primary-hover" onClick={() => setVisible(true)}>快捷键</span>
             {/* 性能监控工具 */}
             <KeyboardShortcutViewer visible={visible} setVisible={() => setVisible(false)} />
             <PerformanceMonitor />
