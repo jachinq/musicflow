@@ -148,7 +148,7 @@ impl MusicDataSource for SubsonicDataSource {
             .get_lyrics(&metadata.artist, &metadata.title)
             .await?
         {
-            println!("{:?}", lyrics);
+            // println!("{:?}", lyrics);
             Ok(parse_subsonic_lyrics(lyrics))
         } else {
             Ok(vec![])

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import _React, { useEffect, useMemo, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
-import { getCoverSmallUrl, getMusicUrl } from "../lib/api";
+import { getCoverSmallUrl, getMusicUrl, getLyrics } from "../lib/api";
 import { usePlaylist } from "../store/playlist";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatTime } from "../lib/utils";
@@ -17,7 +17,7 @@ import {
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
-import { checkRoute, Music, MyRoutes } from "../lib/defined";
+import { checkRoute, Music, MyRoutes, lyric } from "../lib/defined";
 import { toast } from "sonner";
 import { audioBufferCache } from "../lib/audio-cache";
 import { StreamingAudioLoader } from "../lib/streaming-loader";
@@ -56,6 +56,7 @@ export const AudioPlayer = () => {
     setIsPlaying,
     setCurrentLyric,
     setHasUserInteracted,
+    setLyrics,
   } = useCurrentPlay();
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
 
@@ -205,6 +206,7 @@ export const AudioPlayer = () => {
     console.log("切换歌曲:", currentSong?.title);
     initStatus();
     loadAudioFile();
+    loadLyrics();
     // 等待 10 秒后开始预加载下一首歌曲
     setTimeout(() => {
       preDecodeAudioBuffer();
@@ -428,6 +430,26 @@ export const AudioPlayer = () => {
     playAudio(seekTime);
   };
 
+  const loadLyrics = async () => {
+    if (!currentSong) {
+      return;
+    }
+    getLyrics(
+      currentSong.id,
+      (lyrics: lyric[]) => {
+        if (!lyrics || lyrics.length === 0) {
+          setLyrics([]);
+          return;
+        }
+        setLyrics(lyrics);
+      },
+      (error) => {
+        console.error("加载歌词失败:", error);
+        setLyrics([]);
+      }
+    );
+  };
+
   const loadAudioFile = async () => {
     if (!currentSong) {
       return;
@@ -611,7 +633,11 @@ export const AudioPlayer = () => {
               className={`song-title flex flex-row gap-1 justify-center items-center overflow-hidden`}
             >
               <ShowLoader loadStatus={loadStatus} />
-              <ShowTitle currentSong={currentSong} loadStatus={loadStatus} />
+              {isDetailPage ? (
+                <ShowTitle currentSong={currentSong} loadStatus={loadStatus} />
+              ) : (
+                <ShowCurrentLyric currentSong={currentSong} loadStatus={loadStatus} />
+              )}
             </div>
 
             <div
@@ -742,5 +768,29 @@ const ShowTitle = ({
         {currentSong.artist}
       </span>
     </span>
+  );
+};
+
+const ShowCurrentLyric = ({
+  currentSong,
+  loadStatus,
+}: {
+  currentSong: Music;
+  loadStatus: string;
+}) => {
+  const { currentLyric } = useCurrentPlay();
+
+  if (loadStatus.length > 0) return null;
+
+  return (
+    <div className="whitespace-nowrap overflow-hidden text-ellipsis text-center w-full">
+      {currentLyric && currentLyric.text ? (
+        <span className="text-sm">{currentLyric.text}</span>
+      ) : (
+        <span className="text-sm text-muted-foreground">
+          {currentSong.title || "未知标题"} - {currentSong.artist}
+        </span>
+      )}
+    </div>
   );
 };
