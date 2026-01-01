@@ -184,7 +184,7 @@ export const SongListPage = () => {
 
   return <div className=" p-4 grid grid-cols-[auto,1fr] gap-4">
     <SongListSelector />
-    <div className="grid grid-rows-[auto,1fr] gap-4">
+    <div className="grid grid-rows-[auto,1fr]">
       <SongListHeader />
       <SongListContent />
     </div>
@@ -492,6 +492,14 @@ const SongListContent = () => {
     }
   }, [selectSongList]);
 
+  const { isSmallDevice } = useDevice();
+  const getGripCols = () => {
+    const cl = isSmallDevice
+      ? "grid-cols-[48px,1fr,2fr]"
+      : "grid-cols-[48px,1fr,1fr]";
+    return cl + " gap-4";
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -520,9 +528,26 @@ const SongListContent = () => {
   }
 
   return (
-    <div className="flex flex-wrap gap-4 w-full px-4 pb-4">
+    <div className="flex flex-col flex-wrap gap-1 w-full px-4 pb-4">
+      {/* 表头 */}
+      <div className={`sticky top-0 z-10 text-sm font-medium grid items-center gap-2 p-3
+              ${getGripCols()}`}>
+        {/* <label className="flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            className="w-4 h-4 rounded accent-primary cursor-pointer"
+            onChange={(e) => selectAll(e.target.checked)}
+          />
+        </label> */}
+        <strong>封面</strong>
+        <strong>歌曲信息</strong>
+        <strong>专辑</strong>
+      </div>
+
+      {/* 歌曲列表项 */}
       {selectSongList?.songs?.map((item) => (
-        <MusicCard key={item.id} music={item} onPlay={playSingleSong} />
+        // <MusicCard key={item.id} music={item} onPlay={playSingleSong} />
+        <MusicListItem key={item.id} selected={false} item={item} onSelectSong={playSingleSong} colsClass={getGripCols()} showSelect={false} />
       ))}
     </div>
   );
@@ -819,12 +844,7 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
         >
           {/* 表头 */}
           <div
-            className={`
-              sticky top-0 bg-card z-10
-              text-sm font-medium grid items-center gap-2 p-3 border-b-2 border-border
-              ${getGripCols()}
-            `}
-          >
+            className={`sticky top-0 bg-card z-10 text-sm font-medium grid items-center gap-2 p-3 border-b-2 border-border ${getGripCols()}`}>
             <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -838,44 +858,8 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
           </div>
 
           {/* 歌曲列表项 */}
-          {fmusicList.map((item) => {
-            const selected = isSelected(item);
-            return (
-              <div
-                key={item.id}
-                onClick={() => onSelectSong(item)}
-                className={`
-                  grid items-center gap-2 p-3 rounded-lg cursor-pointer
-                  transition-all duration-200
-                  ${getGripCols()}
-                  ${selected
-                    ? 'bg-primary/20 ring-2 ring-primary shadow-md'
-                    : 'hover:bg-muted hover:shadow-sm'
-                  }
-                `}
-              >
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded accent-primary cursor-pointer"
-                  checked={selected}
-                  onChange={() => { }}
-                />
-                <Cover
-                  src={getCoverSmallUrl(item.cover_art)}
-                  alt={item.title}
-                  size={48}
-                  className="shadow-sm"
-                />
-                <div className="flex flex-col gap-1 min-w-0">
-                  <span className="font-medium truncate">{item.title}</span>
-                  <span className="text-sm text-muted-foreground truncate">
-                    {item.artist}
-                  </span>
-                </div>
-                <span className="truncate text-sm">{item.album}</span>
-              </div>
-            );
-          })}
+          {fmusicList.map((item) => <MusicListItem key={item.id} item={item} selected={isSelected(item)} onSelectSong={onSelectSong} colsClass={getGripCols()} />
+          )}
 
           {/* 加载状态 */}
           {isLoadingMore && (
@@ -912,6 +896,47 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
     </Form>
   );
 };
+
+// 歌曲项-列表
+interface MusicListItemProps {
+  item: Music;
+  selected: boolean;
+  onSelectSong: (music: Music) => void;
+  colsClass: string;
+  showSelect?: boolean;
+}
+const MusicListItem = ({ item, selected, onSelectSong, colsClass, showSelect = true }: MusicListItemProps) => {
+
+  return (
+    <div
+      key={item.id}
+      onClick={() => onSelectSong(item)}
+      className={`grid items-center gap-2 p-3 rounded-lg cursor-pointer
+                  transition-all duration-200
+                  ${colsClass}
+                  ${selected ? 'bg-primary/20 ring-2 ring-primary shadow-md' :
+          'hover:bg-muted hover:shadow-sm'}`}>
+      {showSelect && <input type="checkbox"
+        className="w-4 h-4 rounded accent-primary cursor-pointer"
+        checked={selected}
+        onChange={() => { }} />}
+      <Cover
+        src={getCoverSmallUrl(item.cover_art)}
+        alt={item.title}
+        size={48}
+        className="shadow-sm"
+      />
+      <div className="flex flex-col gap-1 min-w-0">
+        <span className="font-medium truncate">{item.title}</span>
+        <span className="text-sm text-muted-foreground truncate">
+          {item.artist}
+        </span>
+      </div>
+      <span className="truncate text-sm">{item.album}</span>
+    </div>
+  )
+}
+
 
 // 节流函数
 function throttle<T extends (...args: any[]) => any>(
