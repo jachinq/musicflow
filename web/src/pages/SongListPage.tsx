@@ -130,16 +130,17 @@ const useSongListStore = create<SongListState>((set, get) => ({
 
 export const SongListPage = () => {
   const { isSmallDevice } = useDevice();
-  const { selectSongList, fetchSongListDetail, fetchSongList, tabId, setTabId } =
+  const { selectSongList, fetchSongListDetail, fetchSongList, tabId, setTabId, songLists } =
     useSongListStore();
 
   useEffect(() => {
-    fetchSongList(true);
+    // 只在歌单列表为空时才自动选中第一个，避免覆盖已选中的歌单
+    fetchSongList(songLists.length === 0);
   }, []);
 
   useEffect(() => {
     fetchSongListDetail();
-  }, [selectSongList?.id]);
+  }, [selectSongList?.id, fetchSongListDetail]);
 
   if (isSmallDevice) {
     return (
