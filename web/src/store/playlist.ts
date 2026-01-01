@@ -114,7 +114,7 @@ interface PlaylistState {
   setShowPlaylist: (show: boolean) => void;
   togglePlaylist: (open?: boolean) => void;
   setAllSongs: (songs: Music[], initial?: boolean) => void;
-  setCurrentSong: (song: Music) => void;
+  setCurrentSong: (song: Music, userInteract?: boolean) => void;
   addSong: (song: Music) => void;
   removeSong: (song: Music) => void;
   clearPlaylist: () => void;
@@ -193,7 +193,9 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
       });
     }, 300);
   },
-  setCurrentSong: (song) => set(() => {
+  setCurrentSong: (song, userInteract = true) => set(() => {
+    // 除非显式表明，否则都视为用户已交互
+    localStorage.setItem("userInteract", userInteract.toString());
     dbSyncManager.syncCurrentSong(song);
     return { currentSong: song }
   }),
