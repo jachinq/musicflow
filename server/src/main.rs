@@ -3,6 +3,7 @@
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::middleware::Logger;
+use actix_web::web::{get, post, put, delete};
 use actix_web::{web, App, HttpServer};
 use env_logger::Env;
 use lib_utils::config::get_config;
@@ -81,126 +82,91 @@ async fn main() -> io::Result<()> {
     log::log_info(&format!("Server started on http://{}:{}", ip, port));
     // 启动 HTTP 服务
     HttpServer::new(move || {
+        let cors = Cors::default() // 添加 CORS 中间件
+            .allow_any_origin() // 允许所有来源的跨域请求，你可以根据需要更改为特定的域名
+            .allow_any_method() // 允许所有方法，如 GET, POST, PUT, DELETE 等
+            .allow_any_header(); // 允许所有请求头，你可以根据需要更改为特定的请求头
+
+        // 创建应用状态
+        let app_state = web::Data::new(AppState {
+            web_path: web_dir.to_string(),
+            music_path: music_path.to_string(),
+            data_source: data_source.clone(),
+        });
+
         App::new()
-            .wrap(
-                Cors::default() // 添加 CORS 中间件
-                    .allow_any_origin() // 允许所有来源的跨域请求，你可以根据需要更改为特定的域名
-                    .allow_any_method() // 允许所有方法，如 GET, POST, PUT, DELETE 等
-                    .allow_any_header(), // 允许所有请求头，你可以根据需要更改为特定的请求头
-            )
+            .wrap(cors) // CORS 中间件
             .wrap(Logger::default()) // 日志记录中间件
             .app_data(web::JsonConfig::default().error_handler(handle_server_error)) //
-            .app_data(web::Data::new(AppState {
-                web_path: web_dir.to_string(),
-                music_path: music_path.to_string(),
-                data_source: data_source.clone(),
-            }))
+            .app_data(app_state)
+
             // 歌曲相关接口
-            .route("/api/list", web::post().to(handle_get_metadatas))
-            .route("/api/single/{song_id}", web::get().to(handle_get_metadata))
-            .route("/api/random_songs", web::get().to(handle_get_random_songs))
-            .route("/api/stream/{song_id}", web::get().to(stream_song))
-            .route("/api/cover/small/{song_id}", web::get().to(get_cover_small))
-            .route(
-                "/api/cover/medium/{song_id}",
-                web::get().to(get_cover_medium),
-            )
-            .route("/api/lyrics/{song_id}", web::get().to(get_lyrics))
-            .route("/api/lyrics/delete/{song_id}", web::delete().to(del_lyrics))
+            .route("/api/list", post().to(handle_get_metadatas))
+            .route("/api/single/{song_id}", get().to(handle_get_metadata))
+            .route("/api/random_songs", get().to(handle_get_random_songs))
+            .route("/api/stream/{song_id}", get().to(stream_song))
+            .route("/api/cover/small/{song_id}", get().to(get_cover_small))
+            .route("/api/cover/medium/{song_id}", get().to(get_cover_medium))
+            .route("/api/cover/large/{song_id}", get().to(get_cover_large))
+            .route("/api/lyrics/{song_id}", get().to(get_lyrics))
+            .route("/api/lyrics/delete/{song_id}", delete().to(del_lyrics))
+
             // 标签相关接口
-            .route("/api/genres", web::get().to(handle_get_genres))
-            .route(
-                "/api/song_genres/{song_id}",
-                web::get().to(handle_get_song_genres),
-            )
-            .route(
-                "/api/add_genre_to_song",
-                web::post().to(handle_add_song_genre),
-            )
-            .route(
-                "/api/delete_song_genre/{song_id}/{genre}",
-                web::delete().to(handle_delete_song_genre),
-            )
-            .route("/api/songs_by_genre/{genre}", web::get().to(handle_get_songs_by_genre))
+            .route("/api/genres", get().to(handle_get_genres))
+            .route("/api/song_genres/{song_id}", get().to(handle_get_song_genres))
+            .route("/api/add_genre_to_song", post().to(handle_add_song_genre))
+            .route("/api/delete_song_genre/{song_id}/{genre}",
+                delete().to(handle_delete_song_genre))
+            .route("/api/songs_by_genre/{genre}", get().to(handle_get_songs_by_genre))
+
             // 歌单相关接口
-            .route("/api/songlists", web::get().to(handle_song_list))
-            .route(
-                "/api/songlist/{songlist_id}",
-                web::get().to(handle_song_list_songs),
-            )
-            .route(
-                "/api/song_songlist/{song_id}",
-                web::get().to(handle_song_song_list),
-            )
-            .route(
-                "/api/delete_songlist/{songlist_id}",
-                web::delete().to(handle_delete_song_list),
-            )
-            .route(
-                "/api/create_songlist",
-                web::post().to(handle_create_song_list),
-            )
-            .route(
-                "/api/update_songlist",
-                web::put().to(handle_update_song_list),
-            )
-            .route(
-                "/api/remove_song_from_songlist/{songlist_id}/{song_id}",
-                web::delete().to(handle_remove_song_from_songlist),
-            )
-            .route(
-                "/api/add_song_to_songlist",
-                web::put().to(handle_add_song_list_song),
-            )
+            .route("/api/songlists", get().to(handle_song_list))
+            .route("/api/songlist/{songlist_id}", get().to(handle_song_list_songs))
+            .route("/api/song_songlist/{song_id}", get().to(handle_song_song_list))
+            .route("/api/delete_songlist/{songlist_id}", delete().to(handle_delete_song_list))
+            .route("/api/create_songlist", post().to(handle_create_song_list))
+            .route("/api/update_songlist", put().to(handle_update_song_list))
+            .route("/api/remove_song_from_songlist/{songlist_id}/{song_id}",
+                delete().to(handle_remove_song_from_songlist))
+            .route("/api/add_song_to_songlist", put().to(handle_add_song_list_song))
+
             // 专辑相关接口
-            .route("/api/album", web::post().to(handle_get_album))
-            .route(
-                "/api/album_by_id/{id}",
-                web::get().to(handle_get_album_by_id),
-            )
-            .route(
-                "/api/album_songs/{album_id}",
-                web::get().to(handle_get_album_songs),
-            )
+            .route("/api/album", post().to(handle_get_album))
+            .route("/api/album_by_id/{id}", get().to(handle_get_album_by_id))
+            .route("/api/album_songs/{album_id}", get().to(handle_get_album_songs))
+
             // 艺术家相关接口
-            .route("/api/artist", web::post().to(handle_get_artist))
-            .route(
-                "/api/artist_by_id/{id}",
-                web::get().to(handle_get_artist_by_id),
-            )
-            .route(
-                "/api/artist_songs/{artist_id}",
-                web::get().to(handle_get_artist_songs),
-            )
-            .route(
-                "/api/set_artist_cover/{artist_id}",
-                web::put().to(handle_set_artist_cover),
-            )
+            .route("/api/artist", post().to(handle_get_artist))
+            .route("/api/artist_by_id/{id}", get().to(handle_get_artist_by_id))
+            .route("/api/artist_songs/{artist_id}", get().to(handle_get_artist_songs))
+            .route("/api/set_artist_cover/{artist_id}", put().to(handle_set_artist_cover))
+
             // 用户相关接口
-            .route("/api/user", web::get().to(handle_get_user))
-            .route("/api/login", web::post().to(handle_login))
-            .route("/api/logout", web::post().to(handle_logout))
-            .route("/api/register", web::post().to(handle_register))
-            .route("/api/update_user", web::put().to(handle_update_user))
-            .route(
-                "/api/change_password",
-                web::post().to(handle_change_password),
-            )
+            .route("/api/user", get().to(handle_get_user))
+            .route("/api/login", post().to(handle_login))
+            .route("/api/logout", post().to(handle_logout))
+            .route("/api/register", post().to(handle_register))
+            .route("/api/update_user", put().to(handle_update_user))
+            .route("/api/change_password", post().to(handle_change_password))
+
             // 播放列表相关接口
-            .route("/api/playlist", web::post().to(handle_get_playlist))
-            .route("/api/add_playlist", web::post().to(handle_add_playlist))
-            .route("/api/set_playlist/{song_id}", web::put().to(handle_set_current))
+            .route("/api/playlist", post().to(handle_get_playlist))
+            .route("/api/add_playlist", post().to(handle_add_playlist))
+            .route("/api/set_playlist/{song_id}", put().to(handle_set_current))
+
             // 工具相关接口
-            .route("/api/log", web::post().to(frontend_log))
-            .route("/api/del/{song_id}", web::get().to(handle_delete_meta))
-            .route("/api/scan_music", web::post().to(handle_scan_music))
-            .route("/api/scan_status", web::get().to(handle_scan_status))
+            .route("/api/log", post().to(frontend_log))
+            .route("/api/del/{song_id}", get().to(handle_delete_meta))
+            .route("/api/scan_music", post().to(handle_scan_music))
+            .route("/api/scan_status", get().to(handle_scan_status))
+
             // 搜索相关接口
-            .route("/api/search", web::get().to(handle_search))
+            .route("/api/search", get().to(handle_search))
+            
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", &web_dir).index_file("index.html"))
-            .default_service(web::get().to(handle_all_others))
+            .default_service(get().to(handle_all_others))
     })
     .bind(&format!("{}:{}", ip, port))?
     .run()

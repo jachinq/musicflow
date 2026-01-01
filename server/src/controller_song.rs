@@ -3,7 +3,7 @@ use base64::Engine;
 use lib_utils::{
     config::get_config,
     database::service::{self, Metadata},
-    datasource::types::MetadataFilter,
+    datasource::{CoverSize, types::MetadataFilter},
     log::log_err,
     readmeta,
 };
@@ -203,7 +203,7 @@ pub async fn get_cover_small(
     song_id: web::Path<String>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
-    let data = get_cover_size(&song_id, "small", &app_state).await;
+    let data = get_cover_size(&song_id, CoverSize::Small, &app_state).await;
     HttpResponse::Ok().content_type("image/webp").body(data)
 }
 
@@ -211,22 +211,21 @@ pub async fn get_cover_medium(
     song_id: web::Path<String>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
-    let data = get_cover_size(&song_id, "medium", &app_state).await;
+    let data = get_cover_size(&song_id, CoverSize::Medium, &app_state).await;
+    HttpResponse::Ok().content_type("image/webp").body(data)
+}
+pub async fn get_cover_large(
+    song_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let data = get_cover_size(&song_id, CoverSize::Large, &app_state).await;
     HttpResponse::Ok().content_type("image/webp").body(data)
 }
 
-pub async fn get_cover_size(song_id: &str, size: &str, app_state: &AppState) -> Vec<u8> {
-    use lib_utils::datasource::types::CoverSize;
+pub async fn get_cover_size(song_id: &str, cover_size: CoverSize, app_state: &AppState) -> Vec<u8> {
     if song_id.len() == 0 {
         return default_cover();
     }
-
-    let cover_size = match size {
-        "small" => CoverSize::Small,
-        "medium" => CoverSize::Medium,
-        "large" => CoverSize::Large,
-        _ => CoverSize::Medium,
-    };
 
     // 使用 DataSource 获取封面
     let result = app_state.data_source.get_cover(song_id, cover_size).await;

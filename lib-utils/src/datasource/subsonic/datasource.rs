@@ -116,7 +116,7 @@ impl MusicDataSource for SubsonicDataSource {
         let size = match size {
             CoverSize::Small => "300",
             CoverSize::Medium => "600",
-            CoverSize::Large => "1000",
+            CoverSize::Large => "1200",
         };
         // 获取封面 URL
         let cover_url = self.client.get_cover_art_url(&cover_art, size);
