@@ -182,18 +182,13 @@ export const SongListPage = () => {
     );
   }
 
-  return (
-    <>
-      <div className="text-2xl font-bold mb-4 p-4">歌单</div>
-      <div className=" p-4 grid grid-cols-[auto,1fr] gap-4">
-        <SongListSelector />
-        <div className="grid grid-rows-[auto,1fr] gap-4">
-          <SongListHeader />
-          <SongListContent />
-        </div>
-      </div>
-    </>
-  );
+  return <div className=" p-4 grid grid-cols-[auto,1fr] gap-4">
+    <SongListSelector />
+    <div className="grid grid-rows-[auto,1fr] gap-4">
+      <SongListHeader />
+      <SongListContent />
+    </div>
+  </div>
 };
 
 // 歌单选择器
@@ -253,11 +248,12 @@ const SongListSelector = () => {
   return (
     <>
       <div className="flex gap-2 flex-col w-full px-4">
+        <div className="text-2xl font-bold">歌单</div>
         {songLists.map((item, index) => (
           <div
             key={item.id}
             style={{
-              animation: `fadeInUp 0.3s ease-out ${index * 0.05}s both`,
+              animation: `fadeInUp 0.3s ease-out ${index * 0.1}s both`,
             }}
           >
             <SongListItem
@@ -286,7 +282,7 @@ const SongListSelector = () => {
         ))}
         <div
           style={{
-            animation: `fadeInUp 0.3s ease-out ${songLists.length * 0.05}s both`,
+            animation: `fadeInUp 0.3s ease-out ${songLists.length * 0.1}s both`,
           }}
         >
           <SongListItem
@@ -305,18 +301,6 @@ const SongListSelector = () => {
         formValues={formValues}
         setFormValues={setFormValues}
       />
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </>
   );
 };
@@ -333,7 +317,7 @@ const SongListHeader = () => {
     fetchSongListDetail,
     handleOperateSongList, // 保存歌单
   } = useSongListStore();
-  
+
   const [showAddSongDialog, setShowAddSongDialog] = useState(false);
 
   const handleUpdateSongList = () => {
@@ -392,14 +376,13 @@ const SongListHeader = () => {
       }
     );
   };
-  const handleImportSong = () => { };
 
   if (!selectSongList) return null;
   console.log(selectSongList);
   return (
     <>
       <div className="px-4 w-full flex flex-col gap-4">
-        <div className="grid grid-cols-[auto,1fr] gap-6 items-center">
+        <div className="grid grid-cols-[auto,1fr] gap-6 border-b-2 pb-2 border-secondary items-end">
           {/* 歌单封面 */}
           <div className="relative group">
             {selectSongList.cover ? (
@@ -422,58 +405,58 @@ const SongListHeader = () => {
           </div>
 
           {/* 歌单信息 */}
-          <div className="flex flex-col justify-center gap-3 min-w-0">
-            <div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                歌单
-              </div>
-              <h1 className={`${isSmallDevice ? 'text-2xl' : 'text-4xl'} font-bold mb-2 truncate`}>
-                {selectSongList.name}
-              </h1>
-            </div>
-            <div className="flex flex-col gap-2">
-              {selectSongList.description && (
+          <div className="flex flex-col justify-start gap-2 min-w-0">
+
+            <h1 className={`${isSmallDevice ? 'text-2xl' : 'text-4xl'} font-bold truncate`}>
+              {selectSongList.name}
+              {selectSongList.created_at && <div className="text-xs text-muted-foreground">
+                创建于 {selectSongList.created_at}
+              </div>}
+            </h1>
+
+            {selectSongList.description && (
+              <div className="flex flex-col gap-2">
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {selectSongList.description}
                 </p>
-              )}
-              <div className="text-xs text-muted-foreground">
-                创建于 {selectSongList.created_at}
               </div>
+            )}
+
+            {/* 操作按钮 */}
+            <div className={`${isSmallDevice ? "grid grid-cols-2 gap-3" : "flex gap-4"}`}>
+              <button
+                className="button flex items-center gap-2 hover:scale-105 transition-transform"
+                onClick={handlePlayAll}
+              >
+                <Play size={18} fill="currentColor" />
+                <span>播放全部</span>
+              </button>
+              <button
+                className="flex items-center gap-2 hover:scale-105 transition-transform"
+                onClick={handleUpdateSongList}
+              >
+                <Edit size={18} />
+                <span>修改歌单</span>
+              </button>
+              {/* <button
+                className="flex items-center gap-2 hover:scale-105 transition-transform"
+                onClick={handleImportSong}
+              >
+                <Upload size={18} />
+                <span>导入歌曲</span>
+              </button> */}
+              <button
+                className="flex items-center gap-2 hover:scale-105 transition-transform"
+                onClick={() => setShowAddSongDialog(true)}
+              >
+                <Plus size={18} />
+                <span>添加歌曲</span>
+              </button>
             </div>
           </div>
         </div>
 
-        <div className={`${isSmallDevice ? "grid grid-cols-2 gap-3" : "flex gap-4"}`}>
-          <button
-            className="button flex items-center justify-center gap-2 flex-1 hover:scale-105 transition-transform"
-            onClick={handlePlayAll}
-          >
-            <Play size={18} fill="currentColor" />
-            <span>播放全部</span>
-          </button>
-          <button
-            className="button flex items-center justify-center gap-2 flex-1 hover:scale-105 transition-transform"
-            onClick={handleUpdateSongList}
-          >
-            <Edit size={18} />
-            <span>修改歌单</span>
-          </button>
-          <button
-            className="button flex items-center justify-center gap-2 flex-1 hover:scale-105 transition-transform"
-            onClick={handleImportSong}
-          >
-            <Upload size={18} />
-            <span>导入歌曲</span>
-          </button>
-          <button
-            className="button flex items-center justify-center gap-2 flex-1 hover:scale-105 transition-transform"
-            onClick={() => setShowAddSongDialog(true)}
-          >
-            <Plus size={18} />
-            <span>添加歌曲</span>
-          </button>
-        </div>
+
       </div>
       <AddSongDialog
         show={showAddSongDialog}
@@ -832,7 +815,7 @@ const AddSongDialog = ({ show, setShow, onSubmit }: AddSongDialogProps) => {
         {/* 歌曲列表 */}
         <div
           ref={scrollContainerRef}
-          className="overflow-y-scroll hide-scrollbar flex gap-2 flex-col max-h-[calc(100vh-400px)]"
+          className="overflow-y-scroll px-1 hide-scrollbar flex gap-2 flex-col max-h-[calc(100vh-400px)] select-none"
         >
           {/* 表头 */}
           <div
