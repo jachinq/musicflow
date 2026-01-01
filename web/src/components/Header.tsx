@@ -39,7 +39,7 @@ export const Header = () => {
       setAllSongs(data.data.list, true);
       if (data.data.current_song) {
         // 应用首次加载，标记为用户未交互。不进行自动播放
-        setCurrentSong(data.data.current_song. false);
+        setCurrentSong(data.data.current_song, false);
       }
     },
       (error) => {
