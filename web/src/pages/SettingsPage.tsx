@@ -136,8 +136,8 @@ function SettingsPage() {
 
         <FormLayout label="当前版本">
           <div className="flex items-center gap-4">
-            <span>v1.2.0</span>
-            <span className="text-sm text-gray-400">2025-11-15</span>
+            <span>v2.0.0</span>
+            <span className="text-sm text-gray-400">2026-01-01</span>
           </div>
         </FormLayout>
 

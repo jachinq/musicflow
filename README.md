@@ -92,6 +92,10 @@ docker-compose up -d
 2025-01-02: First version.
 2025-01-07: Added the db initialization tool.
 2025-01-11: Fixed genre operate.
+2026-01-01: Version 2.0.0. 
+- Support subsonic api.
+- Improve ui experience.
+
 
 # License
 
