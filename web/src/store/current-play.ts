@@ -5,7 +5,6 @@ const volumestr = localStorage.getItem("volume") || "0.5";
 const volume = parseFloat(volumestr);
 
 interface CurrentPlayState {
-    audioContext: AudioContext | null;
     currentTime: number;
     currentLyric: { time: number, text: string } | null;
     duration: number;
@@ -14,7 +13,6 @@ interface CurrentPlayState {
     lyrics: lyric[];
     lastLyricIndex: number; // 缓存上次的歌词索引
     hasUserInteracted: boolean;
-    setAudioContext: (audioContent: AudioContext) => void;
     setCurrentTime: (currentTime: number) => void;
     setCurrentLyric: (currentLyric: { time: number, text: string } | null) => void;
     setDuration: (duration: number) => void;
@@ -46,7 +44,6 @@ const findLyricIndexBinarySearch = (lyrics: lyric[], currentTime: number): numbe
 };
 
 export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
-    audioContext: null,
     currentTime: 0,
     currentLyric: null,
     duration: 0,
@@ -55,7 +52,6 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     lyrics: [],
     lastLyricIndex: 0,
     hasUserInteracted: false,
-    setAudioContext: (audioContext) => set(() => ({ audioContext })),
     setCurrentTime: (currentTime) => set(() => {
         const lyrics = get().lyrics;
         const lastIndex = get().lastLyricIndex;

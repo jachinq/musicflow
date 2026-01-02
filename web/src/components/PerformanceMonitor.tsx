@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Activity, Database, HardDrive, Cpu } from "lucide-react";
-import { audioBufferCache } from "../lib/audio-cache";
+// import { audioBufferCache } from "../lib/audio-cache";
 
 interface PerformanceStats {
   memoryUsage?: number; // MB
@@ -66,7 +66,8 @@ export const PerformanceMonitor = () => {
 
         setStats({
           memoryUsage: getMemoryUsage(),
-          cacheStats: audioBufferCache.getStats(),
+          // cacheStats: audioBufferCache.getStats(),
+          cacheStats: { size: 0, maxSize: 3, keys: [] },
           renderCount: frameCount,
           fps,
         });

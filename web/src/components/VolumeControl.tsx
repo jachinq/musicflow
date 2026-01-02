@@ -6,7 +6,7 @@ import { toast } from "sonner";
 interface VolumeControlProps {
   volume: number; // 0-1 的音量值
   setVolume: (volume: number) => void;
-  gainNode: GainNode | null; // Web Audio API 的 GainNode
+  audioElement: HTMLAudioElement | null; // HTML Audio 元素
   showVolume: boolean;
   setShowVolume: (show: boolean) => void;
   className?: string;
@@ -17,7 +17,7 @@ export const VolumeControl: React.FC<VolumeControlProps> = ({
   setVolume,
   showVolume,
   setShowVolume,
-  gainNode,
+  audioElement,
   className = "",
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -82,12 +82,12 @@ export const VolumeControl: React.FC<VolumeControlProps> = ({
     setShowVolume(!showVolume);
   };
 
-  // 改变音量并同步到 gainNode
+  // 改变音量并同步到 audio 元素
   const changeVolume = (value: number) => {
     const clampedValue = Math.max(0, Math.min(1, value));
     setVolume(clampedValue);
-    if (gainNode) {
-      gainNode.gain.value = clampedValue;
+    if (audioElement) {
+      audioElement.volume = clampedValue;
     }
   };
 
