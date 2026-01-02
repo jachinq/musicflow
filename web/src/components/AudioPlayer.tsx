@@ -24,6 +24,7 @@ import {
   useKeyboardScope,
 } from "../hooks/use-global-keyboard-shortcuts";
 import { useSettingStore } from "../store/setting";
+import { mediaSessionManager } from "../lib/media-session";
 import "../styles/AudioPlayer.css";
 
 export const AudioPlayer = () => {
@@ -72,6 +73,34 @@ export const AudioPlayer = () => {
 
   // 激活播放器作用域
   useKeyboardScope("player");
+
+  // 注册 Media Session 事件处理器
+  // useEffect(() => {
+  //   mediaSessionManager.setActionHandlers({
+  //     onPlay: () => {
+  //       playAudio(currentTime >= duration ? 0 : currentTime);
+  //     },
+  //     onPause: () => {
+  //       pauseAudio();
+  //     },
+  //     onPrevious: () => {
+  //       nextSong(-1);
+  //     },
+  //     onNext: () => {
+  //       nextSong(1);
+  //     },
+  //     onSeek: (time: number) => {
+  //       setCurrentTime(time);
+  //       isPlaying && pauseAudio();
+  //       playAudio(time);
+  //     },
+  //   });
+
+  //   // 组件卸载时清理
+  //   return () => {
+  //     mediaSessionManager.clear();
+  //   };
+  // }, []);
 
   // 空格键控制播放暂停
   useKeyboardShortcut(
@@ -142,7 +171,18 @@ export const AudioPlayer = () => {
   );
 
   useEffect(() => {
-    console.log("AudioPlayer mounted", currentSong);
+    
+    // 更新 Media Session 元数据（无论在哪个页面都要更新）
+    if (currentSong) {
+      console.log("AudioPlayer mounted", currentSong?.artist, currentSong?.title);
+      mediaSessionManager.updateMetadata({
+        title: currentSong.title || '未知标题',
+        artist: currentSong.artist || '未知艺术家',
+        album: currentSong.album || '',
+        artwork: getCoverSmallUrl(currentSong.cover_art),
+      });
+    }
+
     if (isDetailPage && audioContext == null) {
       return;
     }
@@ -151,6 +191,7 @@ export const AudioPlayer = () => {
     initStatus();
     loadAudioFile();
     loadLyrics();
+
     // 等待 10 秒后开始预加载下一首歌曲
     setTimeout(() => {
       preDecodeAudioBuffer();
@@ -333,12 +374,18 @@ export const AudioPlayer = () => {
     setIsPlaying(true);
     audioContext.resume();
 
+    // 更新 Media Session 播放状态
+    mediaSessionManager.setPlaybackState('playing');
+
     if (progressIntevalId) {
       clearInterval(progressIntevalId);
     }
     // 更新当前播放时间
     const interval = setInterval(() => {
-      setCurrentTime(audioContext.currentTime - sourceStartTime + startOffset);
+      const newTime = audioContext.currentTime - sourceStartTime + startOffset;
+      setCurrentTime(newTime);
+      // 更新 Media Session 播放位置
+      mediaSessionManager.updatePositionState(audioBuffer.duration, newTime);
     }, 100);
     setProgressIntevalId(interval);
   };
@@ -365,6 +412,9 @@ export const AudioPlayer = () => {
       }
       setSource(null);
       setIsPlaying(false);
+
+      // 更新 Media Session 播放状态
+      mediaSessionManager.setPlaybackState('paused');
     }
   };
 
@@ -438,7 +488,7 @@ export const AudioPlayer = () => {
 
       // 存入缓存
       audioBufferCache.set(song.id, audioBuffer);
-      console.log(`[AudioPlayer] 缓存音频: ${song.title}`, audioBufferCache.getStats());
+      // console.log(`[AudioPlayer] 缓存音频: ${song.title}`, audioBufferCache.getStats());
 
       if (actuallyDecode) {
         setAudioBuffer(audioBuffer);

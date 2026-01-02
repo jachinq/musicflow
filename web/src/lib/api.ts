@@ -7,7 +7,13 @@ export const API_URL = defaultSetting.server_url || "";
 export const LOG_API = `${API_URL}/api/log`;
 
 export const getCoverSmallUrl = (coverArt: string) => {
-  return `${API_URL}/api/cover/small/${coverArt || '-'}`;
+  const url = `${API_URL}/api/cover/small/${coverArt || '-'}`;
+  // 确保返回绝对 URL（Media Session API 需要）
+  if (url.startsWith('http')) {
+    return url;
+  }
+  // 如果是相对 URL，转换为绝对 URL
+  return new URL(url, window.location.origin).href;
 };
 export const getCoverMediumUrl = (coverArt: string) => {
   if (coverArt.startsWith("http")) return coverArt;
