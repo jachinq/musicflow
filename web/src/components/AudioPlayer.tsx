@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
 import { getCoverSmallUrl, getMusicUrl, getLyrics } from "../lib/api";
 import { usePlaylist } from "../store/playlist";
@@ -27,6 +27,7 @@ import "../styles/AudioPlayer.css";
 export const AudioPlayer = () => {
   const audioRef = useRef<HTMLAudioElement>(new Audio());
   const isDraggingRef = useRef(false);
+  const nextSongRef = useRef<((next: number) => void) | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [loadStatus, setLoadStatus] = useState<string>("");
@@ -76,7 +77,7 @@ export const AudioPlayer = () => {
 
     // 绑定事件监听器
     const handleLoadedMetadata = () => {
-      console.log("歌曲元数据加载完成:", audio.src);
+      // console.log("歌曲元数据加载完成:", audio.src);
       const duration = audio.duration;
       // 只有当 duration 是有效数字时才设置
       if (isFinite(duration) && duration > 0) {
@@ -95,14 +96,17 @@ export const AudioPlayer = () => {
     const handleEnded = () => {
       console.log("歌曲播放结束", audio.src);
       setIsPlaying(false);
-      nextSong(1);
+      // 使用 ref 调用最新的 nextSong 函数，避免闭包陷阱
+      if (nextSongRef.current) {
+        nextSongRef.current(1);
+      }
     };
 
-    const handleError = (e: ErrorEvent) => {
-      console.error("音频加载错误:", e, audio.src);
-      setLoadStatus("加载失败");
-      setIsPlaying(false);
-    };
+    // const handleError = (e: ErrorEvent) => {
+    //   console.error("音频加载错误:", e, audio.src);
+    //   setLoadStatus("加载失败");
+    //   setIsPlaying(false);
+    // };
 
     const handleCanPlay = () => {
       setLoadStatus("");
@@ -115,7 +119,7 @@ export const AudioPlayer = () => {
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError as any);
+    // audio.addEventListener('error', handleError as any);
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('loadstart', handleLoadStart);
 
@@ -129,7 +133,7 @@ export const AudioPlayer = () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError as any);
+      // audio.removeEventListener('error', handleError as any);
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('loadstart', handleLoadStart);
 
@@ -233,7 +237,7 @@ export const AudioPlayer = () => {
     const oldSrc = audio.src;
     if (oldSrc && oldSrc.startsWith('blob:')) {
       URL.revokeObjectURL(oldSrc);
-      console.log("已释放旧的 Blob URL:", oldSrc);
+      // console.log("已释放旧的 Blob URL:", oldSrc);
     }
 
     // 停止当前播放
@@ -299,7 +303,7 @@ export const AudioPlayer = () => {
   }, [currentSong]);
 
   const nextSong = (next: number) => {
-    console.log("current song", currentSong?.title || "unknown");
+    // console.log("current song", currentSong?.title || "unknown");
     if (!currentSong || allSongs.length === 0) {
       console.log("current song or all songs is null");
       return;
@@ -331,7 +335,7 @@ export const AudioPlayer = () => {
       nextSongItem = allSongs[nextIndex];
     }
 
-    console.log(`播放模式: ${play_mode === 1 ? '顺序播放' : play_mode === 2 ? '单曲循环' : '随机播放'}, next song:`, nextSongItem.title);
+    // console.log(`播放模式: ${play_mode === 1 ? '顺序播放' : play_mode === 2 ? '单曲循环' : '随机播放'}, next song:`, nextSongItem.title);
 
     if (currentSong.id === nextSongItem.id) {
       // 单曲循环：重置播放位置并重新播放
@@ -343,10 +347,15 @@ export const AudioPlayer = () => {
     } else {
       // 切换到不同的歌曲
       setCurrentSong(nextSongItem);
-      console.log("next song", nextSongItem.title || "unknown");
+      // console.log("next song", nextSongItem.title || "unknown");
       playAudio();
     }
   };
+
+  // 同步 nextSong 函数到 ref，确保事件监听器能访问最新状态
+  useEffect(() => {
+    nextSongRef.current = nextSong;
+  }, [nextSong]);
 
 
   const playAudio = async () => {

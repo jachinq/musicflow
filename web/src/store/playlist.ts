@@ -81,7 +81,7 @@ class DbSyncManager {
     setPlaylist(
       songId,
       () => {
-        console.log(`[DbSync] 当前歌曲同步成功: ${this.pendingCurrentSong?.title}`);
+        // console.log(`[DbSync] 当前歌曲同步成功: ${this.pendingCurrentSong?.title}`);
         this.pendingCurrentSong = null;
       },
       (error) => {
