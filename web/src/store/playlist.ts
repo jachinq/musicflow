@@ -102,12 +102,12 @@ class DbSyncManager {
 const dbSyncManager = new DbSyncManager();
 
 interface PlaylistState {
-  openPlaylist: boolean;
+  openPlaylist: boolean; // 是否显示播放列表
+  showPlaylist: boolean; // 是否显示播放列表动画
   allSongs: Music[];
   displaySongs: Music[];
   currentSong: Music | null;
   loadedCount: number;
-  showPlaylist: boolean;
   isLoadMore: boolean
   loadMore: () => void;
   setOpenPlaylist: (show: boolean) => void;

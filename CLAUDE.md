@@ -8,7 +8,7 @@ MusicFlow 是一个基于 Rust 后端和 React 前端的音乐管理 Web 应用�
 
 **技术栈**:
 - 后端: Rust (Actix-Web 框架)
-- 前端: React + TypeScript (使用 Rsbuild 构建)
+- 前端: React + TypeScript + Tailwind (使用 Rsbuild 构建)
 - 数据库: SQLite (使用 rusqlite)
 - 音乐元数据: Symphonia 库
 
@@ -206,3 +206,4 @@ docker-compose up -d
 - 数据库文件位置由 `conf/config.json` 中的 `db_path` 控制
 - 封面图片以 base64 格式存储在数据库中,分为 small/medium/large 三种尺寸
 - 前端开发时使用 `pnpm dev`,生产部署需先 `pnpm build` 然后将 `dist/` 复制到 `web_dir`
+- 前端使用 Tailwind CSS, 特定组件的样式文件在 `web/src/styles/*.css`, 但大多时候只需要修改组件的 `className` 即可

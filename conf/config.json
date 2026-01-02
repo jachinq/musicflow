@@ -11,7 +11,7 @@
       "music_dir": "../music"
     },
     "subsonic": {
-      "server_url": "http://localhost:4040/",
+      "server_url": "http://192.168.2.127:10021/",
       "username": "admin",
       "password": "admin",
       "use_token_auth": true,

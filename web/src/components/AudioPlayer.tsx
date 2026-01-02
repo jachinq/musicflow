@@ -66,6 +66,7 @@ export const AudioPlayer = () => {
     setCurrentSong,
     togglePlaylist,
     setAllSongs,
+    setShowPlaylist,
   } = usePlaylist();
 
   const { play_mode } = useSettingStore();
@@ -569,12 +570,15 @@ export const AudioPlayer = () => {
   };
 
   const [showVolume, setShowVolume] = useState<boolean>(false);
+  usePlaylist();
 
   // 根据 showVolume 动态激活/停用音量作用域
   useEffect(() => {
     const { globalKeyboardManager } = require("../hooks/use-global-keyboard-shortcuts");
+    console.log("showVolume changed", showVolume);
     if (showVolume) {
       globalKeyboardManager.activateScope("volume");
+      setShowPlaylist(false);
     } else {
       globalKeyboardManager.deactivateScope("volume");
     }
@@ -706,34 +710,30 @@ export const AudioPlayer = () => {
                     {volume <= 0 && <VolumeXIcon />}
                   </div>
                 </div>
-                {showVolume && (
-                  <>
-                    <div title={volume.toFixed(2)}>
-                      <div className="volume-slider z-10">
-                        <input
-                          className="w-[128px]"
-                          type="range"
-                          dir="btt"
-                          min="0"
-                          max="1"
-                          step="0.001"
-                          value={volume}
-                          onChange={(e) =>
-                            changeVolume(parseFloat(e.target.value))
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div
-                      className="volume-slider-mask fixed top-0 left-0 w-full h-full bg-black-translucent"
-                      onClick={() => setShowVolume(false)}
-                    ></div>
-                  </>
-                )}
+                <div title={volume.toFixed(2)}>
+                  <div className={`volume-slider z-10 ${showVolume ? 'volume-slider-visible' : ''}`}>
+                    <input
+                      className="w-[128px]"
+                      type="range"
+                      dir="btt"
+                      min="0"
+                      max="1"
+                      step="0.001"
+                      value={volume}
+                      onChange={(e) =>
+                        changeVolume(parseFloat(e.target.value))
+                      }
+                    />
+                  </div>
+                </div>
+                <div
+                  className={`volume-slider-mask fixed top-0 left-0 w-full h-full bg-black-translucent ${showVolume ? 'volume-slider-mask-visible' : ''}`}
+                  onClick={() => setShowVolume(false)}
+                ></div>
               </div>
 
               <button
-                className={`control-button ${openPlaylist ? "active" : ""}`}
+                className="control-button"
                 onClick={() => togglePlaylist(true)}
                 aria-label="播放列表"
               >
