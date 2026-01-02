@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
 import { getCoverSmallUrl, getMusicUrl, getLyrics } from "../lib/api";
 import { usePlaylist } from "../store/playlist";
@@ -121,6 +121,10 @@ export const AudioPlayer = () => {
 
     return () => {
       audio.pause();
+      let src = audio.src;
+      if (src) { // 释放资源
+        URL.revokeObjectURL(src);
+      }
       audio.src = '';
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
@@ -128,6 +132,7 @@ export const AudioPlayer = () => {
       audio.removeEventListener('error', handleError as any);
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('loadstart', handleLoadStart);
+
     };
   }, []);
 
@@ -208,7 +213,9 @@ export const AudioPlayer = () => {
 
   // 切换歌曲时加载新歌曲
   useEffect(() => {
-    if (!currentSong || !audioRef.current) return;
+    if (!currentSong || !audioRef.current) {
+      console.log("current song or audio element is null", currentSong, audioRef.current);
+      return};
 
     console.log("切换歌曲:", currentSong?.title);
 
@@ -222,26 +229,40 @@ export const AudioPlayer = () => {
 
     const audio = audioRef.current;
 
+    // 释放旧的 Blob URL
+    const oldSrc = audio.src;
+    if (oldSrc && oldSrc.startsWith('blob:')) {
+      URL.revokeObjectURL(oldSrc);
+      console.log("已释放旧的 Blob URL:", oldSrc);
+    }
+
     // 停止当前播放
     audio.pause();
+    audio.src = '';  // 清空 src，确保不引用旧 Blob
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
     setCurrentLyric(null);
 
+    // 创建可取消的 AbortController
+    const abortController = new AbortController();
+
     // 设置新歌曲 URL // 加载到本地，避免进度条 seek 问题
     const load = async () => {
-      let cancelled = false;
       try {
-        // 取消上一次请求
-        const { signal } = new AbortController();
-        const res = await fetch(getMusicUrl(currentSong), { signal });
+        const res = await fetch(getMusicUrl(currentSong), {
+          signal: abortController.signal
+        });
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
 
         const blob = await res.blob();
-        if (cancelled) return;
+
+        // 检查是否已取消
+        if (abortController.signal.aborted) {
+          return;
+        }
 
         const objectUrl = URL.createObjectURL(blob);
         audioRef.current.src = objectUrl;
@@ -263,7 +284,7 @@ export const AudioPlayer = () => {
           setLoadStatus("加载失败");
         }
       } finally {
-        if (!cancelled) {
+        if (!abortController.signal.aborted) {
           setLoadStatus("");
         }
       }
@@ -271,15 +292,16 @@ export const AudioPlayer = () => {
 
     load();
 
-    // audio.src = getMusicUrl(currentSong);
-    // audio.load();
-
-
+    // cleanup 函数：取消未完成的请求
+    return () => {
+      abortController.abort();
+    };
   }, [currentSong]);
 
   const nextSong = (next: number) => {
     console.log("current song", currentSong?.title || "unknown");
     if (!currentSong || allSongs.length === 0) {
+      console.log("current song or all songs is null");
       return;
     }
 
@@ -309,7 +331,7 @@ export const AudioPlayer = () => {
       nextSongItem = allSongs[nextIndex];
     }
 
-    // console.log(`播放模式: ${play_mode === 1 ? '顺序播放' : play_mode === 2 ? '单曲循环' : '随机播放'}, next song:`, nextSongItem.title);
+    console.log(`播放模式: ${play_mode === 1 ? '顺序播放' : play_mode === 2 ? '单曲循环' : '随机播放'}, next song:`, nextSongItem.title);
 
     if (currentSong.id === nextSongItem.id) {
       // 单曲循环：重置播放位置并重新播放
@@ -322,8 +344,10 @@ export const AudioPlayer = () => {
       // 切换到不同的歌曲
       setCurrentSong(nextSongItem);
       console.log("next song", nextSongItem.title || "unknown");
+      playAudio();
     }
   };
+
 
   const playAudio = async () => {
     localStorage.setItem("userInteract", "true");
