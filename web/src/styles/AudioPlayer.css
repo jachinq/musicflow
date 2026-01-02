@@ -111,61 +111,6 @@
 }
 
 
-/* 音量控制 */
-.volume-slider {
-  /* top: -400px; */
-  /* left: 0; */
-  transform: translateX(-5%) translateY(-125%) scale(0.95);
-  position: absolute;
-  height: 150px;
-  width: 40px;
-  border-radius: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-
-  /* 动画效果 */
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-
-  @apply bg-muted shadow-sm
-}
-
-/* 音量控制条显示状态 */
-.volume-slider-visible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(-5%) translateY(-125%) scale(1);
-}
-
-/* 音量控制遮罩层 */
-.volume-slider-mask {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* 音量控制遮罩层显示状态 */
-.volume-slider-mask-visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.volume-slider input[type="range"] {
-  writing-mode: bt-lr;
-  transform: rotate(-90deg);
-  overscroll-behavior: none;
-  outline: none;
-  border: none;
-}
-.volume-slider::-webkit-slider-thumb {
-  transform: rotate(90deg);
-  outline: none;
-  border: none;
-}
-
 /* 播放器内容区域 */
 .player-content {
   display: grid;
@@ -273,11 +218,11 @@
 /* 歌曲信息区域 */
 .song-info {
   flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   text-align: left;
+  max-width: 450px;
 }
 
 .song-title {
@@ -300,7 +245,7 @@
 
 .song-lyric {
   font-size: 0.875rem;
-  color: hsl(var(--playstatus-foreground) / 0.7);
+  color: var(--playstatus-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

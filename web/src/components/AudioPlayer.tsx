@@ -5,6 +5,7 @@ import { usePlaylist } from "../store/playlist";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatTime } from "../lib/utils";
 import Playlist from "./Playlist";
+import { VolumeControl } from "./VolumeControl";
 import {
   ChevronFirst,
   ChevronLast,
@@ -13,12 +14,8 @@ import {
   PauseCircle,
   PlayCircle,
   // Star,
-  Volume1Icon,
-  Volume2Icon,
-  VolumeXIcon,
 } from "lucide-react";
 import { checkRoute, Music, MyRoutes, lyric } from "../lib/defined";
-import { toast } from "sonner";
 import { audioBufferCache } from "../lib/audio-cache";
 import { StreamingAudioLoader } from "../lib/streaming-loader";
 import {
@@ -47,9 +44,7 @@ export const AudioPlayer = () => {
     duration,
     isPlaying,
     volume,
-    mutedVolume,
     setVolume,
-    setMutedVolume,
     setAudioContext,
     setCurrentTime,
     setDuration,
@@ -57,6 +52,7 @@ export const AudioPlayer = () => {
     setCurrentLyric,
     setLyrics,
   } = useCurrentPlay();
+
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
 
   const {
@@ -125,47 +121,6 @@ export const AudioPlayer = () => {
     "下一首"
   );
 
-  // b 静音/取消静音
-  useKeyboardShortcut(
-    "b",
-    () => {
-      let isMuted = volume > 0;
-      if (isMuted) {
-        setMutedVolume(volume);
-        toast.success("已静音");
-      } else {
-        setMutedVolume(0);
-        toast.success("取消静音");
-      }
-      changeVolume(isMuted ? 0 : mutedVolume || 0.5);
-    },
-    "global",
-    10,
-    "静音/取消静音"
-  );
-
-  // v 显示/隐藏音量
-  useKeyboardShortcut(
-    "v",
-    () => {
-      setShowVolume(!showVolume);
-    },
-    "global",
-    10,
-    "显示/隐藏音量控制"
-  );
-
-  // ArrowUp: 音量控制优先（优先级 20），播放列表其次（优先级 10）
-  useKeyboardShortcut(
-    "ArrowUp",
-    () => {
-      if (volume < 1) changeVolume(Math.min(volume + 0.005, 1));
-    },
-    "volume",
-    20,
-    "增加音量"
-  );
-
   useKeyboardShortcut(
     "ArrowUp",
     () => {
@@ -174,17 +129,6 @@ export const AudioPlayer = () => {
     "playlist",
     10,
     "播放列表：上一首"
-  );
-
-  // ArrowDown: 音量控制优先（优先级 20），播放列表其次（优先级 10）
-  useKeyboardShortcut(
-    "ArrowDown",
-    () => {
-      if (volume > 0) changeVolume(Math.max(volume - 0.005, 0));
-    },
-    "volume",
-    20,
-    "减少音量"
   );
 
   useKeyboardShortcut(
@@ -196,7 +140,6 @@ export const AudioPlayer = () => {
     10,
     "播放列表：下一首"
   );
-
 
   useEffect(() => {
     console.log("AudioPlayer mounted", currentSong);
@@ -570,12 +513,10 @@ export const AudioPlayer = () => {
   };
 
   const [showVolume, setShowVolume] = useState<boolean>(false);
-  usePlaylist();
 
   // 根据 showVolume 动态激活/停用音量作用域
   useEffect(() => {
     const { globalKeyboardManager } = require("../hooks/use-global-keyboard-shortcuts");
-    console.log("showVolume changed", showVolume);
     if (showVolume) {
       globalKeyboardManager.activateScope("volume");
       setShowPlaylist(false);
@@ -593,15 +534,6 @@ export const AudioPlayer = () => {
       globalKeyboardManager.deactivateScope("playlist");
     }
   }, [openPlaylist]);
-
-  const changeVolume = (value: number) => {
-    setVolume(value);
-    if (!gainNode) {
-      return;
-    }
-    gainNode.gain.value = value;
-    // setGainNode(gainNode);
-  };
 
   return (
     <>
@@ -699,38 +631,13 @@ export const AudioPlayer = () => {
 
             {/* 右侧：音量 + 播放列表 */}
             <div className="player-right">
-              <div className="volume-control relative">
-                <div className="flex justify-center items-center gap-2">
-                  <div
-                    className="control-button volume-icon"
-                    onClick={() => setShowVolume(!showVolume)}
-                  >
-                    {volume > 0.5 && <Volume2Icon />}
-                    {volume <= 0.5 && volume > 0 && <Volume1Icon />}
-                    {volume <= 0 && <VolumeXIcon />}
-                  </div>
-                </div>
-                <div title={volume.toFixed(2)}>
-                  <div className={`volume-slider z-10 ${showVolume ? 'volume-slider-visible' : ''}`}>
-                    <input
-                      className="w-[128px]"
-                      type="range"
-                      dir="btt"
-                      min="0"
-                      max="1"
-                      step="0.001"
-                      value={volume}
-                      onChange={(e) =>
-                        changeVolume(parseFloat(e.target.value))
-                      }
-                    />
-                  </div>
-                </div>
-                <div
-                  className={`volume-slider-mask fixed top-0 left-0 w-full h-full bg-black-translucent ${showVolume ? 'volume-slider-mask-visible' : ''}`}
-                  onClick={() => setShowVolume(false)}
-                ></div>
-              </div>
+              <VolumeControl
+                volume={volume}
+                setVolume={setVolume}
+                gainNode={gainNode}
+                showVolume={showVolume}
+                setShowVolume={setShowVolume}
+              />
 
               <button
                 className="control-button"

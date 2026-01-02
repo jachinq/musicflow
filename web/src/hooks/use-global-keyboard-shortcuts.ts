@@ -51,7 +51,7 @@ class GlobalKeyboardManager {
     // 按优先级排序（降序）
     handlers.sort((a, b) => b.priority - a.priority);
 
-    console.log(`[Keyboard] 注册快捷键: ${key} (scope: ${scope}, priority: ${priority})`);
+    // console.log(`[Keyboard] 注册快捷键: ${key} (scope: ${scope}, priority: ${priority})`);
   }
 
   /**
@@ -65,7 +65,7 @@ class GlobalKeyboardManager {
       const index = handlers.findIndex((h) => h.handler === handler);
       if (index !== -1) {
         handlers.splice(index, 1);
-        console.log(`[Keyboard] 注销快捷键: ${key}`);
+        // console.log(`[Keyboard] 注销快捷键: ${key}`);
       }
 
       if (handlers.length === 0) {
@@ -79,7 +79,7 @@ class GlobalKeyboardManager {
    */
   activateScope(scope: KeyboardScope) {
     this.activeScopes.add(scope);
-    console.log(`[Keyboard] 激活作用域: ${scope}`, Array.from(this.activeScopes));
+    // console.log(`[Keyboard] 激活作用域: ${scope}`, Array.from(this.activeScopes));
   }
 
   /**
@@ -88,7 +88,7 @@ class GlobalKeyboardManager {
   deactivateScope(scope: KeyboardScope) {
     if (scope !== "global") {
       this.activeScopes.delete(scope);
-      console.log(`[Keyboard] 停用作用域: ${scope}`, Array.from(this.activeScopes));
+      // console.log(`[Keyboard] 停用作用域: ${scope}`, Array.from(this.activeScopes));
     }
   }
 
@@ -118,7 +118,7 @@ class GlobalKeyboardManager {
       if (this.activeScopes.has(handler.scope)) {
         event.preventDefault();
         handler.handler(event);
-        console.log(`[Keyboard] 触发快捷键: ${key} (scope: ${handler.scope})`);
+        // console.log(`[Keyboard] 触发快捷键: ${key} (scope: ${handler.scope})`);
         break; // 只执行优先级最高的处理器
       }
     }
@@ -140,7 +140,7 @@ class GlobalKeyboardManager {
     if (!this.isListening) {
       window.addEventListener("keydown", this.handleKeyPress);
       this.isListening = true;
-      console.log("[Keyboard] 开始监听键盘事件");
+      // console.log("[Keyboard] 开始监听键盘事件");
     }
   }
 
@@ -151,7 +151,7 @@ class GlobalKeyboardManager {
     if (this.isListening) {
       window.removeEventListener("keydown", this.handleKeyPress);
       this.isListening = false;
-      console.log("[Keyboard] 停止监听键盘事件");
+      // console.log("[Keyboard] 停止监听键盘事件");
     }
   }
 

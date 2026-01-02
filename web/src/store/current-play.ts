@@ -11,7 +11,6 @@ interface CurrentPlayState {
     duration: number;
     isPlaying: boolean;
     volume: number;
-    mutedVolume: number;
     lyrics: lyric[];
     lastLyricIndex: number; // 缓存上次的歌词索引
     hasUserInteracted: boolean;
@@ -21,7 +20,6 @@ interface CurrentPlayState {
     setDuration: (duration: number) => void;
     setIsPlaying: (isPlaying: boolean) => void;
     setVolume: (volume: number) => void;
-    setMutedVolume: (mutedVolume: number) => void;
     setLyrics: (lyrics: lyric[]) => void;
     setHasUserInteracted: (hasUserInteracted: boolean) => void;
 }
@@ -54,7 +52,6 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
     duration: 0,
     isPlaying: false,
     volume,
-    mutedVolume: 0,
     lyrics: [],
     lastLyricIndex: 0,
     hasUserInteracted: false,
@@ -90,7 +87,6 @@ export const useCurrentPlay = create<CurrentPlayState>((set, get) => ({
         localStorage.setItem("volume", volume.toString());
         return { volume }
     }),
-    setMutedVolume: (mutedVolume) => set(() => ({ mutedVolume })),
     setLyrics: (lyrics) => set(() => ({ lyrics, lastLyricIndex: 0 })),
     setHasUserInteracted: (hasUserInteracted) => set({ hasUserInteracted }),
 }));
