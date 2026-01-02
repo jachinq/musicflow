@@ -10,23 +10,52 @@ export interface UseAudioProgressReturn {
   onChange: (value: number) => void
   onDragStart: () => void
   onDragEnd: () => void
+  setSrc: (src: string) => void
+
+  volume: number
+  setVolume: (volume: number) => void
 }
 
-export function useAudioProgress(src: string): UseAudioProgressReturn {
+export function useAudioProgress(initialSrc?: string): UseAudioProgressReturn {
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const isDraggingRef = useRef<boolean>(false)
+  const isDraggingRef = useRef(false)
 
-  const [currentTime, setCurrentTime] = useState<number>(0)
-  const [duration, setDuration] = useState<number>(0)
-  const [playing, setPlaying] = useState<boolean>(false)
+  const [volume, setVolume] = useState(0.25)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [src, setSrc] = useState<string | undefined>(initialSrc)
 
+  useEffect(()=> {
+    console.log('[useAudioProgress] audioRef:', audioRef.current)
+  }, [audioRef.current])
+
+  // 创建 / 更新 Audio 对象
   useEffect(() => {
+
+    console.log('[useAudioProgress] src changed:', src)
+
+    // 如果已有 audio，先停止
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.src = ''
+      audioRef.current = null
+      setCurrentTime(0)
+      setDuration(0)
+      setPlaying(false)
+    }
+    if (!src) return
+
     const audio = new Audio(src)
     audioRef.current = audio
+    audio.volume = volume
+    
+    // TODO 用户控制
+    // togglePlay()
 
     const onLoaded = () => setDuration(audio.duration)
     const onTimeUpdate = () => {
-      if (!isDraggingRef.current) {
+       if (!isDraggingRef.current) {
         setCurrentTime(audio.currentTime)
       }
     }
@@ -47,19 +76,26 @@ export function useAudioProgress(src: string): UseAudioProgressReturn {
     }
   }, [src])
 
+  // 音量控制
+  useEffect(() => {
+    if (!audioRef.current) return
+    audioRef.current.volume = volume
+  }, [volume])
+
   const togglePlay = () => {
+    console.log('[useAudioProgress] togglePlay')
     if (!audioRef.current) return
     if (playing) audioRef.current.pause()
     else audioRef.current.play()
   }
 
   const onInput = (value: number) => {
-    setCurrentTime(value)
+    setCurrentTime(value) // 拖动中只更新 state
   }
 
   const onChange = (value: number) => {
     if (!audioRef.current) return
-    audioRef.current.currentTime = value
+    audioRef.current.currentTime = value // 松手后同步 audio.currentTime
   }
 
   const onDragStart = () => (isDraggingRef.current = true)
@@ -75,5 +111,9 @@ export function useAudioProgress(src: string): UseAudioProgressReturn {
     onChange,
     onDragStart,
     onDragEnd,
+    setSrc,
+
+    volume,
+    setVolume,
   }
 }

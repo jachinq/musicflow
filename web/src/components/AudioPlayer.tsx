@@ -1,4 +1,4 @@
-import React, { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrentPlay } from "../store/current-play";
 import { getCoverSmallUrl, getMusicUrl, getLyrics } from "../lib/api";
 import { usePlaylist } from "../store/playlist";
@@ -25,7 +25,7 @@ import { mediaSessionManager } from "../lib/media-session";
 import "../styles/AudioPlayer.css";
 
 export const AudioPlayer = () => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(new Audio());
   const isDraggingRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,7 +56,10 @@ export const AudioPlayer = () => {
     setShowPlaylist,
   } = usePlaylist();
 
+  // const {audioRef} = useBlobAudio(currentSong);
   const { play_mode } = useSettingStore();
+
+  const pendingTimeRef = useRef(0) // 记录用户拖动进度条时，播放器暂停时的 currentTime
 
   // 初始化全局键盘监听
   useGlobalKeyboardShortcuts();
@@ -66,32 +69,37 @@ export const AudioPlayer = () => {
 
   // 初始化 Audio 实例
   useEffect(() => {
-    const audio = new Audio();
+    const audio = audioRef.current;
     audio.preload = 'auto';
     audio.volume = volume;
     audioRef.current = audio;
 
     // 绑定事件监听器
     const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
+      console.log("歌曲元数据加载完成:", audio.src);
+      const duration = audio.duration;
+      // 只有当 duration 是有效数字时才设置
+      if (isFinite(duration) && duration > 0) {
+        setDuration(duration);
+      } else {
+        setDuration(0);
+      }
       setLoadStatus("");
     };
 
     const handleTimeUpdate = () => {
-      // console.log("audio time update:", audio.currentTime);
-      if (!isDraggingRef.current) {
-        setCurrentTime(audio.currentTime);
-      }
+      if (isDraggingRef.current) return
+      setCurrentTime(audio.currentTime)
     };
 
     const handleEnded = () => {
-      console.log("歌曲播放结束");
+      console.log("歌曲播放结束", audio.src);
       setIsPlaying(false);
       nextSong(1);
     };
 
     const handleError = (e: ErrorEvent) => {
-      console.error("音频加载错误:", e);
+      console.error("音频加载错误:", e, audio.src);
       setLoadStatus("加载失败");
       setIsPlaying(false);
     };
@@ -137,7 +145,7 @@ export const AudioPlayer = () => {
       if (isPlaying) {
         pauseAudio();
       } else {
-        playAudio(currentTime >= duration ? 0 : currentTime);
+        playAudio();
       }
     },
     "global",
@@ -221,21 +229,52 @@ export const AudioPlayer = () => {
     setDuration(0);
     setCurrentLyric(null);
 
-    // 设置新歌曲 URL
-    audio.src = getMusicUrl(currentSong);
-    audio.load();
+    // 设置新歌曲 URL // 加载到本地，避免进度条 seek 问题
+    const load = async () => {
+      let cancelled = false;
+      try {
+        // 取消上一次请求
+        const { signal } = new AbortController();
+        const res = await fetch(getMusicUrl(currentSong), { signal });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
 
-    // 加载歌词
-    loadLyrics();
+        const blob = await res.blob();
+        if (cancelled) return;
 
-    // 检查是否已有用户交互
-    const userInteract = localStorage.getItem("userInteract");
-    const hasUserInteracted = userInteract === "true";
+        const objectUrl = URL.createObjectURL(blob);
+        audioRef.current.src = objectUrl;
+        audioRef.current.load();
 
-    if (hasUserInteracted) {
-      // 自动播放新歌曲
-      playAudio(0);
-    }
+        // 加载歌词
+        loadLyrics();
+
+        // 检查是否已有用户交互
+        const userInteract = localStorage.getItem("userInteract");
+        const hasUserInteracted = userInteract === "true";
+
+        if (hasUserInteracted) {
+          // 自动播放新歌曲
+          playAudio();
+        }
+      } catch (e: any) {
+        if (e.name !== "AbortError") {
+          setLoadStatus("加载失败");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadStatus("");
+        }
+      }
+    };
+
+    load();
+
+    // audio.src = getMusicUrl(currentSong);
+    // audio.load();
+
+
   }, [currentSong]);
 
   const nextSong = (next: number) => {
@@ -270,14 +309,14 @@ export const AudioPlayer = () => {
       nextSongItem = allSongs[nextIndex];
     }
 
-    console.log(`播放模式: ${play_mode === 1 ? '顺序播放' : play_mode === 2 ? '单曲循环' : '随机播放'}, next song:`, nextSongItem.title);
+    // console.log(`播放模式: ${play_mode === 1 ? '顺序播放' : play_mode === 2 ? '单曲循环' : '随机播放'}, next song:`, nextSongItem.title);
 
     if (currentSong.id === nextSongItem.id) {
       // 单曲循环：重置播放位置并重新播放
       console.log("单曲循环：重新播放");
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
-        playAudio(0);
+        playAudio();
       }
     } else {
       // 切换到不同的歌曲
@@ -286,7 +325,7 @@ export const AudioPlayer = () => {
     }
   };
 
-  const playAudio = async (startTime: number = 0) => {
+  const playAudio = async () => {
     localStorage.setItem("userInteract", "true");
 
     if (!audioRef.current) {
@@ -322,17 +361,10 @@ export const AudioPlayer = () => {
     mediaSessionManager.setPlaybackState('paused');
   };
 
-  // 拖动中更新 state，但不更新 audio
-  const onInput = (event: any) => {
-    setCurrentTime(parseFloat(event.target.value))
-  };
-
   const handleSeekChange = (event: { target: { value: string } }) => {
-    const seekTime = parseFloat(event.target.value);
-    if (audioRef.current) {
-      console.log("seek to", seekTime);
-      audioRef.current.currentTime = seekTime;
-    }
+    const t = Number(event.target.value)
+    pendingTimeRef.current = t;
+    setCurrentTime(t);
   };
 
   const loadLyrics = async () => {
@@ -408,11 +440,19 @@ export const AudioPlayer = () => {
               max={duration}
               step="0.1"
               value={currentTime}
-              onMouseDown={() => (isDraggingRef.current = true)}
-              onMouseUp={() => (isDraggingRef.current = false)}
-              onTouchStart={() => (isDraggingRef.current = true)}
-              onTouchEnd={() => (isDraggingRef.current = false)}
-              onInput={onInput}
+              onPointerDown={() => {
+                if (audioRef.current) {
+                  audioRef.current.pause();
+                }
+                isDraggingRef.current = true
+              }}
+              onPointerUp={() => {
+                isDraggingRef.current = false
+                if (audioRef.current) {
+                  audioRef.current.currentTime = pendingTimeRef.current
+                  audioRef.current.play();
+                }
+              }}
               onChange={handleSeekChange}
               aria-label="播放进度"
             />
@@ -467,18 +507,10 @@ export const AudioPlayer = () => {
 
                 <button
                   className={`play-button control-button ${isPlaying ? "playing" : ""}`}
-                  onClick={() => {
-                    isPlaying
-                      ? pauseAudio()
-                      : playAudio(currentTime >= duration ? 0 : currentTime);
-                  }}
+                  onClick={() => (isPlaying ? pauseAudio() : playAudio())}
                   aria-label={isPlaying ? "暂停" : "播放"}
                 >
-                  {isPlaying ? (
-                    <PauseCircle size={28} />
-                  ) : (
-                    <PlayCircle size={28} />
-                  )}
+                  {(isPlaying ? <PauseCircle size={28} /> : <PlayCircle size={28} />)}
                 </button>
 
                 <button
@@ -500,7 +532,6 @@ export const AudioPlayer = () => {
               <VolumeControl
                 volume={volume}
                 setVolume={setVolume}
-                audioElement={audioRef.current}
                 showVolume={showVolume}
                 setShowVolume={setShowVolume}
               />
