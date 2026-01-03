@@ -475,6 +475,46 @@ impl SubsonicClient {
         }
     }
 
+    /// 记录歌曲播放历史
+    ///
+    /// # 参数
+    /// * `id` - 歌曲 ID
+    /// * `submission` - true 为提交播放，false 为正在播放（默认 true）
+    /// * `time` - Unix 时间戳（毫秒），None 表示当前时间
+    ///
+    /// # 返回
+    /// * `Ok(())` - 记录成功
+    pub async fn scrobble(
+        &self,
+        id: &str,
+        submission: Option<bool>,
+        time: Option<u64>,
+    ) -> Result<()> {
+        let mut params = vec![("id", id.to_string())];
+
+        // 添加 submission 参数
+        if let Some(sub) = submission {
+            params.push(("submission", sub.to_string()));
+        }
+
+        // 添加时间戳参数
+        if let Some(t) = time {
+            params.push(("time", t.to_string()));
+        }
+
+        let response: SubsonicResponse<BaseResponse> =
+            self.get("rest/scrobble", params).await?;
+
+        if response.subsonic_response.status == "ok" {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Scrobble failed: {:?}",
+                response.subsonic_response.error
+            ))
+        }
+    }
+
     /// 发送 GET 请求
     async fn get<T>(&self, endpoint: &str, mut params: Vec<(&str, String)>) -> Result<T>
     where

@@ -559,4 +559,13 @@ impl MusicDataSource for SubsonicDataSource {
             .save_play_queue(&song_ids, current_song_id.as_deref(), position)
             .await
     }
+
+    async fn scrobble(
+        &self,
+        song_id: &str,
+        submission: Option<bool>,
+        timestamp: Option<u64>,
+    ) -> Result<()> {
+        self.client.scrobble(song_id, submission, timestamp).await
+    }
 }

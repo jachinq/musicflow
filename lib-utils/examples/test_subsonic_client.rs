@@ -298,6 +298,65 @@ async fn main() {
         _ => println!("   - 跳过保存测试: 没有可用的专辑数据"),
     }
 
+    // 11. 测试播放历史记录 (scrobble)
+    println!("\n11. 测试播放历史记录 (scrobble)...");
+    match client.get_album_list2("newest", 1, 0).await {
+        Ok(albums) if !albums.is_empty() => {
+            if let Some(first_album) = albums.first() {
+                match client.get_album(&first_album.id).await {
+                    Ok(album) => {
+                        if let Some(songs) = &album.song {
+                            if let Some(first_song) = songs.first() {
+                                println!("\n   a) 测试记录\"正在播放\"状态 (submission=false)...");
+                                match client.scrobble(&first_song.id, Some(false), None).await {
+                                    Ok(()) => {
+                                        println!("   ✓ 成功记录正在播放");
+                                        println!("     - 歌曲: {}", first_song.title);
+                                        println!("     - ID: {}", first_song.id);
+                                    }
+                                    Err(e) => println!("   ✗ 记录失败: {}", e),
+                                }
+
+                                // 等待 1 秒
+                                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+                                println!("\n   b) 测试提交播放记录 (submission=true)...");
+                                match client.scrobble(&first_song.id, Some(true), None).await {
+                                    Ok(()) => {
+                                        println!("   ✓ 成功提交播放记录");
+                                        println!("     - 歌曲: {}", first_song.title);
+                                        println!("     - ID: {}", first_song.id);
+                                    }
+                                    Err(e) => println!("   ✗ 记录失败: {}", e),
+                                }
+
+                                println!("\n   c) 测试带时间戳的播放记录...");
+                                let timestamp = std::time::SystemTime::now()
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .unwrap()
+                                    .as_millis() as u64;
+                                match client.scrobble(&first_song.id, Some(true), Some(timestamp)).await {
+                                    Ok(()) => {
+                                        println!("   ✓ 成功记录播放（带时间戳）");
+                                        println!("     - 歌曲: {}", first_song.title);
+                                        println!("     - 时间戳: {}", timestamp);
+                                    }
+                                    Err(e) => println!("   ✗ 记录失败: {}", e),
+                                }
+                            } else {
+                                println!("   - 跳过测试: 专辑没有歌曲");
+                            }
+                        } else {
+                            println!("   - 跳过测试: 专辑没有歌曲");
+                        }
+                    }
+                    Err(e) => println!("   ✗ 获取专辑失败: {}", e),
+                }
+            }
+        }
+        _ => println!("   - 跳过测试: 没有可用的专辑数据"),
+    }
+
     println!("\n=== 测试完成 ===");
     // println!("\n提示:");
     // println!("  可通过环境变量配置:");

@@ -1,43 +1,22 @@
-# getPlayQueue
+# scrobble
 
-返回当前用户的播放队列状态（由 savePlayQueue 设置）。播放队列中包含的歌曲、当前播放的歌曲以及当前歌曲中的位置。通常用于允许用户在不同的客户端/应用之间切换，同时保留播放队列（例如在听音乐书时）。
+API: `/rest/scrobble`
 
-API: `/rest/getPlayQueue`
+记录播放（报告播放历史）。
 
-**参数：**
+注册一个或多个媒体文件的本地播放记录。通常用于播放客户端缓存的媒体时使用。此操作包括以下内容：
 
-无
-
-**响应：**
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<subsonic-response xmlns="http://subsonic.org/restapi" status="ok" version="1.12.0">
-  <playQueue current="133" position="45000" username="admin" changed="2015-02-18T15:22:22.825Z" changedBy="android">
-    <entry id="132" parent="131" isDir="false" title="These Are Days" album="MTV Unplugged" artist="10,000 Maniacs" track="1" year="1993" genre="Soft Rock" coverArt="131" size="5872262" contentType="audio/mpeg" suffix="mp3" duration="293" bitRate="160" path="10,000 Maniacs/MTV Unplugged/01 - These Are Days.mp3" isVideo="false" created="2004-10-25T20:36:03.000Z" albumId="0" artistId="0" type="music"/>
-    <entry id="133" parent="131" isDir="false" title="Eat For Two" album="MTV Unplugged" artist="10,000 Maniacs" track="2" year="1993" genre="Soft Rock" coverArt="131" size="5253248" contentType="audio/mpeg" suffix="mp3" duration="262" bitRate="160" path="10,000 Maniacs/MTV Unplugged/02 - Eat For Two.mp3" isVideo="false" created="2004-10-25T20:36:06.000Z" albumId="0" artistId="0" type="music"/>
-  </playQueue>
-</subsonic-response>
-```
-
-# savePlayQueue
-
-保存当前用户播放队列的状态。这包括播放队列中的音乐，当前正在播放的音乐，以及当前音乐中的位置。通常用于允许用户在不同的客户端/应用之间切换，同时保留播放队列的状态（例如，在听音乐时）。
-
-API: `/rest/savePlayQueue.view`
+如果用户已在 Subsonic 服务器上配置其 last.fm 账户信息（设置 > 个人资料），该操作会将媒体文件“标记播放”至 last.fm 平台。  
+更新媒体文件的播放次数和最后播放时间戳（自 1.11.0 版本起）。  
+使媒体文件显示在网页应用的“正在播放”页面，并出现在 getNowPlaying 接口返回的歌曲列表中（自 1.11.0 版本起）。  
+自 1.8.0 版本起，您可通过指定多个 id 参数（及可选的 time 参数）实现批量标记多个文件的播放记录。
 
 **参数：**
 | 参数 | 必需 | 类型 | 描述 |
 |------|------|------|------|
-| `id` | 是 | 字符串 | 歌曲id，支持多个id参数 |
-| `current` | 否 | 字符串 | 当前播放歌曲id |
-| `position` | 否 | 字符串 | 当前播放歌曲位置 |
+| `id` | 是 | 字符串 | 歌曲 ID |
+| `submission` | 否 | 布尔值 | true 为提交播放，false 为正在播放 |
+| `time` | 否 | Long | Unix 时间戳（毫秒） |
 
 **响应：**
-
-返回空的响应数据，status = ok 表示保存成功，否则表示失败。
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<subsonic-response xmlns="http://subsonic.org/restapi" status="ok" version="1.12.0">
-</subsonic-response>
-```
+成功/失败状态

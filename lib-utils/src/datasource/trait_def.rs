@@ -265,4 +265,20 @@ pub trait MusicDataSource: Send + Sync {
     /// # 返回
     /// * `Ok(())` - 保存成功
     async fn save_play_queue(&self, song_ids: Vec<String>, current_song_id: Option<String>, position: Option<u64>) -> Result<()>;
+
+    /// 记录播放历史
+    ///
+    /// # 参数
+    /// * `song_id` - 歌曲 ID
+    /// * `submission` - true 为提交播放，false 为正在播放（默认 true）
+    /// * `timestamp` - Unix 时间戳（毫秒），None 表示当前时间
+    ///
+    /// # 返回
+    /// * `Ok(())` - 记录成功
+    async fn scrobble(
+        &self,
+        song_id: &str,
+        submission: Option<bool>,
+        timestamp: Option<u64>,
+    ) -> Result<()>;
 }

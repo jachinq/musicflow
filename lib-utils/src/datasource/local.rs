@@ -677,4 +677,19 @@ impl MusicDataSource for LocalDataSource {
         service::add_play_list(1, &play_lists)?;
         Ok(())
     }
+
+    async fn scrobble(
+        &self,
+        song_id: &str,
+        submission: Option<bool>,
+        timestamp: Option<u64>,
+    ) -> Result<()> {
+        // 本地模式暂时不实现播放历史记录功能
+        // 记录日志以便后续扩展
+        log::log_info(&format!(
+            "Scrobble called for song_id={}, submission={:?}, timestamp={:?}",
+            song_id, submission, timestamp
+        ));
+        Ok(())
+    }
 }

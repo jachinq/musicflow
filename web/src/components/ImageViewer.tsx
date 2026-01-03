@@ -60,7 +60,7 @@ export const ImageViewer = ({ src, alt, onClose }: ImageViewerProps) => {
       <img
         src={src}
         alt={alt}
-        className={`max-w-[90vw] max-h-[90vh] object-contain transition-all duration-300 ${
+        className={`rounded-lg max-w-[90vw] max-h-[90vh] object-contain transition-all duration-300 ${
           isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"
         }`}
         onClick={(e) => e.stopPropagation()}
