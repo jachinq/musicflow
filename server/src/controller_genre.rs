@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use lib_utils::database::service;
 use serde::{Deserialize, Serialize};
 
-use crate::{AppState, JsonResult, MetadataVo};
+use crate::{AppState, JsonResult, MetadataVo, adapters};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Genre {
@@ -62,12 +62,11 @@ pub async fn handle_add_song_genre(
     let genre = info.genre.clone();
 
     // 本地模式:使用数据库服务修改
-    let metadata = service::get_metadata_by_id(&song_id);
-    if let Ok(Some(_)) = metadata {
-    } else {
+    let metadata = app_state.data_source.get_metadata(&song_id).await;
+    if metadata.is_err() {
         return HttpResponse::Ok().json(JsonResult::<()>::error("歌曲不存在"));
     }
-    let song = metadata.unwrap().unwrap();
+    let song = metadata.unwrap();
 
     let mut genres = song.split_genre();
     if genres.iter().find(|g| *g == &genre).is_some() {
@@ -80,9 +79,8 @@ pub async fn handle_add_song_genre(
     let exist_tags = service::set_metadata_genre(&new_genres, &song_id);
     if let Ok(_) = exist_tags {
         // 操作完后,拿到新的歌曲风格
-        if let Ok(Some(m)) = service::get_metadata_by_id(&song_id) {
-            let vo = MetadataVo::from(&m);
-            return HttpResponse::Ok().json(JsonResult::success(vo));
+        if let Ok(m) = app_state.data_source.get_metadata(&song_id).await {
+            return HttpResponse::Ok().json(JsonResult::success(adapters::unified_to_vo(m)));
         } else {
             return HttpResponse::Ok().json(JsonResult::<MetadataVo>::error("添加风格失败"));
         }
@@ -105,12 +103,11 @@ pub async fn handle_delete_song_genre(
     let (song_id, genre) = path.into_inner();
 
     // 本地模式:使用数据库服务修改
-    let metadata = service::get_metadata_by_id(&song_id);
-    if let Ok(Some(_)) = metadata {
-    } else {
+    let metadata = app_state.data_source.get_metadata(&song_id).await;
+    if metadata.is_err() {
         return HttpResponse::Ok().json(JsonResult::<()>::error("歌曲不存在"));
     }
-    let song = metadata.unwrap().unwrap();
+    let song = metadata.unwrap();
 
     let mut genres = song.split_genre();
     if !genres.contains(&genre) {
@@ -122,9 +119,8 @@ pub async fn handle_delete_song_genre(
     }
     let new_genres = genres.join(",");
     if let Ok(_) = service::set_metadata_genre(&new_genres, &song_id) {
-        if let Ok(Some(m)) = service::get_metadata_by_id(&song_id) {
-            let vo = MetadataVo::from(&m);
-            return HttpResponse::Ok().json(JsonResult::success(vo));
+        if let Ok(m) = app_state.data_source.get_metadata(&song_id).await {
+            return HttpResponse::Ok().json(JsonResult::success(adapters::unified_to_vo(m)));
         } else {
             return HttpResponse::Ok().json(JsonResult::<MetadataVo>::error("风格删除失败"));
         }

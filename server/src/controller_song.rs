@@ -3,12 +3,11 @@ use base64::Engine;
 use lib_utils::{
     config::get_config,
     database::service::{self, Metadata},
-    datasource::{CoverSize, types::MetadataFilter},
+    datasource::{types::MetadataFilter, CoverSize},
     log::log_err,
     readmeta,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::{adapters, AppState, JsonResult};
 
@@ -39,93 +38,6 @@ pub struct MetadataVo {
     pub album_id: String,
     pub artist_id: String,
     pub cover_art: String,
-}
-
-pub trait IntoVec<T> {
-    fn into_vec(&self) -> Vec<T>;
-}
-impl IntoVec<MetadataVo> for Vec<Metadata> {
-    fn into_vec(&self) -> Vec<MetadataVo> {
-        if self.len() == 0 {
-            return vec![];
-        }
-        let ids = self.iter().map(|m| m.id.clone()).collect::<Vec<_>>();
-
-        let album_songs = service::album_song_by_song_ids(&ids);
-        let artist_songs = service::artist_song_by_song_ids(&ids);
-
-        let mut id_album_id_map = HashMap::new();
-        let mut id_artist_id_map = HashMap::new();
-
-        if let Ok(album_songs) = album_songs {
-            for album_song in album_songs {
-                id_album_id_map.insert(album_song.song_id.clone(), album_song.album_id.to_string());
-            }
-        } else {
-            log_err(&format!("album_songs error: {}", album_songs.unwrap_err()));
-        }
-
-        if let Ok(artist_songs) = artist_songs {
-            for artist_song in artist_songs {
-                id_artist_id_map.insert(
-                    artist_song.song_id.clone(),
-                    artist_song.artist_id.to_string(),
-                );
-            }
-        } else {
-            log_err(&format!(
-                "artist_songs error: {}",
-                artist_songs.unwrap_err()
-            ));
-        }
-
-        self.iter()
-            .map(|m| {
-                let mut vo = MetadataVo::convert(m);
-                vo.album_id = id_album_id_map.get(&vo.id).cloned().unwrap_or_default();
-                vo.artist_id = id_artist_id_map.get(&vo.id).cloned().unwrap_or_default();
-                vo
-            })
-            .collect::<Vec<_>>()
-    }
-}
-
-impl MetadataVo {
-    pub fn from(value: &Metadata) -> Self {
-        let list = vec![value.clone()];
-        let list = list.into_vec();
-        if list.len() == 0 {
-            return Self::default();
-        }
-        list.first().unwrap().clone()
-    }
-
-    pub fn convert(value: &Metadata) -> Self {
-        let mut vo = MetadataVo::default();
-        vo.id = value.id.to_string();
-        vo.file_name = value.file_name.clone();
-        vo.file_path = value.file_path.clone();
-        vo.file_url = value.file_url.clone();
-        vo.title = value.title.clone();
-        vo.artist = value.artist.clone();
-        vo.artists = value.split_artist();
-        vo.album = value.album.clone();
-        vo.year = value.year.clone();
-        vo.duration = value.duration.clone();
-        vo.bitrate = value.bitrate.clone();
-        vo.samplerate = value.samplerate.clone();
-        vo.genre = value.genre.clone();
-        vo.genres = value.split_genre();
-        vo.track = value.track.clone();
-        vo.disc = value.disc.clone();
-        vo.comment = value.comment.clone();
-        // let url = vo.file_url.replace("\\", "/");
-
-        let config = get_config();
-        let music_dir = config.music_dir.replace("\\", "/").clone();
-        vo.file_url = format!("/music{}", vo.file_path.replace(&music_dir, ""));
-        vo
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -161,19 +73,21 @@ pub async fn handle_get_metadatas(
     let mut metadata_list = result.unwrap();
     // println!("{:?} size={}", filter, metadata_list.len());
 
-    // 根据艺术家过滤 (仅本地模式)
-    if let Some(artist_ids) = &query.artist {
-        if !artist_ids.is_empty() {
-            let song_ids = get_song_id_by_artist_ids(artist_ids).await;
-            metadata_list.retain(|m| song_ids.contains(&m.id));
+    if app_state.config.is_local_mode() {
+        // 根据艺术家过滤 (仅本地模式)
+        if let Some(artist_ids) = &query.artist {
+            if !artist_ids.is_empty() {
+                let song_ids = get_song_id_by_artist_ids(artist_ids).await;
+                metadata_list.retain(|m| song_ids.contains(&m.id));
+            }
         }
-    }
 
-    // 根据专辑过滤 (仅本地模式)
-    if let Some(album_ids) = &query.album {
-        if !album_ids.is_empty() {
-            let song_ids = get_song_id_by_album_ids(album_ids).await;
-            metadata_list.retain(|m| song_ids.contains(&m.id));
+        // 根据专辑过滤 (仅本地模式)
+        if let Some(album_ids) = &query.album {
+            if !album_ids.is_empty() {
+                let song_ids = get_song_id_by_album_ids(album_ids).await;
+                metadata_list.retain(|m| song_ids.contains(&m.id));
+            }
         }
     }
 
@@ -271,7 +185,11 @@ pub async fn get_lyrics(
     HttpResponse::Ok().json(lyrics)
 }
 
-pub async fn del_lyrics(song_id: web::Path<String>) -> impl Responder {
+pub async fn del_lyrics(song_id: web::Path<String>, app_state: &AppState) -> impl Responder {
+    if !app_state.config.is_local_mode() {
+        return HttpResponse::Forbidden().json(JsonResult::<()>::error("仅本地模式下可删除歌词"));
+    }
+
     let lyrics = service::del_lyrics(&song_id);
 
     let lyrics = if let Ok(lyrics) = lyrics {
@@ -281,13 +199,15 @@ pub async fn del_lyrics(song_id: web::Path<String>) -> impl Responder {
         0
     };
 
-    if let Ok(Some(meta)) = service::get_metadata_by_id(&song_id) {
-        let config = get_config();
-        if let Err(e) = readmeta::read_metadata_into_db(&meta.file_path, &config.music_dir) {
-            return HttpResponse::Ok().json(JsonResult::<()>::error(&format!(
-                "删除成功，重新扫描时出错:{}",
-                &e.to_string()
-            )));
+    if let Ok(meta) = app_state.data_source.get_metadata(&song_id).await {
+        if let Some(file_path) = meta.file_path {
+            let config = get_config();
+            if let Err(e) = readmeta::read_metadata_into_db(&file_path, &config.music_dir) {
+                return HttpResponse::Ok().json(JsonResult::<()>::error(&format!(
+                    "删除成功，重新扫描时出错:{}",
+                    &e.to_string()
+                )));
+            }
         }
     }
     HttpResponse::Ok().json(JsonResult::success(lyrics))
@@ -374,8 +294,7 @@ pub async fn handle_get_random_songs(
         }
         Err(e) => {
             log_err(&format!("get_random_songs error: {}", e));
-            HttpResponse::InternalServerError()
-                .json(JsonResult::<ListMusic>::error(&e.to_string()))
+            HttpResponse::InternalServerError().json(JsonResult::<ListMusic>::error(&e.to_string()))
         }
     }
 }
