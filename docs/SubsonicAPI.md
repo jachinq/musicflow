@@ -1,25 +1,43 @@
-## getRandomSongs
+# getPlayQueue
 
-url: `http://your-server/rest/getRandomSongs`
+返回当前用户的播放队列状态（由 savePlayQueue 设置）。播放队列中包含的歌曲、当前播放的歌曲以及当前歌曲中的位置。通常用于允许用户在不同的客户端/应用之间切换，同时保留播放队列（例如在听音乐书时）。
 
-Returns random songs matching the given criteria.
+API: `/rest/getPlayQueue`
 
-| Parameter | Required | Default | Comment |
-|---|---|---|---|
-| size | No | 10 | The maximum number of songs to return. Max 500. |
-| genre | No | | Only returns songs belonging to this genre. |
-| fromYear | No | | Only return songs published after or in this year. |
-| toYear | No | | Only return songs published before or in this year. |
-| musicFolderId | No | | Only return songs in the music folder with the given ID. See getMusicFolders. |
+**参数：**
 
+无
 
-Returns a <subsonic-response> element with a nested <randomSongs> element on success. Example.
+**响应：**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<subsonic-response xmlns="http://subsonic.org/restapi" status="ok" version="1.12.0">
+  <playQueue current="133" position="45000" username="admin" changed="2015-02-18T15:22:22.825Z" changedBy="android">
+    <entry id="132" parent="131" isDir="false" title="These Are Days" album="MTV Unplugged" artist="10,000 Maniacs" track="1" year="1993" genre="Soft Rock" coverArt="131" size="5872262" contentType="audio/mpeg" suffix="mp3" duration="293" bitRate="160" path="10,000 Maniacs/MTV Unplugged/01 - These Are Days.mp3" isVideo="false" created="2004-10-25T20:36:03.000Z" albumId="0" artistId="0" type="music"/>
+    <entry id="133" parent="131" isDir="false" title="Eat For Two" album="MTV Unplugged" artist="10,000 Maniacs" track="2" year="1993" genre="Soft Rock" coverArt="131" size="5253248" contentType="audio/mpeg" suffix="mp3" duration="262" bitRate="160" path="10,000 Maniacs/MTV Unplugged/02 - Eat For Two.mp3" isVideo="false" created="2004-10-25T20:36:06.000Z" albumId="0" artistId="0" type="music"/>
+  </playQueue>
+</subsonic-response>
+```
+
+# savePlayQueue
+
+保存当前用户播放队列的状态。这包括播放队列中的音乐，当前正在播放的音乐，以及当前音乐中的位置。通常用于允许用户在不同的客户端/应用之间切换，同时保留播放队列的状态（例如，在听音乐时）。
+
+API: `/rest/savePlayQueue.view`
+
+**参数：**
+| 参数 | 必需 | 类型 | 描述 |
+|------|------|------|------|
+| `id` | 是 | 字符串 | 歌曲id，支持多个id参数 |
+| `current` | 否 | 字符串 | 当前播放歌曲id |
+| `position` | 否 | 字符串 | 当前播放歌曲位置 |
+
+**响应：**
+
+返回空的响应数据，status = ok 表示保存成功，否则表示失败。
 
 ```xml
-<subsonic-response xmlns="http://subsonic.org/restapi" status="ok" version="1.4.0">
-  <randomSongs>
-    <song id="111" parent="11" title="Dancing Queen" isDir="false" album="Arrival" artist="ABBA" track="7" year="1978" genre="Pop" coverArt="24" size="8421341" contentType="audio/mpeg" suffix="mp3" duration="146" bitRate="128" path="ABBA/Arrival/Dancing Queen.mp3"/>
-    <song id="112" parent="11" title="Money, Money, Money" isDir="false" album="Arrival" artist="ABBA" track="7" year="1978" genre="Pop" coverArt="25" size="4910028" contentType="audio/flac" suffix="flac" transcodedContentType="audio/mpeg" transcodedSuffix="mp3" duration="208" bitRate="128" path="ABBA/Arrival/Money, Money, Money.mp3"/>
-  </randomSongs>
+<?xml version="1.0" encoding="UTF-8"?>
+<subsonic-response xmlns="http://subsonic.org/restapi" status="ok" version="1.12.0">
 </subsonic-response>
 ```

@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use lib_utils::{
     config::get_config,
-    database::service::{self, Metadata},
+    database::service,
     datasource::{types::MetadataFilter, CoverSize},
     log::log_err,
     readmeta,
@@ -185,7 +185,7 @@ pub async fn get_lyrics(
     HttpResponse::Ok().json(lyrics)
 }
 
-pub async fn del_lyrics(song_id: web::Path<String>, app_state: &AppState) -> impl Responder {
+pub async fn del_lyrics(song_id: web::Path<String>, app_state: web::Data<AppState>) -> impl Responder {
     if !app_state.config.is_local_mode() {
         return HttpResponse::Forbidden().json(JsonResult::<()>::error("仅本地模式下可删除歌词"));
     }
