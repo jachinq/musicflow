@@ -219,6 +219,85 @@ async fn main() {
         Err(e) => println!("   ✗ 搜索失败: {}", e),
     }
 
+    // 10. 测试播放队列
+    println!("\n10. 测试播放队列功能...");
+
+    // 先尝试获取现有播放队列
+    println!("\n   a) 获取播放队列 (getPlayQueue)...");
+    match client.get_play_queue().await {
+        Ok(Some(queue)) => {
+            println!("   ✓ 播放队列已存在");
+            println!("     - 歌曲数量: {}", queue.entry.as_ref().map(|e| e.len()).unwrap_or(0));
+            if let Some(current) = &queue.current {
+                println!("     - 当前播放: {}", current);
+            }
+            if let Some(pos) = queue.position {
+                println!("     - 播放位置: {} 毫秒", pos);
+            }
+        }
+        Ok(None) => println!("   - 播放队列为空"),
+        Err(e) => println!("   ✗ 获取失败: {}", e),
+    }
+
+    // 如果有专辑数据，尝试保存播放队列
+    match client.get_album_list2("newest", 1, 0).await {
+        Ok(albums) if !albums.is_empty() => {
+            if let Some(first_album) = albums.first() {
+                match client.get_album(&first_album.id).await {
+                    Ok(album) => {
+                        if let Some(songs) = &album.song {
+                            if songs.len() >= 3 {
+                                println!("\n   b) 保存播放队列 (savePlayQueue)...");
+
+                                // 取前 3 首歌曲
+                                let song_ids: Vec<String> = songs
+                                    .iter()
+                                    .take(3)
+                                    .map(|s| s.id.clone())
+                                    .collect();
+
+                                let current = Some(song_ids[0].as_str());
+                                let position = Some(5000u64); // 5 秒位置
+
+                                match client.save_play_queue(&song_ids, current, position).await {
+                                    Ok(()) => {
+                                        println!("   ✓ 播放队列保存成功");
+                                        println!("     - 保存了 {} 首歌曲", song_ids.len());
+                                        println!("     - 当前播放: {}", song_ids[0]);
+                                        println!("     - 播放位置: 5000 毫秒");
+
+                                        // 再次获取验证
+                                        println!("\n   c) 验证保存结果...");
+                                        match client.get_play_queue().await {
+                                            Ok(Some(queue)) => {
+                                                println!("   ✓ 验证成功");
+                                                let saved_count = queue.entry.as_ref().map(|e| e.len()).unwrap_or(0);
+                                                println!("     - 队列中歌曲数: {}", saved_count);
+                                                if let Some(curr) = &queue.current {
+                                                    println!("     - 当前播放: {}", curr);
+                                                }
+                                                if let Some(pos) = queue.position {
+                                                    println!("     - 播放位置: {} 毫秒", pos);
+                                                }
+                                            }
+                                            Ok(None) => println!("   ✗ 验证失败: 播放队列为空"),
+                                            Err(e) => println!("   ✗ 验证失败: {}", e),
+                                        }
+                                    }
+                                    Err(e) => println!("   ✗ 保存失败: {}", e),
+                                }
+                            } else {
+                                println!("   - 跳过保存测试: 专辑歌曲数不足 3 首");
+                            }
+                        }
+                    }
+                    Err(e) => println!("   ✗ 获取专辑失败: {}", e),
+                }
+            }
+        }
+        _ => println!("   - 跳过保存测试: 没有可用的专辑数据"),
+    }
+
     println!("\n=== 测试完成 ===");
     // println!("\n提示:");
     // println!("  可通过环境变量配置:");

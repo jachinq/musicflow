@@ -515,4 +515,38 @@ impl MusicDataSource for SubsonicDataSource {
     async fn delete_playlist(&self, playlist_id: &str) -> Result<()> {
         self.client.delete_playlist(playlist_id).await
     }
+
+    async fn get_play_queue(&self) -> Result<Option<PlayQueueInfo>> {
+        let queue = self.client.get_play_queue().await?;
+
+        if let Some(q) = queue {
+            // 提取歌曲 ID 列表
+            let song_ids = q
+                .entry
+                .unwrap_or_default()
+                .into_iter()
+                .map(|s| s.id)
+                .collect();
+
+            Ok(Some(PlayQueueInfo {
+                song_ids,
+                current_song_id: q.current,
+                position: q.position,
+                changed: q.changed,
+                changed_by: q.changed_by,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn save_play_queue(&self, queue: &PlayQueueInfo) -> Result<()> {
+        self.client
+            .save_play_queue(
+                &queue.song_ids,
+                queue.current_song_id.as_deref(),
+                queue.position,
+            )
+            .await
+    }
 }

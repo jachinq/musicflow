@@ -249,4 +249,20 @@ pub trait MusicDataSource: Send + Sync {
     /// # 返回
     /// * `Ok(())` - 删除成功
     async fn delete_playlist(&self, playlist_id: &str) -> Result<()>;
+
+    /// 获取播放队列（用于跨客户端同步）
+    ///
+    /// # 返回
+    /// * `Ok(Some(PlayQueueInfo))` - 播放队列信息
+    /// * `Ok(None)` - 没有播放队列
+    async fn get_play_queue(&self) -> Result<Option<PlayQueueInfo>>;
+
+    /// 保存播放队列（用于跨客户端同步）
+    ///
+    /// # 参数
+    /// * `queue` - 播放队列信息
+    ///
+    /// # 返回
+    /// * `Ok(())` - 保存成功
+    async fn save_play_queue(&self, queue: &PlayQueueInfo) -> Result<()>;
 }

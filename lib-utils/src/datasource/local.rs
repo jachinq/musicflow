@@ -600,4 +600,59 @@ impl MusicDataSource for LocalDataSource {
         service::delete_song_list(playlist_id_i64)?;
         Ok(())
     }
+
+    async fn get_play_queue(&self) -> Result<Option<PlayQueueInfo>> {
+        // 从本地数据库获取播放队列（默认 user_id = 1）
+        let play_list = service::get_play_list(1)?;
+
+        if play_list.is_empty() {
+            return Ok(None);
+        }
+
+        // 提取歌曲 ID 列表
+        let song_ids: Vec<String> = play_list.iter().map(|pl| pl.song_id.clone()).collect();
+
+        // 查找当前播放的歌曲（status = 1）
+        let current_entry = play_list.iter().find(|pl| pl.status == 1);
+        let current_song_id = current_entry.map(|pl| pl.song_id.clone());
+        let position = current_entry.map(|pl| pl.offset as u64);
+
+        Ok(Some(PlayQueueInfo {
+            song_ids,
+            current_song_id,
+            position,
+            changed: None,
+            changed_by: Some("MusicFlow".to_string()),
+        }))
+    }
+
+    async fn save_play_queue(&self, queue: &PlayQueueInfo) -> Result<()> {
+        // 将 PlayQueueInfo 转换为数据库 PlayList 格式
+        let play_lists: Vec<service::PlayList> = queue
+            .song_ids
+            .iter()
+            .map(|song_id| {
+                let is_current = queue
+                    .current_song_id
+                    .as_ref()
+                    .map(|id| id == song_id)
+                    .unwrap_or(false);
+
+                service::PlayList {
+                    user_id: 1,
+                    song_id: song_id.clone(),
+                    status: if is_current { 1 } else { 0 },
+                    offset: if is_current {
+                        queue.position.unwrap_or(0) as i64
+                    } else {
+                        0
+                    },
+                }
+            })
+            .collect();
+
+        // 保存到数据库（会先清空旧数据）
+        service::add_play_list(1, &play_lists)?;
+        Ok(())
+    }
 }

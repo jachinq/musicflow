@@ -279,6 +279,21 @@ pub struct PlaylistDetail {
     pub songs: Vec<UnifiedMetadata>,
 }
 
+/// 播放队列信息（用于跨客户端同步）
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PlayQueueInfo {
+    /// 播放队列中的歌曲 ID 列表
+    pub song_ids: Vec<String>,
+    /// 当前播放的歌曲 ID
+    pub current_song_id: Option<String>,
+    /// 当前播放位置（毫秒）
+    pub position: Option<u64>,
+    /// 最后修改时间
+    pub changed: Option<String>,
+    /// 修改客户端
+    pub changed_by: Option<String>,
+}
+
 impl UnifiedMetadata {
     /// 分割 genre 字符串为列表
     /// 本地模式使用逗号分隔,Subsonic 也使用逗号分隔
