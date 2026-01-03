@@ -20,3 +20,4 @@ config/config.json
 *.flac
 *.db
 *.log
+todo.md
