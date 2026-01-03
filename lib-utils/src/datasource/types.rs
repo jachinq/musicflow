@@ -282,16 +282,12 @@ pub struct PlaylistDetail {
 /// 播放队列信息（用于跨客户端同步）
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PlayQueueInfo {
-    /// 播放队列中的歌曲 ID 列表
-    pub song_ids: Vec<String>,
-    /// 当前播放的歌曲 ID
-    pub current_song_id: Option<String>,
+    /// 歌曲详情
+    pub songs: Vec<UnifiedMetadata>,
+    /// 当前播放的歌曲
+    pub current_song: Option<UnifiedMetadata>,
     /// 当前播放位置（毫秒）
     pub position: Option<u64>,
-    /// 最后修改时间
-    pub changed: Option<String>,
-    /// 修改客户端
-    pub changed_by: Option<String>,
 }
 
 impl UnifiedMetadata {

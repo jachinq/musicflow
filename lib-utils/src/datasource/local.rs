@@ -1,17 +1,17 @@
 // 本地文件数据源实现
 // 封装现有的本地文件系统访问逻辑
 
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
 use crate::config::get_config;
-use crate::{database, log, readmeta};
 use crate::database::service;
 use crate::datasource::trait_def::MusicDataSource;
 use crate::datasource::types::*;
+use crate::{database, log, readmeta};
 
 /// 本地文件数据源
 pub struct LocalDataSource {
@@ -124,7 +124,9 @@ impl MusicDataSource for LocalDataSource {
             .unwrap_or_else(|_| link_id.parse::<i64>().unwrap_or(0));
 
         if link_id.len() > 150 {
-            let url = base64::engine::general_purpose::STANDARD.decode(link_id.to_string()).unwrap_or_default();
+            let url = base64::engine::general_purpose::STANDARD
+                .decode(link_id.to_string())
+                .unwrap_or_default();
             let url = String::from_utf8(url).unwrap_or_default();
             // println!("url={:?}", url);
             if url.is_empty() {
@@ -430,9 +432,15 @@ impl MusicDataSource for LocalDataSource {
         })
     }
 
-    async fn stream_song(&self, _song_id: &str, _range: Option<String>) -> Result<reqwest::Response> {
+    async fn stream_song(
+        &self,
+        _song_id: &str,
+        _range: Option<String>,
+    ) -> Result<reqwest::Response> {
         // 本地数据源不支持流式传输,应该使用静态文件服务
-        Err(anyhow::anyhow!("Local data source does not support streaming. Use file_url instead."))
+        Err(anyhow::anyhow!(
+            "Local data source does not support streaming. Use file_url instead."
+        ))
     }
 
     async fn list_playlists(&self) -> Result<Vec<PlaylistInfo>> {
@@ -617,23 +625,37 @@ impl MusicDataSource for LocalDataSource {
         let current_song_id = current_entry.map(|pl| pl.song_id.clone());
         let position = current_entry.map(|pl| pl.offset as u64);
 
+        let mut current_song = None;
+        let mut metalist = Vec::new();
+        for id in song_ids {
+            if let Ok(metadata) = self.get_metadata(&id).await {
+                if let Some(current_id) = &current_song_id {
+                    if metadata.id.eq(current_id) {
+                        current_song = Some(metadata.clone());
+                    }
+                }
+                metalist.push(metadata);
+            }
+        }
+
         Ok(Some(PlayQueueInfo {
-            song_ids,
-            current_song_id,
+            songs: metalist,
+            current_song,
             position,
-            changed: None,
-            changed_by: Some("MusicFlow".to_string()),
         }))
     }
 
-    async fn save_play_queue(&self, queue: &PlayQueueInfo) -> Result<()> {
+    async fn save_play_queue(
+        &self,
+        song_ids: Vec<String>,
+        current_song_id: Option<String>,
+        position: Option<u64>,
+    ) -> Result<()> {
         // 将 PlayQueueInfo 转换为数据库 PlayList 格式
-        let play_lists: Vec<service::PlayList> = queue
-            .song_ids
+        let play_lists: Vec<service::PlayList> = song_ids
             .iter()
             .map(|song_id| {
-                let is_current = queue
-                    .current_song_id
+                let is_current = current_song_id
                     .as_ref()
                     .map(|id| id == song_id)
                     .unwrap_or(false);
@@ -643,7 +665,7 @@ impl MusicDataSource for LocalDataSource {
                     song_id: song_id.clone(),
                     status: if is_current { 1 } else { 0 },
                     offset: if is_current {
-                        queue.position.unwrap_or(0) as i64
+                        position.unwrap_or(0) as i64
                     } else {
                         0
                     },

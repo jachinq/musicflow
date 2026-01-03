@@ -5,7 +5,7 @@ import { MyRoutes } from "../lib/defined";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { usePlaylist } from "../store/playlist";
-import { getPlayList } from "../lib/api";
+import { getPlayQueue } from "../lib/api";
 import { SearchInput } from "./SearchInput";
 
 export const Header = () => {
@@ -31,7 +31,7 @@ export const Header = () => {
 
   useEffect(() => {
     // 获取播放列表
-    getPlayList(1, 0, (data) => {
+    getPlayQueue(1, 0, (data) => {
       if (!data || !data.success) {
         console.error("获取播放列表失败", data);
         return;

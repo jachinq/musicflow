@@ -264,5 +264,5 @@ pub trait MusicDataSource: Send + Sync {
     ///
     /// # 返回
     /// * `Ok(())` - 保存成功
-    async fn save_play_queue(&self, queue: &PlayQueueInfo) -> Result<()>;
+    async fn save_play_queue(&self, song_ids: Vec<String>, current_song_id: Option<String>, position: Option<u64>) -> Result<()>;
 }

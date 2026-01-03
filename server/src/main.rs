@@ -42,6 +42,7 @@ use controller_user::*;
 // 应用状态
 #[derive(Clone)]
 struct AppState {
+    config: lib_utils::config::Config,
     web_path: String,
     music_path: String,
     data_source: Arc<dyn MusicDataSource>,
@@ -53,18 +54,20 @@ async fn main() -> io::Result<()> {
     std::env::set_var("RUST_LOG", "info");
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
-    // 初始化数据库
-    let result = table::init();
-    if result.is_err() {
-        let _ = log::log_err(&format!("init table error: {}", result.err().unwrap()));
-        return Err(io::Error::new(io::ErrorKind::Other, "init table error"));
-    }
-
     // 读取配置文件信息
     let config = get_config();
     let web_dir = config.web_dir.clone();
     let ip = config.ip.clone();
     let port = config.port.clone();
+
+    if config.is_local_mode() {
+        // 本地模式，初始化数据库
+        let result = table::init();
+        if result.is_err() {
+            let _ = log::log_err(&format!("init table error: {}", result.err().unwrap()));
+            return Err(io::Error::new(io::ErrorKind::Other, "init table error"));
+        }
+    }
 
     // 创建数据源
     let data_source = create_data_source(&config);
@@ -89,6 +92,7 @@ async fn main() -> io::Result<()> {
 
         // 创建应用状态
         let app_state = web::Data::new(AppState {
+            config: config.clone(),
             web_path: web_dir.to_string(),
             music_path: music_path.to_string(),
             data_source: data_source.clone(),
@@ -149,10 +153,9 @@ async fn main() -> io::Result<()> {
             .route("/api/update_user", put().to(handle_update_user))
             .route("/api/change_password", post().to(handle_change_password))
 
-            // 播放列表相关接口
-            .route("/api/playlist", post().to(handle_get_playlist))
-            .route("/api/add_playlist", post().to(handle_add_playlist))
-            .route("/api/set_playlist/{song_id}", put().to(handle_set_current))
+            // 播放队列相关接口
+            .route("/api/getPlayQue", post().to(handle_get_play_queue))
+            .route("/api/savePlayQueue", post().to(handle_save_play_queue))
 
             // 工具相关接口
             .route("/api/log", post().to(frontend_log))

@@ -201,40 +201,33 @@ export const getSongsByGenre = (
   fetchUtils(url, onSuccess, onError);
 };
 
-// ----- 播放列表相关接口 -----//
-export const getPlayList = (
+// ----- 播放队列相关接口 -----//
+export const getPlayQueue = (
   page: number,
   size: number,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/playlist`;
+  const url = `${API_URL}/api/getPlayQue`;
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
     body: JSON.stringify({ page, size }),
   });
 };
 
-export const addPlayList = (
+export const savePlayQueue = (
   song_ids: String[],
+  current_id: String,
+  position: number,
   onSuccess: (data: any) => void,
   onError: (error: any) => void
 ) => {
-  const url = `${API_URL}/api/add_playlist`;
+  const url = `${API_URL}/api/savePlayQueue`;
   fetchUtils(url, onSuccess, onError, {
     method: "POST",
-    body: JSON.stringify({ song_ids }),
+    body: JSON.stringify({ song_ids, current_id, position }),
   });
 };
-export const setPlaylist = (
-  song_id: String,
-  onSuccess: (data: any) => void,
-  onError: (error: any) => void
-) => {
-  const url = `${API_URL}/api/set_playlist/${song_id}`;
-  fetchUtils(url, onSuccess, onError, { method: "PUT" });
-};
-
 
 
 // ----- songList 相关接口 -----//

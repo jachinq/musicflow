@@ -16,6 +16,17 @@ pub struct Config {
     pub data_source: DataSourceConfig,
 }
 
+impl Config {
+    pub fn is_local_mode(&self) -> bool {
+        self.data_source.mode == "local"
+    }
+
+    pub fn is_subsonic_mode(&self) -> bool {
+        self.data_source.mode == "subsonic"
+    }
+    
+}
+
 /// 数据源配置
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DataSourceConfig {

@@ -127,7 +127,7 @@ impl MusicDataSource for SubsonicDataSource {
         if response.status() != 200 {
             return Err(anyhow::anyhow!("Failed to download cover art"));
         }
-        
+
         let bytes = response.bytes().await?;
 
         Ok(bytes.to_vec())
@@ -282,8 +282,7 @@ impl MusicDataSource for SubsonicDataSource {
 
     async fn get_genre_songs(&self, genre: &str) -> Result<Vec<UnifiedMetadata>> {
         let songs = self.client.get_genre_songs(genre).await?;
-        let mut metadata_list: Vec<UnifiedMetadata> =
-            songs.into_iter().map(|s| s.into()).collect();
+        let mut metadata_list: Vec<UnifiedMetadata> = songs.into_iter().map(|s| s.into()).collect();
 
         // 为每个歌曲设置流式 URL
         for meta in &mut metadata_list {
@@ -520,33 +519,44 @@ impl MusicDataSource for SubsonicDataSource {
         let queue = self.client.get_play_queue().await?;
 
         if let Some(q) = queue {
-            // 提取歌曲 ID 列表
-            let song_ids = q
-                .entry
-                .unwrap_or_default()
-                .into_iter()
-                .map(|s| s.id)
-                .collect();
+            let mut current_song = None;
+            let mut metadata_list: Vec<UnifiedMetadata> = vec![];
+            if let Some(entry) = q.entry {
+                metadata_list = entry
+                    .into_iter()
+                    .map(|s| {
+                        let mut meta: UnifiedMetadata = s.into();
+                        meta.stream_url = Some(self.client.get_stream_url(
+                            &meta.id,
+                            self.max_bitrate,
+                            &self.prefer_format,
+                        ));
 
+                        if Some(meta.id.clone()).eq(&q.current) {
+                            current_song = Some(meta.clone());
+                        }
+                        meta
+                    })
+                    .collect();
+            }
             Ok(Some(PlayQueueInfo {
-                song_ids,
-                current_song_id: q.current,
+                songs: metadata_list,
+                current_song,
                 position: q.position,
-                changed: q.changed,
-                changed_by: q.changed_by,
             }))
         } else {
             Ok(None)
         }
     }
 
-    async fn save_play_queue(&self, queue: &PlayQueueInfo) -> Result<()> {
+    async fn save_play_queue(
+        &self,
+        song_ids: Vec<String>,
+        current_song_id: Option<String>,
+        position: Option<u64>,
+    ) -> Result<()> {
         self.client
-            .save_play_queue(
-                &queue.song_ids,
-                queue.current_song_id.as_deref(),
-                queue.position,
-            )
+            .save_play_queue(&song_ids, current_song_id.as_deref(), position)
             .await
     }
 }
