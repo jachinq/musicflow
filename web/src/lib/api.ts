@@ -477,3 +477,33 @@ export const searchAll = (
   const url = `${API_URL}/api/search?q=${encodeURIComponent(keyword)}&page=${page}&page_size=${pageSize}`;
   fetchUtils(url, onSuccess, onError, { method: "GET" });
 };
+
+/**
+ * 记录播放历史
+ * @param song_id 歌曲 ID
+ * @param submission true=已播放，false=正在播放（默认 true）
+ * @param timestamp Unix 时间戳（毫秒），可选
+ * @param onSuccess 成功回调
+ * @param onError 失败回调
+ */
+export const scrobble = (
+  song_id: string,
+  submission?: boolean,
+  timestamp?: number,
+  onSuccess?: (data: JsonResult<any>) => void,
+  onError?: (error: any) => void
+) => {
+  const url = `${API_URL}/api/scrobble`;
+  const body: any = { song_id };
+  if (submission !== undefined) {
+    body.submission = submission;
+  }
+  if (timestamp !== undefined) {
+    body.timestamp = timestamp;
+  }
+
+  fetchUtils(url, onSuccess || (() => {}), onError || (() => {}), {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+};

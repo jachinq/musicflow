@@ -298,3 +298,41 @@ pub async fn handle_get_random_songs(
         }
     }
 }
+
+/// Scrobble 请求参数
+#[derive(Debug, Deserialize)]
+pub struct ScrobbleRequest {
+    pub song_id: String,
+    #[serde(default)]
+    pub submission: Option<bool>,
+    #[serde(default)]
+    pub timestamp: Option<u64>,
+}
+
+/// 记录播放历史
+///
+/// 路由: POST /api/scrobble
+///
+/// 请求参数:
+/// - song_id: 歌曲 ID（必需）
+/// - submission: true=已播放，false=正在播放（可选，默认 true）
+/// - timestamp: Unix 时间戳（毫秒）（可选）
+///
+/// 返回: 成功/失败状态
+pub async fn handle_scrobble(
+    app_state: web::Data<AppState>,
+    req: web::Json<ScrobbleRequest>,
+) -> impl Responder {
+    let result = app_state
+        .data_source
+        .scrobble(&req.song_id, req.submission, req.timestamp)
+        .await;
+
+    match result {
+        Ok(()) => HttpResponse::Ok().json(JsonResult::success(())),
+        Err(e) => {
+            log_err(&format!("scrobble error: {}", e));
+            HttpResponse::Ok().json(JsonResult::<()>::error(&e.to_string()))
+        }
+    }
+}

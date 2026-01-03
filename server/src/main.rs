@@ -107,6 +107,7 @@ async fn main() -> io::Result<()> {
             // 歌曲相关接口
             .route("/api/list", post().to(handle_get_metadatas))
             .route("/api/single/{song_id}", get().to(handle_get_metadata))
+            .route("/api/scrobble", post().to(handle_scrobble))
             .route("/api/random_songs", get().to(handle_get_random_songs))
             .route("/api/stream/{song_id}", get().to(stream_song))
             .route("/api/cover/small/{song_id}", get().to(get_cover_small))

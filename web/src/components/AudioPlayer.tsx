@@ -22,6 +22,7 @@ import {
 } from "../hooks/use-global-keyboard-shortcuts";
 import { useSettingStore } from "../store/setting";
 import { mediaSessionManager } from "../lib/media-session";
+import { useScrobble } from "../hooks/use-scrobble";
 import "../styles/AudioPlayer.css";
 
 export const AudioPlayer = () => {
@@ -61,6 +62,9 @@ export const AudioPlayer = () => {
   const { play_mode } = useSettingStore();
 
   const pendingTimeRef = useRef(0) // 记录用户拖动进度条时，播放器暂停时的 currentTime
+
+  // 集成播放历史记录（自动记录）
+  useScrobble(currentSong, currentTime, duration, isPlaying);
 
   // 初始化全局键盘监听
   useGlobalKeyboardShortcuts();
