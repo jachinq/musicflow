@@ -114,17 +114,10 @@ const Playlist = ({ clearPlaylist }: Props) => {
                   width={40}
                 />
                 {currentSong?.id === song.id && isPlaying && (
-                  <>
-                    <AudioLines
-                      size={22}
-                      className="absolute animate-pulse text-sidebar-ring z-50"
-                      style={{
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                      }}
-                    />
-                  </>
+                  <AudioLines size={22} 
+                    className="absolute animate-pulse text-sidebar-ring z-50"
+                    style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+                  />
                 )}
               </div>
               <div
