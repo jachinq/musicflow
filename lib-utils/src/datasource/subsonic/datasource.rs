@@ -183,7 +183,9 @@ impl MusicDataSource for SubsonicDataSource {
         &self,
         pagination: Pagination,
         filter_text: Option<String>,
+        list_type: Option<AlbumListType>,
     ) -> Result<Vec<AlbumInfo>> {
+        // 如果有搜索关键字，使用 search3 API
         if let Some(filter_text) = filter_text {
             let filter_text = filter_text.trim();
             if !filter_text.is_empty() {
@@ -192,17 +194,29 @@ impl MusicDataSource for SubsonicDataSource {
                     .search3(filter_text, pagination.start(), pagination.page_size)
                     .await?;
                 let albums = search_result.album.unwrap_or_default();
-                let all_albums: Vec<AlbumInfo> = albums.into_iter().map(|a| a.into()).collect();
-                return Ok(all_albums);
+                return Ok(albums.into_iter().map(|a| a.into()).collect());
             }
         }
+
+        // 使用 getAlbumList2 API
+        let album_type = list_type.unwrap_or_default();
+
+        // 提取 genre 和 year 参数
+        let (genre, from_year, to_year) = match &album_type {
+            AlbumListType::ByGenre { genre } => (Some(genre.as_str()), None, None),
+            AlbumListType::ByYear { from_year, to_year } => (None, *from_year, *to_year),
+            _ => (None, None, None),
+        };
 
         let albums = self
             .client
             .get_album_list2(
-                "alphabeticalByName",
+                album_type.to_subsonic_type(),
                 pagination.page_size,
                 pagination.start(),
+                genre,
+                from_year,
+                to_year,
             )
             .await?;
 

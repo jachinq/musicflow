@@ -12,7 +12,7 @@ import {
   getSongsByGenre,
   setArtistCover,
 } from "../lib/api";
-import { Album, Artist, Genre, JsonResult, Music, MyRoutes } from "../lib/defined";
+import { Album, Artist, Genre, GetAlbumList, JsonResult, Music, MyRoutes } from "../lib/defined";
 import { toast } from "sonner";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Input } from "../components/Input";
@@ -153,7 +153,9 @@ const WithDrawerList = ({ type }: { type: DrawerType }) => {
     let fetchFunc = undefined;
     switch (type) {
       case DrawerType.ALBUM:
-        fetchFunc = getAlbumList;
+        fetchFunc = (page: number, pageSize: number, filterText: string, onSuccess: (data: JsonResult<GetAlbumList>) => void,
+          onError: (error: any) => void) =>
+          getAlbumList(page, pageSize, filterText, undefined, onSuccess, onError);
         break;
       case DrawerType.ARTIST:
         fetchFunc = getArtistList;

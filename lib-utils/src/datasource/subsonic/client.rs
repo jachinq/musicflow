@@ -99,12 +99,27 @@ impl SubsonicClient {
         list_type: &str,
         size: usize,
         offset: usize,
+        genre: Option<&str>,
+        from_year: Option<u32>,
+        to_year: Option<u32>,
     ) -> Result<Vec<SubsonicAlbum>> {
-        let params = vec![
+        let mut params = vec![
             ("type", list_type.to_string()),
             ("size", size.to_string()),
             ("offset", offset.to_string()),
         ];
+
+        // 添加可选参数
+        if let Some(g) = genre {
+            params.push(("genre", g.to_string()));
+        }
+        if let Some(y) = from_year {
+            params.push(("fromYear", y.to_string()));
+        }
+        if let Some(y) = to_year {
+            params.push(("toYear", y.to_string()));
+        }
+
         let response: SubsonicResponse<AlbumList2Wrapper> =
             self.get("rest/getAlbumList2", params).await?;
 

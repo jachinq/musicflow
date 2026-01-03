@@ -183,7 +183,9 @@ impl MusicDataSource for LocalDataSource {
         &self,
         pagination: Pagination,
         filter_text: Option<String>,
+        _list_type: Option<AlbumListType>,
     ) -> Result<Vec<AlbumInfo>> {
+        // TODO: 未来实现本地数据源的排序逻辑
         let mut albums = service::get_album_list()?;
         if filter_text.is_some() {
             let filter_text_lower = filter_text.as_ref().unwrap().to_lowercase();

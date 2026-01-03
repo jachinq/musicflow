@@ -321,11 +321,21 @@ export const getAlbumList = (
   currentPage: number,
   pageSize: number,
   filterText: String,
+  listType: string | undefined,
   onSuccess: (data: JsonResult<GetAlbumList>) => void,
   onError: (error: any) => void
 ) => {
   const url = `${API_URL}/api/album`;
-  const params = { page: currentPage, page_size: pageSize, filter_text: filterText };
+  const params: any = {
+    page: currentPage,
+    page_size: pageSize,
+    filter_text: filterText,
+  };
+
+  if (listType) {
+    params.list_type = listType;
+  }
+
   // console.log("api/album", params);
   fetchUtils(url, onSuccess, onError, {
     method: "POST",

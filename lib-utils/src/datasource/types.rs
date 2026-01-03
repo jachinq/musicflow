@@ -309,3 +309,52 @@ pub fn split_genre(genre: &str) -> Vec<String> {
     }
     list
 }
+
+/// 专辑列表类型
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum AlbumListType {
+    /// 随机
+    Random,
+    /// 最新添加
+    Newest,
+    /// 评分最高
+    Highest,
+    /// 最常播放
+    Frequent,
+    /// 最近播放
+    Recent,
+    /// 已收藏
+    Starred,
+    /// 按流派
+    ByGenre { genre: String },
+    /// 按年份
+    ByYear {
+        from_year: Option<u32>,
+        to_year: Option<u32>,
+    },
+    /// 按字母排序（默认）
+    AlphabeticalByName,
+}
+
+impl AlbumListType {
+    /// 转换为 Subsonic API 的 type 字符串
+    pub fn to_subsonic_type(&self) -> &str {
+        match self {
+            AlbumListType::Random => "random",
+            AlbumListType::Newest => "newest",
+            AlbumListType::Highest => "highest",
+            AlbumListType::Frequent => "frequent",
+            AlbumListType::Recent => "recent",
+            AlbumListType::Starred => "starred",
+            AlbumListType::ByGenre { .. } => "byGenre",
+            AlbumListType::ByYear { .. } => "byYear",
+            AlbumListType::AlphabeticalByName => "alphabeticalByName",
+        }
+    }
+}
+
+impl Default for AlbumListType {
+    fn default() -> Self {
+        AlbumListType::AlphabeticalByName
+    }
+}

@@ -79,9 +79,19 @@ pub trait MusicDataSource: Send + Sync {
 
     /// 获取专辑列表
     ///
+    /// # 参数
+    /// * `pagination` - 分页信息
+    /// * `filter_text` - 搜索关键字
+    /// * `list_type` - 专辑列表类型（随机、最新、最常播放等）
+    ///
     /// # 返回
     /// * `Ok(Vec<AlbumInfo>)` - 专辑列表
-    async fn list_albums(&self, pagination: Pagination, filter_text: Option<String>) -> Result<Vec<AlbumInfo>>;
+    async fn list_albums(
+        &self,
+        pagination: Pagination,
+        filter_text: Option<String>,
+        list_type: Option<AlbumListType>,
+    ) -> Result<Vec<AlbumInfo>>;
 
     /// 根据ID获取专辑信息
     ///
