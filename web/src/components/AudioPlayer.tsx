@@ -123,7 +123,37 @@ export const AudioPlayer = () => {
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('loadstart', handleLoadStart);
 
+
+    // 注册 Media Session 事件处理器
+    mediaSessionManager.setActionHandlers({
+      onPlay: () => {
+        playAudio();
+      },
+      onPause: () => {
+        pauseAudio();
+      },
+      onPrevious: () => {
+        if (nextSongRef.current) {
+          nextSongRef.current(-1);
+        }
+      },
+      onNext: () => {
+        if (nextSongRef.current) {
+          nextSongRef.current(1);
+        }
+      },
+      onSeek: (time: number) => {
+        setCurrentTime(time);
+        isPlaying ? pauseAudio() : playAudio();
+      },
+    });
+
     return () => {
+
+      // 组件卸载时清理
+      mediaSessionManager.clear();
+
+      // 处理 audio 管理
       audio.pause();
       let src = audio.src;
       if (src) { // 释放资源
@@ -219,7 +249,8 @@ export const AudioPlayer = () => {
   useEffect(() => {
     if (!currentSong || !audioRef.current) {
       console.log("current song or audio element is null", currentSong, audioRef.current);
-      return};
+      return
+    };
 
     console.log("切换歌曲:", currentSong?.title);
 
