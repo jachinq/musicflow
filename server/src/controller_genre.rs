@@ -52,12 +52,10 @@ pub async fn handle_add_song_genre(
     info: web::Json<QueryAddTagToMusic>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
-    use lib_utils::datasource::types::DataSourceType;
-
     // 检查数据源类型,Subsonic 模式不支持修改 genre
-    if app_state.data_source.source_type() == DataSourceType::Subsonic {
+    if !app_state.config.is_local_mode() {
         return HttpResponse::Ok()
-            .json(JsonResult::<()>::error("Subsonic 模式不支持修改歌曲风格"));
+            .json(JsonResult::<()>::error("仅支持本地数据源模式修改歌曲风格"));
     }
 
     let song_id = info.song_id.clone();
@@ -98,12 +96,10 @@ pub async fn handle_delete_song_genre(
     path: web::Path<(String, String)>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
-    use lib_utils::datasource::types::DataSourceType;
-
     // 检查数据源类型,Subsonic 模式不支持修改 genre
-    if app_state.data_source.source_type() == DataSourceType::Subsonic {
+    if !app_state.config.is_local_mode() {
         return HttpResponse::Ok()
-            .json(JsonResult::<()>::error("Subsonic 模式不支持修改歌曲风格"));
+            .json(JsonResult::<()>::error("仅支持本地数据源模式删除歌曲风格"));
     }
 
     let (song_id, genre) = path.into_inner();

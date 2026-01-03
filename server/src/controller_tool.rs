@@ -1,17 +1,8 @@
 use actix_web::{web, HttpResponse, Responder};
-use lib_utils::{
-    database::service::{self, Album},
-    log,
-};
+use lib_utils::log;
 use serde::{Deserialize, Serialize};
 
 use crate::{AppState, JsonResult};
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct ListAlbumResponse {
-    list: Vec<Album>,
-    total: usize,
-}
 
 pub async fn handle_scan_music(app_state: web::Data<AppState>) -> impl Responder {
     match app_state.data_source.scan_music().await {
@@ -45,7 +36,14 @@ pub async fn frontend_log(log: web::Json<FrontendLog>) -> impl Responder {
     HttpResponse::Ok().json(log)
 }
 
-pub async fn handle_delete_meta(song_id: web::Path<String>) -> impl Responder {
+pub async fn handle_delete_meta(
+    song_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    if !app_state.config.is_local_mode() {
+        return HttpResponse::Forbidden().json(JsonResult::<()>::error("仅本地模式下可删除歌曲"));
+    }
+    use lib_utils::database::service;
     log::log_info(&format!("delete meta: {}", song_id));
     match service::del_metadata_by_id(&song_id) {
         Ok(size) => HttpResponse::Ok().json(JsonResult::success(format!("影响行数: {size}"))),

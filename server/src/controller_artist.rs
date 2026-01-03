@@ -89,14 +89,16 @@ pub struct SetArtistCoverBody {
 pub async fn handle_set_artist_cover(
     id: web::Path<i64>,
     body: web::Json<SetArtistCoverBody>,
+    app_data: web::Data<AppState>
 ) -> impl Responder {
     use lib_utils::database::service;
 
-    let cover = body.cover.clone();
-    // if cover.is_empty() {
-    //     return HttpResponse::BadRequest().json(JsonResult::<()>::error("图片不能为空,可以是链接或者base64编码字符串"));
-    // }
+    if !app_data.config.is_local_mode() {
+        return HttpResponse::BadRequest().json(JsonResult::<()>::error("仅支持本地数据源模式修改封面"));
+    }
+
     // 实现上传图片并保存到数据库
+    let cover = body.cover.clone();
     if let Ok(size) = service::set_artist_cover(*id, &cover) {
         HttpResponse::Ok().json(JsonResult::success(format!("{}个歌手封面保存成功", size)))
     } else {

@@ -314,16 +314,6 @@ export const getSongListDetail = (
   fetchUtils(url, onSuccess, onError);
 };
 
-// 获取歌曲所在歌单
-export const getSongSongList = (
-  song_id: string,
-  onSuccess: (data: JsonResult<any>) => void,
-  onError: (error: any) => void
-) => {
-  const url = `${API_URL}/api/song_songlist/${song_id}`;
-  fetchUtils(url, onSuccess, onError);
-};
-
 // ----- 专辑相关接口 -----//
 
 // 获取专辑列表

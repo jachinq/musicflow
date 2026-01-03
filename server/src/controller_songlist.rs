@@ -36,22 +36,6 @@ pub async fn handle_song_list_songs(
     }
 }
 
-pub async fn handle_song_song_list(
-    song_id: web::Path<String>,
-    data: web::Data<AppState>,
-) -> impl Responder {
-    // 这个接口需要查询某个歌曲属于哪些歌单
-    // 暂时使用原有的数据库实现
-    use lib_utils::database::service;
-
-    let result = service::get_song_song_list(&song_id.into_inner());
-    match result {
-        Ok(list) => HttpResponse::Ok().json(JsonResult::success(list)),
-        Err(e) => HttpResponse::InternalServerError()
-            .json(JsonResult::<()>::error(&format!("Error: {}", e))),
-    }
-}
-
 pub async fn handle_delete_song_list(
     song_list_id: web::Path<String>,
     data: web::Data<AppState>,

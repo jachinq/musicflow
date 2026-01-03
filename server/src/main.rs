@@ -126,7 +126,6 @@ async fn main() -> io::Result<()> {
             // 歌单相关接口
             .route("/api/songlists", get().to(handle_song_list))
             .route("/api/songlist/{songlist_id}", get().to(handle_song_list_songs))
-            .route("/api/song_songlist/{song_id}", get().to(handle_song_song_list))
             .route("/api/delete_songlist/{songlist_id}", delete().to(handle_delete_song_list))
             .route("/api/create_songlist", post().to(handle_create_song_list))
             .route("/api/update_songlist", put().to(handle_update_song_list))
