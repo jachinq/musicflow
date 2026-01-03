@@ -430,6 +430,51 @@ impl SubsonicClient {
         }
     }
 
+    /// 获取播放队列
+    pub async fn get_play_queue(&self) -> Result<Option<SubsonicPlayQueue>> {
+        let response: SubsonicResponse<PlayQueueWrapper> =
+            self.get("rest/getPlayQueue", vec![]).await?;
+
+        Ok(response.subsonic_response.play_queue)
+    }
+
+    /// 保存播放队列
+    pub async fn save_play_queue(
+        &self,
+        song_ids: &[String],
+        current: Option<&str>,
+        position: Option<u64>,
+    ) -> Result<()> {
+        let mut params = vec![];
+
+        // 添加歌曲 ID
+        for song_id in song_ids {
+            params.push(("id", song_id.clone()));
+        }
+
+        // 添加当前播放歌曲
+        if let Some(current_id) = current {
+            params.push(("current", current_id.to_string()));
+        }
+
+        // 添加播放位置
+        if let Some(pos) = position {
+            params.push(("position", pos.to_string()));
+        }
+
+        let response: SubsonicResponse<BaseResponse> =
+            self.get("rest/savePlayQueue", params).await?;
+
+        if response.subsonic_response.status == "ok" {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Save play queue failed: {:?}",
+                response.subsonic_response.error
+            ))
+        }
+    }
+
     /// 发送 GET 请求
     async fn get<T>(&self, endpoint: &str, mut params: Vec<(&str, String)>) -> Result<T>
     where
@@ -850,4 +895,26 @@ struct PlaylistWrapper {
     #[serde(flatten)]
     base: BaseResponse,
     playlist: Option<SubsonicPlaylist>,
+}
+
+/// Subsonic 播放队列信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubsonicPlayQueue {
+    pub current: Option<String>,
+    pub position: Option<u64>,
+    pub username: Option<String>,
+    pub changed: Option<String>,
+    pub changed_by: Option<String>,
+    pub entry: Option<Vec<SubsonicSong>>,
+}
+
+/// 播放队列响应包装
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct PlayQueueWrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    play_queue: Option<SubsonicPlayQueue>,
 }
