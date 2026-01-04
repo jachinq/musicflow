@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { KeyboardShortcutViewer } from "../components/KeyboardShortcutViewer";
-import { PerformanceMonitor } from "../components/PerformanceMonitor";
+// import { PerformanceMonitor } from "../components/PerformanceMonitor";
 import { useState, useRef } from "react";
 
 function SettingsPage() {
@@ -146,7 +146,7 @@ function SettingsPage() {
             <span className="cursor-pointer hover:text-primary-hover" onClick={() => setVisible(true)}>快捷键</span>
             {/* 性能监控工具 */}
             <KeyboardShortcutViewer visible={visible} setVisible={() => setVisible(false)} />
-            <PerformanceMonitor />
+            {/* <PerformanceMonitor /> */}
           </>
         </FormLayout>
 
