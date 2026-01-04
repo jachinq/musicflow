@@ -49,7 +49,7 @@ export const KeyboardShortcutViewer = ({ visible, setVisible }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-background text-foreground rounded-lg shadow-lg max-w-3xl w-full max-h-[80vh] overflow-auto">
         <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-bold">快捷键列表</h2>
@@ -89,13 +89,6 @@ export const KeyboardShortcutViewer = ({ visible, setVisible }: Props) => {
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="sticky bottom-0 bg-background border-t border-border px-6 py-4 text-center text-sm text-muted-foreground">
-          {/* 按 <kbd className="px-2 py-1 bg-muted border border-border rounded-md font-mono">?</kbd>{" "}
-          关闭此窗口 ·  */}
-          按 <kbd className="px-2 py-1 bg-muted border border-border rounded-md font-mono">Shift + ?</kbd>{" "}
-          打开性能监控
         </div>
       </div>
     </div>
