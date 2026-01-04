@@ -3,29 +3,34 @@ import { Album } from '../lib/defined';
 import { AlbumCard } from './AlbumCard';
 import { useState, useEffect } from 'react';
 import { AlbumCardSkeleton } from './Skeleton';
-import { Clock, TrendingUp, Sparkles, Play, RotateCcw } from 'lucide-react';
+import { Clock, TrendingUp, Sparkles, Play, RotateCcw, ChevronRight } from 'lucide-react';
 import { getAlbumList, getRandomSongs } from '../lib/api';
 import { useHomePageStore } from '../store/home-page';
 import { usePlaylist } from '../store/playlist';
 import { toast } from 'sonner';
 import { MusicCard } from './MusicCard';
+import { useNavigate } from 'react-router-dom';
 
 interface SectionHeaderProps {
   icon: React.ReactNode;
   title: string;
   subtitle?: string;
+  actionButton?: React.ReactNode;
 }
 
-function SectionHeader({ icon, title, subtitle }: SectionHeaderProps) {
+function SectionHeader({ icon, title, subtitle, actionButton }: SectionHeaderProps) {
   return (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-        {icon}
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          {icon}
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-foreground">{title}</h2>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
       </div>
-      <div>
-        <h2 className="text-xl font-bold text-foreground">{title}</h2>
-        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
-      </div>
+      {actionButton && <div>{actionButton}</div>}
     </div>
   );
 }
@@ -37,6 +42,7 @@ function SectionHeader({ icon, title, subtitle }: SectionHeaderProps) {
 export function RecentlyAlbums() {
   const [recentAlbums, setRecentAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchRecentlyPlayed = async () => {
@@ -94,6 +100,15 @@ export function RecentlyAlbums() {
         icon={<Clock className="w-5 h-5 text-primary" />}
         title="最近播放"
         subtitle="继续聆听您喜欢的音乐"
+        actionButton={
+          <button
+            onClick={() => navigate('/recommendations/albums/recent')}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            <span>查看更多</span>
+            <ChevronRight size={16} />
+          </button>
+        }
       />
       <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
         {recentAlbums.map((album) => (
@@ -111,6 +126,7 @@ export function RecentlyAlbums() {
 export function TopAlbums() {
   const [topAlbums, setTopAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTopPlayed = async () => {
@@ -168,6 +184,15 @@ export function TopAlbums() {
         icon={<TrendingUp className="w-5 h-5 text-primary" />}
         title="热门推荐"
         subtitle="发现最受欢迎的音乐"
+        actionButton={
+          <button
+            onClick={() => navigate('/recommendations/albums/frequent')}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            <span>查看更多</span>
+            <ChevronRight size={16} />
+          </button>
+        }
       />
       <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
         {topAlbums.map((album) => (
@@ -185,6 +210,7 @@ export function TopAlbums() {
 export function NewestAlbums() {
   const [newestAlbums, setNewestAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchNewestAlbums = async () => {
@@ -242,6 +268,15 @@ export function NewestAlbums() {
         icon={<Sparkles className="w-5 h-5 text-primary" />}
         title="最新专辑"
         subtitle="发现刚刚添加的音乐"
+        actionButton={
+          <button
+            onClick={() => navigate('/recommendations/albums/newest')}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            <span>查看更多</span>
+            <ChevronRight size={16} />
+          </button>
+        }
       />
       <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
         {newestAlbums.map((album) => (
@@ -263,8 +298,9 @@ export function RandomSongs() {
     randomSongsLoading,
     setRandomSongsLoading,
   } = useHomePageStore();
-  
+
   const { playSingleSong, setAllSongs, setCurrentSong } = usePlaylist();
+  const navigate = useNavigate();
 
   // 加载随机歌曲
   const loadRandomSongs = useCallback(() => {
@@ -324,17 +360,26 @@ export function RandomSongs() {
             <span className="break-keep">播放全部</span>
           </div>
         </div>
-        <button
-          onClick={loadRandomSongs}
-          disabled={randomSongsLoading}
-          className="text-sm text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-          title="换一批"
-        >
-          <div className="flex items-center gap-2">
-            {randomSongsLoading ? "加载中..." : "换一批"}
-            <RotateCcw size={16} />
-          </div>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/recommendations/random')}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            <span>查看更多</span>
+            <ChevronRight size={16} />
+          </button>
+          <button
+            onClick={loadRandomSongs}
+            disabled={randomSongsLoading}
+            className="text-sm text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+            title="换一批"
+          >
+            <div className="flex items-center gap-2">
+              {randomSongsLoading ? "加载中..." : "换一批"}
+              <RotateCcw size={16} />
+            </div>
+          </button>
+        </div>
 
       </div>
 

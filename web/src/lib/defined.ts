@@ -11,6 +11,8 @@ export enum MyRoutes {
     Player = "/player/:id",
     Settings = "/settings",
     Search = "/search",
+    RecommendationAlbums = "/recommendations/albums/:type",
+    RecommendationRandom = "/recommendations/random",
 }
 export const checkRoute = (location: Location<any>, route: MyRoutes): boolean => {
     const pathname = location.pathname;

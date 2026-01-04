@@ -11,6 +11,8 @@ import { ThemeProvider } from "./components/theme-provider";
 import { MoreInfoPage } from "./pages/MoreInfoPage";
 import { SongListPage } from "./pages/SongListPage";
 import { SearchPage } from "./pages/SearchPage";
+import { RecommendationAlbumsPage } from "./pages/RecommendationAlbumsPage";
+import { RecommendationRandomPage } from "./pages/RecommendationRandomPage";
 import { Header } from "./components/Header";
 import { MyRoutes } from "./lib/defined";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -46,6 +48,8 @@ function App() {
                     <Route path={MyRoutes.Player} element={<MusicPlayPage />} />
                     <Route path={MyRoutes.Settings} element={<SettingsPage />} />
                     <Route path={MyRoutes.Search} element={<SearchPage />} />
+                    <Route path="/recommendations/albums/:type" element={<RecommendationAlbumsPage />} />
+                    <Route path="/recommendations/random" element={<RecommendationRandomPage />} />
                   </Routes>
                 </PageTransition>
               </div>
