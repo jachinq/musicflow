@@ -59,6 +59,7 @@ async fn main() -> io::Result<()> {
     let web_dir = config.web_dir.clone();
     let ip = config.ip.clone();
     let port = config.port.clone();
+    let music_dir = config.music_dir.clone().replace("\\", "/");
 
     if config.is_local_mode() {
         // 本地模式，初始化数据库
@@ -67,18 +68,17 @@ async fn main() -> io::Result<()> {
             let _ = log::log_err(&format!("init table error: {}", result.err().unwrap()));
             return Err(io::Error::new(io::ErrorKind::Other, "init table error"));
         }
+
+        // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
+        log::log_info(&format!("Music dir: {}, Web dir: {}", music_dir, web_dir));
+
+        readmeta::check_lost_file(&music_dir).await;
     }
 
     // 创建数据源
     let data_source = create_data_source(&config);
     log::log_info(&format!("Data source created: {:?}", data_source.source_type()));
 
-    // 扫描音乐文件，构建音乐 ID 到 Music 实例的映射表
-    let music_dir = config.music_dir.clone();
-    let music_dir = music_dir.replace("\\", "/");
-    log::log_info(&format!("Music dir: {}, Web dir: {}", music_dir, web_dir));
-
-    readmeta::check_lost_file(&music_dir).await;
     // 映射音乐文件的静态路径
     let music_path = "/music";
 
