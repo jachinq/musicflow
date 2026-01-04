@@ -10,6 +10,23 @@ import { usePlaylist } from '../store/playlist';
 import { toast } from 'sonner';
 import { MusicCard } from './MusicCard';
 import { useNavigate } from 'react-router-dom';
+import { useDevice } from '../hooks/use-device';
+
+/**
+ * 根据设备尺寸返回推荐内容的数量
+ * - 小屏设备 (≤768px): 4 条
+ * - 中屏设备 (768-1024px): 8 条
+ * - 大屏设备 (1024-1560px): 12 条
+ * - 超大屏设备 (≥1560px): 16 条
+ */
+function useRecommendationCount() {
+  const { isSmallDevice, isMediumDevice, isLargeDevice } = useDevice();
+
+  if (isSmallDevice) return 6;
+  if (isMediumDevice) return 10;
+  if (isLargeDevice) return 14;
+  return 18; // isHugeDevice
+}
 
 interface SectionHeaderProps {
   icon: React.ReactNode;
@@ -43,6 +60,7 @@ export function RecentlyAlbums() {
   const [recentAlbums, setRecentAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const count = useRecommendationCount();
 
   useEffect(() => {
     const fetchRecentlyPlayed = async () => {
@@ -50,7 +68,7 @@ export function RecentlyAlbums() {
       try {
         getAlbumList(
           1,
-          8,
+          count,
           "",
           "recent",
           (response) => {
@@ -71,7 +89,7 @@ export function RecentlyAlbums() {
     };
 
     fetchRecentlyPlayed();
-  }, []);
+  }, [count]);
 
   if (isLoading) {
     return (
@@ -82,7 +100,7 @@ export function RecentlyAlbums() {
           subtitle="继续聆听您喜欢的音乐"
         />
         <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: count }).map((_, i) => (
             <AlbumCardSkeleton key={i} />
           ))}
         </div>
@@ -127,6 +145,7 @@ export function TopAlbums() {
   const [topAlbums, setTopAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const count = useRecommendationCount();
 
   useEffect(() => {
     const fetchTopPlayed = async () => {
@@ -134,7 +153,7 @@ export function TopAlbums() {
       try {
         getAlbumList(
           1,
-          8,
+          count,
           "",
           "frequent",
           (response) => {
@@ -155,7 +174,7 @@ export function TopAlbums() {
     };
 
     fetchTopPlayed();
-  }, []);
+  }, [count]);
 
   if (isLoading) {
     return (
@@ -166,7 +185,7 @@ export function TopAlbums() {
           subtitle="发现最受欢迎的音乐"
         />
         <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: count }).map((_, i) => (
             <AlbumCardSkeleton key={i} />
           ))}
         </div>
@@ -211,6 +230,7 @@ export function NewestAlbums() {
   const [newestAlbums, setNewestAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const count = useRecommendationCount();
 
   useEffect(() => {
     const fetchNewestAlbums = async () => {
@@ -218,7 +238,7 @@ export function NewestAlbums() {
       try {
         getAlbumList(
           1,
-          8,
+          count,
           "",
           "newest",
           (response) => {
@@ -239,7 +259,7 @@ export function NewestAlbums() {
     };
 
     fetchNewestAlbums();
-  }, []);
+  }, [count]);
 
   if (isLoading) {
     return (
@@ -250,7 +270,7 @@ export function NewestAlbums() {
           subtitle="发现刚刚添加的音乐"
         />
         <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: count }).map((_, i) => (
             <AlbumCardSkeleton key={i} />
           ))}
         </div>
@@ -301,12 +321,13 @@ export function RandomSongs() {
 
   const { playSingleSong, setAllSongs, setCurrentSong } = usePlaylist();
   const navigate = useNavigate();
+  const count = useRecommendationCount();
 
   // 加载随机歌曲
   const loadRandomSongs = useCallback(() => {
     setRandomSongsLoading(true);
     getRandomSongs(
-      8, // 获取50首随机歌曲
+      count,
       undefined,
       undefined,
       undefined,
@@ -324,7 +345,7 @@ export function RandomSongs() {
         toast.error("获取随机推荐失败");
       }
     );
-  }, [setRandomSongs, setRandomSongsLoading]);
+  }, [count, setRandomSongs, setRandomSongsLoading]);
 
   const playRandomSong = () => {
     if (randomSongs.length === 0) {
