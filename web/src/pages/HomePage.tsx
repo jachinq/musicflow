@@ -2,9 +2,7 @@
 
 import { FlameKindling, Loader, Rabbit } from "lucide-react";
 import { useHomePageStore } from "../store/home-page";
-import RandomSongs from "../components/RandomSongs";
-// import { MusicStatsCards } from "../components/MusicStatsCards";
-// import { RecentlyPlayed, TopPlayed } from "../components/RecommendationSections";
+import { NewestAlbums, RecentlyAlbums, TopAlbums, RandomSongs } from "../components/RecommendationSections";
 
 
 export const HomePage = () => {
@@ -40,20 +38,22 @@ export const HomePage = () => {
       {/* 随机歌曲 */}
       <RandomSongs />
 
+      {/* 最新专辑 */}
+      <NewestAlbums />
+
       {/* 最近播放 */}
-      {/* <RecentlyPlayed /> */}
+      <RecentlyAlbums />
 
       {/* 热门推荐 */}
-      {/* <TopPlayed /> */}
+      <TopAlbums />
 
       {randomSongs?.length === 0 && <>
-    
-<div className="flex flex-col gap-2 justify-center items-center p-4">
-        <div className="flex flex-col gap-2 justify-center items-center">
-          <Rabbit size={64} />
-          暂无推荐歌曲
+        <div className="flex flex-col gap-2 justify-center items-center p-4">
+          <div className="flex flex-col gap-2 justify-center items-center">
+            <Rabbit size={64} />
+            暂无推荐歌曲
+          </div>
         </div>
-      </div>
       </>}
 
     </div>

@@ -30,7 +30,7 @@ function App() {
             <Header />
 
             <div
-              className={`${currentSong && "mb-[90px]"
+              className={`${currentSong && "mb-[100px]"
                 } flex justify-center items-center w-full h-full `}
             >
               <div className="max-w-[1560px] w-full">
