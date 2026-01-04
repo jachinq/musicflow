@@ -91,7 +91,7 @@ pub async fn handle_set_artist_cover(
     body: web::Json<SetArtistCoverBody>,
     app_data: web::Data<AppState>
 ) -> impl Responder {
-    use lib_utils::database::service;
+    use lib_utils::datasource::local::service;
 
     if !app_data.config.is_local_mode() {
         return HttpResponse::BadRequest().json(JsonResult::<()>::error("仅支持本地数据源模式修改封面"));

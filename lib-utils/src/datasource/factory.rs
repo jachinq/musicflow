@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 use crate::datasource::trait_def::MusicDataSource;
-use crate::datasource::local::LocalDataSource;
+use crate::datasource::local::datasource::LocalDataSource;
 use crate::datasource::subsonic::SubsonicDataSource;
 use crate::config::Config;
 

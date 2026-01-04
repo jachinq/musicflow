@@ -7,7 +7,7 @@ use actix_web::web::{get, post, put, delete};
 use actix_web::{web, App, HttpServer};
 use env_logger::Env;
 use lib_utils::config::get_config;
-use lib_utils::database::table;
+use lib_utils::datasource::local::table;
 use lib_utils::datasource::factory::create_data_source;
 use lib_utils::datasource::MusicDataSource;
 use lib_utils::{log, readmeta};

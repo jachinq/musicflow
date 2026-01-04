@@ -1,4 +1,4 @@
-use lib_utils::database::service::get_random_songs;
+use lib_utils::datasource::local::service::get_random_songs;
 
 fn main() {
     println!("=== 测试 get_random_songs 方法 ===\n");

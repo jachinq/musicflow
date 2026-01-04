@@ -43,7 +43,7 @@ pub async fn handle_delete_meta(
     if !app_state.config.is_local_mode() {
         return HttpResponse::Forbidden().json(JsonResult::<()>::error("仅本地模式下可删除歌曲"));
     }
-    use lib_utils::database::service;
+    use lib_utils::datasource::local::service;
     log::log_info(&format!("delete meta: {}", song_id));
     match service::del_metadata_by_id(&song_id) {
         Ok(size) => HttpResponse::Ok().json(JsonResult::success(format!("影响行数: {size}"))),

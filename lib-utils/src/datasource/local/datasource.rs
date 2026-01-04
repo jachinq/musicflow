@@ -8,10 +8,10 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use crate::config::get_config;
-use crate::database::service;
+use crate::datasource::local::service;
 use crate::datasource::trait_def::MusicDataSource;
 use crate::datasource::types::*;
-use crate::{database, log, readmeta};
+use crate::{datasource::local, log, readmeta};
 
 /// 本地文件数据源
 pub struct LocalDataSource {
@@ -401,7 +401,7 @@ impl MusicDataSource for LocalDataSource {
 
     async fn health_check(&self) -> Result<()> {
         // 检查数据库连接
-        database::connect_db()?;
+        local::connect_db()?;
 
         // 检查音乐目录
         let music_path = PathBuf::from(&self.music_dir);

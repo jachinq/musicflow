@@ -85,7 +85,7 @@ async fn main() {
 
     // 3. 获取专辑列表
     println!("\n3. 获取最近添加的专辑...");
-    match client.get_album_list2("newest", 5, 0).await {
+    match client.get_album_list2("newest", 5, 0, None, None, None).await {
         Ok(albums) => {
             println!("   ✓ 成功获取 {} 张专辑", albums.len());
             if !albums.is_empty() {
@@ -240,7 +240,7 @@ async fn main() {
     }
 
     // 如果有专辑数据，尝试保存播放队列
-    match client.get_album_list2("newest", 1, 0).await {
+    match client.get_album_list2("newest", 1, 0, None, None, None).await {
         Ok(albums) if !albums.is_empty() => {
             if let Some(first_album) = albums.first() {
                 match client.get_album(&first_album.id).await {
@@ -300,7 +300,7 @@ async fn main() {
 
     // 11. 测试播放历史记录 (scrobble)
     println!("\n11. 测试播放历史记录 (scrobble)...");
-    match client.get_album_list2("newest", 1, 0).await {
+    match client.get_album_list2("newest", 1, 0, None, None, None).await {
         Ok(albums) if !albums.is_empty() => {
             if let Some(first_album) = albums.first() {
                 match client.get_album(&first_album.id).await {

@@ -1,7 +1,7 @@
 use lib_utils::log::log_file;
 use lib_utils::readmeta::read_metadata_into_db;
 use lib_utils::thread_pool::ThreadPool;
-use lib_utils::{config::get_config, database::table};
+use lib_utils::{config::get_config, local::table};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::{path::Path, time};

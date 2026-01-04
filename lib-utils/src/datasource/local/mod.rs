@@ -1,6 +1,7 @@
 pub mod covert;
 pub mod service;
 pub mod table;
+pub mod datasource;
 
 use crate::config::get_config;
 use rusqlite::Connection;

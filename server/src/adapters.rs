@@ -2,7 +2,7 @@
 
 use lib_utils::datasource::types::*;
 use crate::controller_song::MetadataVo;
-use lib_utils::database::service;
+use lib_utils::datasource::local::service;
 use std::collections::HashMap;
 
 /// 将 UnifiedMetadata 转换为 MetadataVo

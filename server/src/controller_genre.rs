@@ -1,5 +1,5 @@
 use actix_web::{web, HttpResponse, Responder};
-use lib_utils::database::service;
+use lib_utils::datasource::local::service;
 use serde::{Deserialize, Serialize};
 
 use crate::{AppState, JsonResult, MetadataVo, adapters};

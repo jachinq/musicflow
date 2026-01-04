@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use base64::Engine;
 use lib_utils::{
     config::get_config,
-    database::service,
+    datasource::local::service,
     datasource::{types::MetadataFilter, CoverSize},
     log::log_err,
     readmeta,

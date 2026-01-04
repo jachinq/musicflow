@@ -11,8 +11,8 @@ use symphonia::core::probe::{Hint, ProbeResult};
 
 use crate::comm::is_music_file;
 use crate::config::get_config;
-use crate::database::service::{self, Metadata};
-use crate::database::service::*;
+use crate::datasource::local::service::{self, Metadata};
+use crate::datasource::local::service::*;
 use crate::image::{compress_img, resize_image};
 use crate::log::{self, log_file};
 use crate::readmeta;
