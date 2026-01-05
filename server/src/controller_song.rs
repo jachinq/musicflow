@@ -274,19 +274,33 @@ pub async fn handle_get_random_songs(
     query: web::Query<RandomSongsQuery>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
-    // 使用 DataSource 获取随机歌曲(支持本地数据库和 Subsonic 服务器)
+    // 从每日缓存获取数据
     let result = app_state
-        .data_source
-        .get_random_songs(
-            query.size,
-            query.genre.as_deref(),
-            query.from_year.as_deref(),
-            query.to_year.as_deref(),
-        )
+        .daily_random_songs
+        .get_or_refresh(&app_state.data_source)
         .await;
 
     match result {
-        Ok(metadata_list) => {
+        Ok(mut metadata_list) => {
+            // 应用查询参数过滤
+            if let Some(genre) = &query.genre {
+                metadata_list.retain(|m| {
+                    !m.genre.is_empty() && m.genre.to_lowercase().contains(&genre.to_lowercase())
+                });
+            }
+
+            if let Some(from_year) = &query.from_year {
+                metadata_list.retain(|m| !m.year.is_empty() && &m.year >= from_year);
+            }
+
+            if let Some(to_year) = &query.to_year {
+                metadata_list.retain(|m| !m.year.is_empty() && &m.year <= to_year);
+            }
+
+            // 限制返回数量
+            let size = query.size.unwrap_or(150).min(500);
+            metadata_list.truncate(size);
+
             let total = metadata_list.len() as u32;
             // 转换为 VO
             let list = adapters::unified_list_to_vo(metadata_list);

@@ -14,7 +14,8 @@ use lib_utils::{log, readmeta};
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use chrono::Local;
 
 mod controller_album;
 mod controller_artist;
@@ -39,6 +40,60 @@ use controller_stream::*;
 use controller_tool::*;
 use controller_user::*;
 
+// 每日随机歌曲缓存结构
+struct DailyRandomCache {
+    // 缓存数据
+    data: RwLock<Vec<lib_utils::datasource::UnifiedMetadata>>,
+    // 缓存日期（用于判断是否需要刷新）
+    cached_date: RwLock<String>, // 格式: "2026-01-05"
+}
+
+impl DailyRandomCache {
+    fn new() -> Self {
+        Self {
+            data: RwLock::new(Vec::new()),
+            cached_date: RwLock::new(String::new()),
+        }
+    }
+
+    // 获取今天的日期字符串
+    fn today() -> String {
+        Local::now().format("%Y-%m-%d").to_string()
+    }
+
+    // 检查缓存是否过期
+    fn is_expired(&self) -> bool {
+        let cached = self.cached_date.read().unwrap();
+        *cached != Self::today()
+    }
+
+    // 更新缓存
+    async fn refresh(&self, data_source: &Arc<dyn MusicDataSource>) -> Result<(), Box<dyn std::error::Error>> {
+        // 从数据源获取随机歌曲（最大 200 首）
+        let songs = data_source.get_random_songs(Some(200), None, None, None).await?;
+
+        // 更新缓存
+        *self.data.write().unwrap() = songs;
+        *self.cached_date.write().unwrap() = Self::today();
+
+        Ok(())
+    }
+
+    // 获取缓存数据（如果过期则刷新）
+    async fn get_or_refresh(
+        &self,
+        data_source: &Arc<dyn MusicDataSource>,
+    ) -> Result<Vec<lib_utils::datasource::UnifiedMetadata>, Box<dyn std::error::Error>> {
+        // 如果缓存过期，刷新缓存
+        if self.is_expired() {
+            self.refresh(data_source).await?;
+        }
+
+        // 返回缓存数据的克隆
+        Ok(self.data.read().unwrap().clone())
+    }
+}
+
 // 应用状态
 #[derive(Clone)]
 struct AppState {
@@ -46,6 +101,8 @@ struct AppState {
     web_path: String,
     music_path: String,
     data_source: Arc<dyn MusicDataSource>,
+    // 每日随机歌曲缓存
+    daily_random_songs: Arc<DailyRandomCache>,
 }
 
 #[actix_web::main]
@@ -79,6 +136,15 @@ async fn main() -> io::Result<()> {
     let data_source = create_data_source(&config);
     log::log_info(&format!("Data source created: {:?}", data_source.source_type()));
 
+    // 初始化每日随机歌曲缓存
+    let daily_cache = Arc::new(DailyRandomCache::new());
+    // 预热缓存（异步加载，不阻塞启动）
+    if let Err(e) = daily_cache.refresh(&data_source).await {
+        log::log_err(&format!("Failed to initialize daily random cache: {}", e));
+    } else {
+        log::log_info("Daily random cache initialized successfully");
+    }
+
     // 映射音乐文件的静态路径
     let music_path = "/music";
 
@@ -96,6 +162,7 @@ async fn main() -> io::Result<()> {
             web_path: web_dir.to_string(),
             music_path: music_path.to_string(),
             data_source: data_source.clone(),
+            daily_random_songs: daily_cache.clone(),
         });
 
         App::new()
