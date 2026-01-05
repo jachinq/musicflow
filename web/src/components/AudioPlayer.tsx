@@ -147,7 +147,8 @@ export const AudioPlayer = () => {
         }
       },
       onSeek: (time: number) => {
-        setCurrentTime(time);
+        // setCurrentTime(time);
+        audioRef.current.currentTime = time;
         isPlaying ? pauseAudio() : playAudio();
       },
     });
