@@ -3,7 +3,7 @@ import { Album } from '../lib/defined';
 import { AlbumCard } from './AlbumCard';
 import { useState, useEffect } from 'react';
 import { AlbumCardSkeleton } from './Skeleton';
-import { Clock, TrendingUp, Sparkles, Play, RotateCcw, ChevronRight } from 'lucide-react';
+import { Clock, TrendingUp, Sparkles, Play, ChevronRight } from 'lucide-react';
 import { getAlbumList, getRandomSongs } from '../lib/api';
 import { useHomePageStore } from '../store/home-page';
 import { usePlaylist } from '../store/playlist';
@@ -315,7 +315,6 @@ export function RandomSongs() {
   const {
     randomSongs,
     setRandomSongs,
-    randomSongsLoading,
     setRandomSongsLoading,
   } = useHomePageStore();
 
@@ -348,11 +347,29 @@ export function RandomSongs() {
   }, [count, setRandomSongs, setRandomSongsLoading]);
 
   const playRandomSong = () => {
-    if (randomSongs.length === 0) {
-      return;
-    }
-    setAllSongs(randomSongs);
-    setCurrentSong(randomSongs[0]);
+    setRandomSongsLoading(true);
+    getRandomSongs(
+      200, // 播放全部 200 首推荐歌曲
+      undefined,
+      undefined,
+      undefined,
+      (result) => {
+        setRandomSongsLoading(false);
+        if (!result || !result.success) {
+          toast.error("获取随机推荐失败");
+          return;
+        }
+        setAllSongs(result.data.list);
+        if (result.data.list.length > 0) {
+          setCurrentSong(result.data.list[0]);
+        }
+      },
+      (error) => {
+        setRandomSongsLoading(false);
+        console.error("获取随机推荐失败", error);
+        toast.error("获取随机推荐失败");
+      }
+    );
   };
 
   // 组件首次挂载时,如果没有歌曲才加载
@@ -372,12 +389,11 @@ export function RandomSongs() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="text-primary" size={20} />
-          <h2 className="text-2xl font-semibold">随机推荐</h2>
-          <div
-            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-primary-hover px-2 py-1 rounded-md bg-primary text-primary-foreground transition-all duration-300 max-h-10"
+          <h2 className="text-2xl font-semibold">今日推荐</h2>
+          <div className="group flex items-center gap-2 text-sm cursor-pointer hover:bg-primary-hover px-2 py-1 rounded-md bg-primary text-primary-foreground transition-all duration-300 max-h-10 hover:scale-105"
             onClick={playRandomSong}
           >
-            <Play size={16} />
+            <Play size={16} className='group-hover:animate-pulse'/>
             <span className="break-keep">播放全部</span>
           </div>
         </div>
@@ -388,17 +404,6 @@ export function RandomSongs() {
           >
             <span>查看更多</span>
             <ChevronRight size={16} />
-          </button>
-          <button
-            onClick={loadRandomSongs}
-            disabled={randomSongsLoading}
-            className="text-sm text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-            title="换一批"
-          >
-            <div className="flex items-center gap-2">
-              {randomSongsLoading ? "加载中..." : "换一批"}
-              <RotateCcw size={16} />
-            </div>
           </button>
         </div>
 

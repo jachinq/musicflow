@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { GetList, JsonResult, Music } from "../lib/defined";
 import { getRandomSongs } from "../lib/api";
 import { MusicCard } from "../components/MusicCard";
-import { useInfiniteScroll } from "../hooks/use-infinite-scroll";
 import { Sparkles, Loader, ChevronLeft, Play } from "lucide-react";
 import { toast } from "sonner";
 import { usePlaylist } from "../store/playlist";
@@ -14,8 +13,8 @@ export function RecommendationRandomPage() {
   const [loading, setLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const batchSize = 30; // 每次加载 30 首歌曲
-  const maxSongs = 200; // 最多加载 200 首，避免无限加载
+  const batchSize = 50; // 每次展示 50 首歌曲
+  const maxSongs = 200; // 最多加载 200 首
 
   const { playSingleSong, setAllSongs, setCurrentSong } = usePlaylist();
 
@@ -32,28 +31,42 @@ export function RecommendationRandomPage() {
       setLoading(true);
     }
 
+    // 计算需要请求的总数量（累计）
+    const requestSize = append ? songs.length + batchSize : batchSize;
+
     getRandomSongs(
-      batchSize,
+      requestSize,
       undefined,
       undefined,
       undefined,
       (result: JsonResult<GetList>) => {
         if (result && result.success) {
-          const newData = (result.data.list || []) as Music[];
+          const allData = (result.data.list || []) as Music[];
 
           if (append) {
+            // 客户端去重：跳过前 songs.length 首，取接下来的 batchSize 首
+            const newData = allData.slice(songs.length, songs.length + batchSize);
             setSongs((prevSongs) => {
               const combined = [...prevSongs, ...newData];
               // 限制最大数量
-              return combined.slice(0, maxSongs);
+              const result = combined.slice(0, maxSongs);
+
+              // 检查是否达到最大数量或已无更多数据
+              if (result.length >= maxSongs || allData.length < requestSize) {
+                setHasMore(false);
+              }
+
+              return result;
             });
           } else {
-            setSongs(newData);
-          }
+            // 首次加载，取前 batchSize 首
+            const initialData = allData.slice(0, batchSize);
+            setSongs(initialData);
 
-          // 检查是否达到最大数量
-          if (songs.length + newData.length >= maxSongs) {
-            setHasMore(false);
+            // 检查是否还有更多数据
+            if (allData.length < batchSize || initialData.length >= maxSongs) {
+              setHasMore(false);
+            }
           }
         } else {
           toast.error("获取随机歌曲失败", {
@@ -74,18 +87,11 @@ export function RecommendationRandomPage() {
     );
   }, [songs.length, batchSize, maxSongs]);
 
-  const loadMore = useCallback(() => {
+  const loadMore = () => {
     if (!isLoadingMore && hasMore) {
       fetchRandomSongs(true);
     }
-  }, [fetchRandomSongs, isLoadingMore, hasMore]);
-
-  useInfiniteScroll({
-    onLoadMore: loadMore,
-    hasMore: hasMore,
-    isLoading: isLoadingMore,
-    threshold: 200,
-  });
+  };
 
   useEffect(() => {
     fetchRandomSongs(false);
@@ -143,10 +149,23 @@ export function RecommendationRandomPage() {
         ))}
       </div>
 
-      {/* 加载更多指示器 */}
-      {isLoadingMore && (
+      {/* 加载更多按钮 */}
+      {hasMore && songs.length > 0 && (
         <div className="flex justify-center py-4">
-          <Loader className="animate-spin" size={32} />
+          <button
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader className="animate-spin" size={16} />
+                <span>加载中...</span>
+              </>
+            ) : (
+              <span>加载更多 (50 首)</span>
+            )}
+          </button>
         </div>
       )}
 
