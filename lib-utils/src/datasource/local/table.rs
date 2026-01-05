@@ -11,7 +11,45 @@ pub fn init() -> Result<()> {
     let conn = connect_db()?;
     let sql = sql();
     conn.execute_batch(&sql)?;
+
+    // 执行数据库迁移
+    migrate()?;
+
     // log::log_info(&format!("Database initialized, sql={}", sql));
+    Ok(())
+}
+
+/// 数据库迁移函数
+/// 检测数据库版本并执行必要的迁移
+pub fn migrate() -> Result<()> {
+    let conn = connect_db()?;
+
+    // 获取当前数据库版本
+    let version: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
+
+    // 版本 0 -> 版本 1: 添加 album.created_at 字段 (如果不存在)
+    if version < 1 {
+        // 检查 album 表是否存在 created_at 字段
+        let has_created_at: bool = conn
+            .prepare("SELECT COUNT(*) FROM pragma_table_info('album') WHERE name='created_at'")?
+            .query_row([], |row| {
+                let count: i32 = row.get(0)?;
+                Ok(count > 0)
+            })?;
+
+        if !has_created_at {
+            // 添加 created_at 字段
+            conn.execute("ALTER TABLE album ADD COLUMN created_at TEXT NOT NULL DEFAULT ''", [])?;
+
+            // 为现有专辑填充创建时间 (使用当前时间)
+            let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+            conn.execute("UPDATE album SET created_at = ? WHERE created_at = ''", [&now])?;
+        }
+
+        // 更新版本号
+        conn.pragma_update(None, "user_version", 1)?;
+    }
+
     Ok(())
 }
 
@@ -120,7 +158,8 @@ fn sql() -> String {
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       year TEXT NOT NULL DEFAULT '',
-      artist TEXT NOT NULL DEFAULT ''
+      artist TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT ''
     );
   
   CREATE TABLE
@@ -139,8 +178,23 @@ fn sql() -> String {
       status INTEGER NOT NULL DEFAULT 0,
       offset INTEGER NOT NULL DEFAULT 0
     );
-  
-  COMMIT;  
+
+  CREATE TABLE
+    IF NOT EXISTS scrobble (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL DEFAULT 1,
+      song_id TEXT NOT NULL,
+      album_id INTEGER,
+      submission INTEGER NOT NULL,
+      timestamp INTEGER NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+  CREATE INDEX IF NOT EXISTS idx_scrobble_song_id ON scrobble(song_id);
+  CREATE INDEX IF NOT EXISTS idx_scrobble_album_id ON scrobble(album_id);
+  CREATE INDEX IF NOT EXISTS idx_scrobble_timestamp ON scrobble(timestamp DESC);
+
+  COMMIT;
   "#
     .to_string();
 }

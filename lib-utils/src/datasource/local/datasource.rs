@@ -183,12 +183,14 @@ impl MusicDataSource for LocalDataSource {
         &self,
         pagination: Pagination,
         filter_text: Option<String>,
-        _list_type: Option<AlbumListType>,
+        list_type: Option<AlbumListType>,
     ) -> Result<Vec<AlbumInfo>> {
-        // TODO: 未来实现本地数据源的排序逻辑
-        let mut albums = service::get_album_list()?;
-        if filter_text.is_some() {
-            let filter_text_lower = filter_text.as_ref().unwrap().to_lowercase();
+        // 使用排序逻辑
+        let mut albums = service::get_album_list(list_type.as_ref())?;
+
+        // 文本过滤
+        if let Some(filter_text) = filter_text {
+            let filter_text_lower = filter_text.to_lowercase();
             albums = albums
                 .into_iter()
                 .filter(|a| {
@@ -313,11 +315,11 @@ impl MusicDataSource for LocalDataSource {
         metadatas.iter().for_each(|m| {
             m.split_genre()
                 .iter()
-                .for_each(|g| genres.push(g.to_string()));
+                .for_each(|g: &String| genres.push(g.to_string()));
         });
 
         let mut set = HashSet::new();
-        genres.iter().for_each(|g| {
+        genres.iter().for_each(|g: &String| {
             set.insert(g);
         });
         let mut genres = set
@@ -686,12 +688,23 @@ impl MusicDataSource for LocalDataSource {
         submission: Option<bool>,
         timestamp: Option<u64>,
     ) -> Result<()> {
-        // 本地模式暂时不实现播放历史记录功能
-        // 记录日志以便后续扩展
+        // 默认值: submission = true, timestamp = 当前时间
+        let submission_val = submission.unwrap_or(true);
+        let timestamp_val = timestamp.unwrap_or_else(|| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+        });
+
+        // 调用 service 层记录播放历史
+        service::add_scrobble(1, song_id, submission_val, timestamp_val as i64)?;
+
         log::log_info(&format!(
-            "Scrobble called for song_id={}, submission={:?}, timestamp={:?}",
-            song_id, submission, timestamp
+            "Scrobble recorded: song_id={}, submission={}, timestamp={}",
+            song_id, submission_val, timestamp_val
         ));
+
         Ok(())
     }
 }

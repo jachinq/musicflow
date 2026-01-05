@@ -4,6 +4,7 @@ use rusqlite::{params_from_iter, Result, Row};
 use serde::{Deserialize, Serialize};
 
 use super::connect_db;
+use crate::datasource::types::AlbumListType;
 
 fn repeat_vars(count: usize) -> String {
     assert_ne!(count, 0);
@@ -140,6 +141,7 @@ fn covert_row_to_album(row: &rusqlite::Row) -> Result<Album> {
         description: row.get(2)?,
         year: row.get(3)?,
         artist: row.get(4)?,
+        created_at: row.get(5).unwrap_or_default(),
     })
 }
 
@@ -159,6 +161,19 @@ fn covert_row_to_play_list(row: &rusqlite::Row) -> Result<PlayList> {
         song_id: row.get(1)?,
         status: row.get(2)?,
         offset: row.get(3)?,
+    })
+}
+
+fn covert_row_to_scrobble(row: &rusqlite::Row) -> Result<Scrobble> {
+    let submission_int: i64 = row.get(4)?;
+    Ok(Scrobble {
+        id: row.get(0)?,
+        user_id: row.get(1)?,
+        song_id: row.get(2)?,
+        album_id: row.get(3)?,
+        submission: submission_int != 0,
+        timestamp: row.get(5)?,
+        created_at: row.get(6)?,
     })
 }
 
@@ -602,22 +617,71 @@ pub fn get_song_song_list(song_id: &str) -> Result<Vec<SongList>> {
 // 专辑相关接口
 pub fn add_album(album: &Album) -> Result<i64> {
     let conn = connect_db()?;
+
+    // 如果没有提供 created_at,使用当前时间
+    let created_at = if album.created_at.is_empty() {
+        chrono::Local::now()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+    } else {
+        album.created_at.clone()
+    };
+
     let mut stmt =
-        conn.prepare("INSERT INTO album (name, description, year, artist) VALUES (?, ?, ?, ?)")?;
+        conn.prepare("INSERT INTO album (name, description, year, artist, created_at) VALUES (?, ?, ?, ?, ?)")?;
     let _ = stmt.execute([
         &album.name.clone(),
         &album.description.clone(),
         &album.year.clone(),
         &album.artist.clone(),
+        &created_at,
     ])?;
     // 拿到自增id
     let id = conn.last_insert_rowid();
     Ok(id)
 }
 
-pub fn get_album_list() -> Result<Vec<Album>> {
+pub fn get_album_list(list_type: Option<&AlbumListType>) -> Result<Vec<Album>> {
     let conn = connect_db()?;
-    let mut stmt = conn.prepare("SELECT * FROM album")?;
+
+    // 根据排序类型构建 SQL
+    let sql = match list_type {
+        // 最新添加 - 按 created_at 倒序
+        Some(AlbumListType::Newest) => {
+            "SELECT * FROM album ORDER BY created_at DESC".to_string()
+        }
+
+        // 最常播放 - 按播放次数倒序
+        Some(AlbumListType::Frequent) => {
+            r#"
+            SELECT a.id, a.name, a.description, a.year, a.artist, a.created_at,
+                   COUNT(s.id) as play_count
+            FROM album a
+            LEFT JOIN scrobble s ON a.id = s.album_id AND s.submission = 1
+            GROUP BY a.id
+            ORDER BY play_count DESC, a.name ASC
+            "#
+            .to_string()
+        }
+
+        // 最近播放 - 按最后播放时间倒序
+        Some(AlbumListType::Recent) => {
+            r#"
+            SELECT a.id, a.name, a.description, a.year, a.artist, a.created_at,
+                   MAX(s.timestamp) as last_played
+            FROM album a
+            LEFT JOIN scrobble s ON a.id = s.album_id
+            GROUP BY a.id
+            ORDER BY last_played DESC, a.created_at DESC
+            "#
+            .to_string()
+        }
+
+        // 默认: 按名称字母排序
+        _ => "SELECT * FROM album ORDER BY name ASC".to_string(),
+    };
+
+    let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map([], |row| covert_row_to_album(row))?;
 
     let mut album_list = Vec::new();
@@ -1052,6 +1116,7 @@ pub struct Album {
     pub description: String,
     pub year: String,
     pub artist: String,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -1077,4 +1142,58 @@ impl Album {
         album.name = name;
         album
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+pub struct Scrobble {
+    pub id: i64,
+    pub user_id: i64,
+    pub song_id: String,
+    pub album_id: Option<i64>,
+    pub submission: bool,
+    pub timestamp: i64,
+    pub created_at: String,
+}
+
+// ==================== Scrobble 播放历史相关函数 ====================
+
+/// 添加播放历史记录
+pub fn add_scrobble(
+    user_id: i64,
+    song_id: &str,
+    submission: bool,
+    timestamp: i64,
+) -> Result<i64> {
+    let conn = connect_db()?;
+
+    // 查询 album_id (从 album_song 表)
+    let album_id: Option<i64> = conn
+        .query_row(
+            "SELECT album_id FROM album_song WHERE song_id = ? LIMIT 1",
+            [song_id],
+            |row| row.get(0),
+        )
+        .ok();
+
+    // 生成 created_at
+    let created_at = chrono::Local::now()
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string();
+
+    // 插入记录
+    let mut stmt = conn.prepare(
+        "INSERT INTO scrobble (user_id, song_id, album_id, submission, timestamp, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    )?;
+
+    stmt.execute([
+        &user_id.to_string(),
+        &song_id.to_string(),
+        &album_id.map(|id| id.to_string()).unwrap_or_default(),
+        &(if submission { 1 } else { 0 }).to_string(),
+        &timestamp.to_string(),
+        &created_at,
+    ])?;
+
+    let id = conn.last_insert_rowid();
+    Ok(id)
 }

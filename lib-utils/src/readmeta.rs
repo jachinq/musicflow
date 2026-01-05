@@ -645,7 +645,7 @@ pub async fn check_lost_file(music_dir: &str) {
     }
 
     // 第二种情况：对应路径存在metadata，但是关联的封面、歌词等缺失，也需要重新扫描
-    let album_list = if let Ok(list) = service::get_album_list() {
+    let album_list = if let Ok(list) = service::get_album_list(None) {
         list.iter().map(|album| album.name.to_string()).collect()
     } else {
         Vec::new()
