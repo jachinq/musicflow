@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Music, MyRoutes } from "../lib/defined";
-import { addGenreToSong, getGenreList, removeGenreFromSong } from "../lib/api";
-import { PlusIcon, X } from "lucide-react";
+import { Music, MyRoutes, SongList } from "../lib/defined";
+import { addGenreToSong, getGenreList, removeGenreFromSong, getSongList, addSongToSongList } from "../lib/api";
+import { PlusIcon, X, ListPlus } from "lucide-react";
 import { Input } from "./Input";
 import { GenreElement } from "./Genre";
 import { toast } from "sonner";
@@ -32,13 +32,17 @@ export const DetailInfo = ({ song, contentH = false }: { song?: Music, contentH?
         <ShowItem name="名称" value={song.title} />
         <ShowItem name="歌手" value={song.artist || (song.artists && song.artists.join(" / "))} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
         <ShowItem name="专辑" value={song.album} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoAlbum() }} />
-        {song.bitrate && <ShowItem name="比特率" value={song.bitrate} />}
+        {song.bitrate && <ShowItem name="比特率" value={`${song.bitrate / 1000} kbps`} />}
         {song.samplerate && <ShowItem name="采样率" value={song.samplerate} />}
         <ShowItem name="年份" value={song.year} />
         <ShowItem name="时长" value={song.duration.toFixed(2)} />
         <ShowItem
           name="风格"
           value={<Genres song={song} genres={genres} setGenres={setGenres} />}
+        />
+        <ShowItem
+          name="歌单"
+          value={<SongListManager song={song} />}
         />
         <ShowItem name="路径" value={song.file_path} />
       </div>
@@ -141,7 +145,7 @@ const ShowItem = ({
   value: React.ReactNode;
 } & React.HTMLAttributes<HTMLDivElement>) => {
   return (
-    <div className={`grid grid-cols-[1fr,4fr] gap-4 ${className}`} onClick={onClick}>
+    <div className={`grid grid-cols-[1fr,4fr] items-center gap-4 ${className}`} onClick={onClick}>
       <div>{name}</div>
       <div>{value}</div>
     </div>
@@ -167,6 +171,9 @@ const NewTagForm = ({
 
   useEffect(() => {
     getGenreList(
+      1,
+      9999,
+      "",
       (result) => {
         if (result && result.success) {
           const tagList = result.data;
@@ -206,6 +213,123 @@ const NewTagForm = ({
             添加
           </button>
           <button onClick={onCancel} className="button-info">
+            取消
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// 歌单管理组件
+const SongListManager = ({ song }: { song: Music }) => {
+  const [showDialog, setShowDialog] = useState(false);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <div
+        className="genre flex items-center gap-1 cursor-pointer"
+        onClick={() => setShowDialog(true)}
+      >
+        <ListPlus size={16} />
+        <span className="text-xs">添加到歌单</span>
+      </div>
+      {showDialog && (
+        <SongListSelectorDialog
+          song={song}
+          onClose={() => setShowDialog(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+// 歌单选择对话框
+const SongListSelectorDialog = ({
+  song,
+  onClose,
+}: {
+  song: Music;
+  onClose: () => void;
+}) => {
+  const [songLists, setSongLists] = useState<SongList[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getSongList(
+      (result) => {
+        if (result && result.success) {
+          setSongLists(result.data);
+        }
+        setIsLoading(false);
+      },
+      (error) => {
+        console.log(error);
+        toast.error("获取歌单列表失败");
+        setIsLoading(false);
+      }
+    );
+  }, []);
+
+  const handleSelectSongList = (songList: SongList) => {
+    addSongToSongList(
+      songList.id,
+      [song.id],
+      (result) => {
+        if (result && result.success) {
+          toast.success("添加到歌单成功", {
+            description: `已添加到歌单：${songList.name}`,
+          });
+          onClose();
+        } else {
+          toast.error("添加到歌单失败", {
+            description: result?.message || "未知错误",
+          });
+        }
+      },
+      (error) => {
+        console.log(error);
+        toast.error("添加到歌单失败");
+      }
+    );
+  };
+
+  return (
+    <>
+      <div className="mask" onClick={onClose}></div>
+      <div className="dialog flex flex-col gap-4 z-20 p-8 max-w-md">
+        <div className="text-lg font-bold">选择歌单</div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-muted-foreground">加载中...</div>
+          </div>
+        ) : songLists.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <p>暂无歌单</p>
+            <p className="text-sm">请先创建歌单</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 max-h-[calc(100vh-300px)] overflow-y-scroll">
+            {songLists.map((songList) => (
+              <div
+                key={songList.id}
+                className="card p-4 cursor-pointer hover:bg-primary-hover transition-colors"
+                onClick={() => handleSelectSongList(songList)}
+              >
+                <div className="font-medium">{songList.name}</div>
+                {songList.description && (
+                  <div className="text-sm text-muted-foreground truncate">
+                    {songList.description}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button onClick={onClose} className="button-info">
             取消
           </button>
         </div>
