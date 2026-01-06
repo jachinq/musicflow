@@ -60,6 +60,7 @@ impl MusicDataSource for SubsonicDataSource {
 
         // 从服务器获取
         let song = self.client.get_song(id).await?;
+        // println!("song={:#?}", song);
         let mut metadata: UnifiedMetadata = song.into();
 
         // 设置流式URL

@@ -29,6 +29,7 @@ impl From<SubsonicSong> for UnifiedMetadata {
             cover_art: song.cover_art.clone(),
             album_id: song.album_id.clone(),
             artist_id: song.artist_id.clone(),
+            starred: song.starred,
         }
     }
 }

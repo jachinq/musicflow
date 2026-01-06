@@ -39,9 +39,10 @@ impl Pagination {
     }
 }
 /// 数据源类型
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum DataSourceType {
     /// 本地文件系统
+    #[default]
     Local,
     /// Subsonic 服务器
     Subsonic,
@@ -49,7 +50,7 @@ pub enum DataSourceType {
 
 /// 统一的音乐元数据结构
 /// 兼容本地文件和 Subsonic 两种数据源
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UnifiedMetadata {
     /// 统一 ID (本地模式为数字字符串, Subsonic 模式为服务器ID)
     pub id: String,
@@ -76,6 +77,7 @@ pub struct UnifiedMetadata {
     pub cover_art: Option<String>,
     pub album_id: Option<String>,
     pub artist_id: Option<String>,
+    pub starred: Option<bool>,
 
     // 本地文件模式专有字段
     pub file_name: Option<String>,
@@ -85,35 +87,6 @@ pub struct UnifiedMetadata {
     // Subsonic 模式专有字段
     pub subsonic_id: Option<String>,
     pub stream_url: Option<String>,
-}
-
-impl Default for UnifiedMetadata {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            title: String::new(),
-            artist: String::new(),
-            album: String::new(),
-            year: String::new(),
-            duration: 0.0,
-            genre: String::new(),
-            track: String::new(),
-            disc: String::new(),
-            language: String::new(),
-            comment: String::new(),
-            bitrate: String::new(),
-            samplerate: String::new(),
-            source: DataSourceType::Local,
-            file_name: None,
-            file_path: None,
-            file_url: None,
-            subsonic_id: None,
-            stream_url: None,
-            cover_art: None,
-            album_id: None,
-            artist_id: None,
-        }
-    }
 }
 
 /// 音频流类型

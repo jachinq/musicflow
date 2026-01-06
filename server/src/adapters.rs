@@ -71,6 +71,7 @@ pub fn unified_to_vo(metadata: UnifiedMetadata) -> MetadataVo {
         album_id,
         artist_id,
         cover_art,
+        starred: metadata.starred.unwrap_or(false),
     }
 }
 
@@ -140,6 +141,7 @@ pub fn unified_list_to_vo(metadata_list: Vec<UnifiedMetadata>) -> Vec<MetadataVo
                     album_id: album_id.to_string(),
                     artist_id: artist_id.to_string(),
                     cover_art: album_id.to_string(),
+                    starred: m.starred.unwrap_or(false),
                 }
             })
             .collect()

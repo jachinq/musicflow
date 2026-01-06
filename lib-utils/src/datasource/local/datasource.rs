@@ -51,6 +51,7 @@ impl LocalDataSource {
             cover_art: None,
             album_id: None,
             artist_id: None,
+            starred: None,
         }
     }
 

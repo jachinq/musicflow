@@ -38,6 +38,7 @@ pub struct MetadataVo {
     pub album_id: String,
     pub artist_id: String,
     pub cover_art: String,
+    pub starred: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

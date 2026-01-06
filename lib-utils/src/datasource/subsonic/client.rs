@@ -788,6 +788,7 @@ pub struct SubsonicSong {
     // pub created: Option<String>,
     pub suffix: Option<String>,
     pub path: Option<String>,
+    pub starred: Option<bool>,
     // pub media_type: Option<String>,
     // pub sort_name: Option<String>,
     // pub user_rating: Option<u32>,
