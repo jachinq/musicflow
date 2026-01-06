@@ -20,6 +20,8 @@ const VolumeControlComponent: React.FC<VolumeControlProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const volumePanelRef = useRef<HTMLDivElement>(null);
+  const maskRef = useRef<HTMLDivElement>(null);
   const [mutedVolume, setMutedVolume] = useState(0); // 静音前的音量值
 
   // b 静音/取消静音
@@ -85,6 +87,41 @@ const VolumeControlComponent: React.FC<VolumeControlProps> = ({
     const clampedValue = Math.max(0, Math.min(1, value));
     setVolume(clampedValue);
   };
+
+  // 使用原生事件监听器来支持 preventDefault (非 passive)
+  useEffect(() => {
+    const panelElement = volumePanelRef.current;
+    const maskElement = maskRef.current;
+    if (!showVolume) return;
+
+    const handlePanelWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      changeVolume(volume + delta);
+    };
+
+    const handleMaskWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    if (panelElement) {
+      panelElement.addEventListener("wheel", handlePanelWheel, { passive: false });
+    }
+    if (maskElement) {
+      maskElement.addEventListener("wheel", handleMaskWheel, { passive: false });
+    }
+
+    return () => {
+      if (panelElement) {
+        panelElement.removeEventListener("wheel", handlePanelWheel);
+      }
+      if (maskElement) {
+        maskElement.removeEventListener("wheel", handleMaskWheel);
+      }
+    };
+  }, [showVolume, volume]);
 
   // 处理滑块拖拽
   const handleSliderChange = (clientY: number) => {
@@ -184,14 +221,16 @@ const VolumeControlComponent: React.FC<VolumeControlProps> = ({
 
 
       {/* 音量面板 */}
-      <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[1]
+      <div
+        ref={volumePanelRef}
+        className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[1]
                    transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]
                    ${showVolume ? "opacity-100 scale-100 pointer-events-auto"
           : "opacity-0 scale-95 pointer-events-none"}`}
         style={{ transitionProperty: "opacity, transform" }}
       >
         {/* 玻璃态容器 */}
-        <div className="relative w-12 h-40 rounded-2xl overflow-hidden 
+        <div className="relative w-12 h-40 rounded-2xl overflow-hidden
                      shadow-2xl flex flex-col items-center justify-center p-3"
           style={{
             background: "linear-gradient(135deg, var(--muted), var(--card))",
@@ -277,6 +316,7 @@ const VolumeControlComponent: React.FC<VolumeControlProps> = ({
           // backdropFilter: "blur(2px)",
         }}
         onClick={() => setShowVolume(false)}
+        onWheel={(e) => e.preventDefault()}
         aria-hidden="true"
       />
     </div >
