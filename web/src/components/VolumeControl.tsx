@@ -11,7 +11,7 @@ interface VolumeControlProps {
   className?: string;
 }
 
-export const VolumeControl: React.FC<VolumeControlProps> = ({
+const VolumeControlComponent: React.FC<VolumeControlProps> = ({
   volume,
   setVolume,
   showVolume,
@@ -282,3 +282,7 @@ export const VolumeControl: React.FC<VolumeControlProps> = ({
     </div >
   );
 };
+
+// 使用 React.memo 避免因父组件频繁更新（如播放时每秒多次的 currentTime 更新）而重渲染
+// 这样可以防止点击事件在重渲染时丢失
+export const VolumeControl = React.memo(VolumeControlComponent);
