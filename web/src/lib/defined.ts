@@ -13,6 +13,7 @@ export enum MyRoutes {
     Search = "/search",
     RecommendationAlbums = "/recommendations/albums/:type",
     RecommendationRandom = "/recommendations/random",
+    Favorites = "/favorites",
 }
 export const checkRoute = (location: Location<any>, route: MyRoutes): boolean => {
     const pathname = location.pathname;
@@ -74,6 +75,7 @@ export interface Music {
     track: string;
     disc: string;
     comment: string;
+    starred?: boolean; // 收藏状态
     decodedAudioBuffer?: AudioBuffer; // decoded audio buffer of the file
 }
 

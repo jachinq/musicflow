@@ -614,6 +614,7 @@ impl MusicDataSource for SubsonicDataSource {
 
     async fn get_starred(&self) -> Result<StarredResult> {
         let starred = self.client.get_starred2().await?;
+        // println!("starred: {:#?}", starred);
 
         // 转换歌曲列表
         let songs: Vec<UnifiedMetadata> = starred

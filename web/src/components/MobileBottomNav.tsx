@@ -1,4 +1,4 @@
-import { Home, Search, Library, Settings, Music } from 'lucide-react';
+import { Home, Search, Library, Settings, Music, Heart } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MyRoutes } from '../lib/defined';
 import { useDevice } from '../hooks/use-device';
@@ -13,6 +13,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, label: '首页', path: MyRoutes.Home },
   { icon: Search, label: '搜索', path: MyRoutes.Search },
+  { icon: Heart, label: '收藏', path: MyRoutes.Favorites },
   { icon: Library, label: '歌单', path: MyRoutes.Playlist },
   { icon: Settings, label: '设置', path: MyRoutes.Settings },
 ];

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Music2Icon, SettingsIcon, TagIcon } from "lucide-react";
+import { Music2Icon, SettingsIcon, TagIcon, Heart } from "lucide-react";
 import { useState } from "react";
 import { MyRoutes } from "../lib/defined";
 import { toast } from "sonner";
@@ -77,13 +77,16 @@ export const Header = () => {
           />
         </div>
         <div className="flex space-x-4 items-center">
-          <Link to="/playlist" className="navigation">
+          <Link to="/favorites" className="navigation" title="我的收藏">
+            <Heart />
+          </Link>
+          <Link to="/playlist" className="navigation" title="歌单">
             <Music2Icon />
           </Link>
-          <Link to="/albums" className="navigation">
+          <Link to="/albums" className="navigation" title="专辑/艺术家/风格">
             <TagIcon />
           </Link>
-          <Link to="/settings" className="navigation">
+          <Link to="/settings" className="navigation" title="设置">
             <SettingsIcon />
           </Link>
         </div>

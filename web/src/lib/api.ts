@@ -517,3 +517,62 @@ export const scrobble = (
     body: JSON.stringify(body),
   });
 };
+
+// ==================== 收藏相关 API ====================
+
+/**
+ * 收藏歌曲
+ */
+export const starSong = (
+  songId: string,
+  onSuccess: (data: JsonResult<null>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/star`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+    body: JSON.stringify({ id: songId, item_type: "song" }),
+  });
+};
+
+/**
+ * 取消收藏歌曲
+ */
+export const unstarSong = (
+  songId: string,
+  onSuccess: (data: JsonResult<null>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/unstar`;
+  fetchUtils(url, onSuccess, onError, {
+    method: "POST",
+    body: JSON.stringify({ id: songId, item_type: "song" }),
+  });
+};
+
+/**
+ * 获取收藏列表
+ */
+export const getStarredList = (
+  onSuccess: (data: JsonResult<{
+    songs: Music[];
+    albums: Album[];
+    artists: Artist[];
+  }>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/starred`;
+  fetchUtils(url, onSuccess, onError);
+};
+
+/**
+ * 检查是否已收藏（可选，可以从 /api/single/{id} 的 starred 字段获取）
+ */
+export const checkIsStarred = (
+  songId: string,
+  onSuccess: (data: JsonResult<{ starred: boolean }>) => void,
+  onError: (error: any) => void
+) => {
+  const url = `${API_URL}/api/is_starred?id=${songId}&item_type=song`;
+  fetchUtils(url, onSuccess, onError);
+};

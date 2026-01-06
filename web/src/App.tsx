@@ -2,10 +2,12 @@
 import "./styles/globals.css";
 import { Toaster } from "sonner";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import { HomePage } from "./pages/HomePage";
 import MusicPlayPage from "./pages/MusicPlayPage";
 import SettingsPage from "./pages/SettingsPage";
 import { usePlaylist } from "./store/playlist";
+import { useFavoriteStore } from "./store/favorite";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { ThemeProvider } from "./components/theme-provider";
 import { MoreInfoPage } from "./pages/MoreInfoPage";
@@ -13,15 +15,33 @@ import { SongListPage } from "./pages/SongListPage";
 import { SearchPage } from "./pages/SearchPage";
 import { RecommendationAlbumsPage } from "./pages/RecommendationAlbumsPage";
 import { RecommendationRandomPage } from "./pages/RecommendationRandomPage";
+import { FavoritesPage } from "./pages/FavoritesPage";
 import { Header } from "./components/Header";
 import { MyRoutes } from "./lib/defined";
 import ErrorBoundary from "./components/ErrorBoundary";
 import LoadingBar from "./components/LoadingBar";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { PageTransition } from "./components/PageTransition";
+import { getStarredList } from "./lib/api";
 
 function App() {
   const { currentSong } = usePlaylist();
+  const { setStarredSongs } = useFavoriteStore();
+
+  // 应用启动时初始化收藏数据
+  useEffect(() => {
+    getStarredList(
+      (result) => {
+        if (result && result.success) {
+          const songs = result.data.songs || [];
+          setStarredSongs(songs);
+        }
+      },
+      (error) => {
+        console.error("初始化收藏数据失败:", error);
+      }
+    );
+  }, [setStarredSongs]);
 
   return (
     <ErrorBoundary>
@@ -48,6 +68,7 @@ function App() {
                     <Route path={MyRoutes.Player} element={<MusicPlayPage />} />
                     <Route path={MyRoutes.Settings} element={<SettingsPage />} />
                     <Route path={MyRoutes.Search} element={<SearchPage />} />
+                    <Route path={MyRoutes.Favorites} element={<FavoritesPage />} />
                     <Route path="/recommendations/albums/:type" element={<RecommendationAlbumsPage />} />
                     <Route path="/recommendations/random" element={<RecommendationRandomPage />} />
                   </Routes>
