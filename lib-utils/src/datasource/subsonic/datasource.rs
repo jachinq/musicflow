@@ -582,4 +582,81 @@ impl MusicDataSource for SubsonicDataSource {
     ) -> Result<()> {
         self.client.scrobble(song_id, submission, timestamp).await
     }
+
+    async fn star(&self, id: &str, item_type: StarItemType) -> Result<()> {
+        match item_type {
+            StarItemType::Song => {
+                self.client.star(Some(id), None, None).await
+            }
+            StarItemType::Album => {
+                self.client.star(None, Some(id), None).await
+            }
+            StarItemType::Artist => {
+                self.client.star(None, None, Some(id)).await
+            }
+        }
+    }
+
+    async fn unstar(&self, id: &str, item_type: StarItemType) -> Result<()> {
+        match item_type {
+            StarItemType::Song => {
+                self.client.unstar(Some(id), None, None).await
+            }
+            StarItemType::Album => {
+                self.client.unstar(None, Some(id), None).await
+            }
+            StarItemType::Artist => {
+                self.client.unstar(None, None, Some(id)).await
+            }
+        }
+    }
+
+    async fn get_starred(&self) -> Result<StarredResult> {
+        let starred = self.client.get_starred2().await?;
+
+        // 转换歌曲列表
+        let songs: Vec<UnifiedMetadata> = starred
+            .song
+            .unwrap_or_default()
+            .into_iter()
+            .map(|s| {
+                let mut meta: UnifiedMetadata = s.into();
+                meta.stream_url = Some(self.client.get_stream_url(
+                    &meta.id,
+                    self.max_bitrate,
+                    &self.prefer_format,
+                ));
+                meta
+            })
+            .collect();
+
+        // 转换专辑列表
+        let albums: Vec<AlbumInfo> = starred
+            .album
+            .unwrap_or_default()
+            .into_iter()
+            .map(|a| a.into())
+            .collect();
+
+        // 转换艺术家列表
+        let artists: Vec<ArtistInfo> = starred
+            .artist
+            .unwrap_or_default()
+            .into_iter()
+            .map(|a| a.into())
+            .collect();
+
+        Ok(StarredResult {
+            songs,
+            albums,
+            artists,
+        })
+    }
+
+    async fn is_starred(&self, _id: &str, _item_type: StarItemType) -> Result<bool> {
+        // Subsonic API 没有提供单独的检查接口
+        // 需要获取完整收藏列表并检查
+        // 这里暂时返回 false，实际使用时可以通过缓存优化
+        Ok(false)
+    }
 }

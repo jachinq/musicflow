@@ -707,4 +707,64 @@ impl MusicDataSource for LocalDataSource {
 
         Ok(())
     }
+
+    async fn star(&self, id: &str, item_type: StarItemType) -> Result<()> {
+        service::add_favorite(1, id, item_type.as_str())?;
+        log::log_info(&format!(
+            "Starred: id={}, type={}",
+            id,
+            item_type.as_str()
+        ));
+        Ok(())
+    }
+
+    async fn unstar(&self, id: &str, item_type: StarItemType) -> Result<()> {
+        service::remove_favorite(1, id, item_type.as_str())?;
+        log::log_info(&format!(
+            "Unstarred: id={}, type={}",
+            id,
+            item_type.as_str()
+        ));
+        Ok(())
+    }
+
+    async fn get_starred(&self) -> Result<StarredResult> {
+        // 获取收藏的歌曲 ID 列表
+        let song_ids = service::get_favorites_by_type(1, "song")?;
+        let mut songs = Vec::new();
+        for song_id in song_ids {
+            if let Ok(metadata) = self.get_metadata(&song_id).await {
+                songs.push(metadata);
+            }
+        }
+
+        // 获取收藏的专辑 ID 列表
+        let album_ids = service::get_favorites_by_type(1, "album")?;
+        let mut albums = Vec::new();
+        for album_id in album_ids {
+            if let Ok(album) = self.get_album_by_id(&album_id).await {
+                albums.push(album);
+            }
+        }
+
+        // 获取收藏的艺术家 ID 列表
+        let artist_ids = service::get_favorites_by_type(1, "artist")?;
+        let mut artists = Vec::new();
+        for artist_id in artist_ids {
+            if let Ok(artist) = self.get_artist_by_id(&artist_id).await {
+                artists.push(artist);
+            }
+        }
+
+        Ok(StarredResult {
+            songs,
+            albums,
+            artists,
+        })
+    }
+
+    async fn is_starred(&self, id: &str, item_type: StarItemType) -> Result<bool> {
+        service::is_favorited(1, id, item_type.as_str())
+            .map_err(|e| anyhow::anyhow!("Failed to check starred status: {}", e))
+    }
 }

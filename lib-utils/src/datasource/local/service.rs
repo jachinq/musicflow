@@ -1197,3 +1197,103 @@ pub fn add_scrobble(
     let id = conn.last_insert_rowid();
     Ok(id)
 }
+
+
+// ==================== Favorite 收藏相关函数 ====================
+
+/// 收藏记录结构
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Favorite {
+    pub user_id: i64,
+    pub item_id: String,
+    pub item_type: String,
+    pub created_at: String,
+}
+
+/// 添加收藏
+pub fn add_favorite(user_id: i64, item_id: &str, item_type: &str) -> Result<()> {
+    let conn = connect_db()?;
+
+    // 生成 created_at
+    let created_at = chrono::Local::now()
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string();
+
+    // 检查是否已收藏
+    let exists = is_favorited(user_id, item_id, item_type)?;
+    if exists {
+        return Ok(()); // 已经收藏，直接返回成功
+    }
+
+    // 插入记录
+    conn.execute(
+        "INSERT INTO user_favorite (user_id, item_id, item_type, created_at) VALUES (?, ?, ?, ?)",
+        [&user_id.to_string(), item_id, item_type, &created_at],
+    )?;
+
+    Ok(())
+}
+
+/// 取消收藏
+pub fn remove_favorite(user_id: i64, item_id: &str, item_type: &str) -> Result<()> {
+    let conn = connect_db()?;
+
+    conn.execute(
+        "DELETE FROM user_favorite WHERE user_id = ? AND item_id = ? AND item_type = ?",
+        [&user_id.to_string(), item_id, item_type],
+    )?;
+
+    Ok(())
+}
+
+/// 检查是否已收藏
+pub fn is_favorited(user_id: i64, item_id: &str, item_type: &str) -> Result<bool> {
+    let conn = connect_db()?;
+
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM user_favorite WHERE user_id = ? AND item_id = ? AND item_type = ?",
+        [&user_id.to_string(), item_id, item_type],
+        |row| row.get(0),
+    )?;
+
+    Ok(count > 0)
+}
+
+/// 获取用户的所有收藏（按类型）
+pub fn get_favorites_by_type(user_id: i64, item_type: &str) -> Result<Vec<String>> {
+    let conn = connect_db()?;
+
+    let mut stmt = conn.prepare(
+        "SELECT item_id FROM user_favorite WHERE user_id = ? AND item_type = ? ORDER BY created_at DESC",
+    )?;
+
+    let favorites = stmt
+        .query_map([&user_id.to_string(), item_type], |row| {
+            row.get::<_, String>(0)
+        })?
+        .collect::<Result<Vec<String>>>()?;
+
+    Ok(favorites)
+}
+
+/// 获取用户的所有收藏
+pub fn get_all_favorites(user_id: i64) -> Result<Vec<Favorite>> {
+    let conn = connect_db()?;
+
+    let mut stmt = conn.prepare(
+        "SELECT user_id, item_id, item_type, created_at FROM user_favorite WHERE user_id = ? ORDER BY created_at DESC",
+    )?;
+
+    let favorites = stmt
+        .query_map([&user_id.to_string()], |row| {
+            Ok(Favorite {
+                user_id: row.get(0)?,
+                item_id: row.get(1)?,
+                item_type: row.get(2)?,
+                created_at: row.get(3)?,
+            })
+        })?
+        .collect::<Result<Vec<Favorite>>>()?;
+
+    Ok(favorites)
+}

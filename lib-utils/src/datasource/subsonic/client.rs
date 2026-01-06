@@ -512,7 +512,7 @@ impl SubsonicClient {
             params.push(("submission", sub.to_string()));
         }
 
-        // 添加时间戳参数
+        // 添加时间��参数
         if let Some(t) = time {
             params.push(("time", t.to_string()));
         }
@@ -528,6 +528,114 @@ impl SubsonicClient {
                 response.subsonic_response.error
             ))
         }
+    }
+
+    /// 收藏项目（歌曲、专辑、艺术家）
+    ///
+    /// # 参数
+    /// * `id` - 项目 ID
+    /// * `album_id` - 专辑 ID（可选，用于收藏专辑）
+    /// * `artist_id` - 艺术家 ID（可选，用于收藏艺术家）
+    ///
+    /// # 返回
+    /// * `Ok(())` - 收藏成功
+    pub async fn star(
+        &self,
+        id: Option<&str>,
+        album_id: Option<&str>,
+        artist_id: Option<&str>,
+    ) -> Result<()> {
+        let mut params = vec![];
+
+        if let Some(song_id) = id {
+            params.push(("id", song_id.to_string()));
+        }
+
+        if let Some(aid) = album_id {
+            params.push(("albumId", aid.to_string()));
+        }
+
+        if let Some(arid) = artist_id {
+            params.push(("artistId", arid.to_string()));
+        }
+
+        if params.is_empty() {
+            return Err(anyhow::anyhow!("At least one ID must be provided"));
+        }
+
+        let response: SubsonicResponse<BaseResponse> = self.get("rest/star", params).await?;
+
+        if response.subsonic_response.status == "ok" {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Star failed: {:?}",
+                response.subsonic_response.error
+            ))
+        }
+    }
+
+    /// 取消收藏
+    ///
+    /// # 参数
+    /// * `id` - 项目 ID
+    /// * `album_id` - 专辑 ID（可选）
+    /// * `artist_id` - 艺术家 ID（可选）
+    ///
+    /// # 返回
+    /// * `Ok(())` - 取消收藏成功
+    pub async fn unstar(
+        &self,
+        id: Option<&str>,
+        album_id: Option<&str>,
+        artist_id: Option<&str>,
+    ) -> Result<()> {
+        let mut params = vec![];
+
+        if let Some(song_id) = id {
+            params.push(("id", song_id.to_string()));
+        }
+
+        if let Some(aid) = album_id {
+            params.push(("albumId", aid.to_string()));
+        }
+
+        if let Some(arid) = artist_id {
+            params.push(("artistId", arid.to_string()));
+        }
+
+        if params.is_empty() {
+            return Err(anyhow::anyhow!("At least one ID must be provided"));
+        }
+
+        let response: SubsonicResponse<BaseResponse> = self.get("rest/unstar", params).await?;
+
+        if response.subsonic_response.status == "ok" {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Unstar failed: {:?}",
+                response.subsonic_response.error
+            ))
+        }
+    }
+
+    /// 获取收藏列表（getStarred2）
+    ///
+    /// # 返回
+    /// * `Ok(SubsonicStarred2)` - 收藏列表
+    pub async fn get_starred2(&self) -> Result<SubsonicStarred2> {
+        let response: SubsonicResponse<Starred2Wrapper> =
+            self.get("rest/getStarred2", vec![]).await?;
+
+        Ok(response
+            .subsonic_response
+            .starred2
+            .unwrap_or(SubsonicStarred2 {
+                song: None,
+                album: None,
+                artist: None,
+            }))
     }
 
     /// 发送 GET 请求
@@ -972,4 +1080,23 @@ struct PlayQueueWrapper {
     #[serde(flatten)]
     base: BaseResponse,
     play_queue: Option<SubsonicPlayQueue>,
+}
+
+/// 收藏列表（Starred2）
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SubsonicStarred2 {
+    pub song: Option<Vec<SubsonicSong>>,
+    pub album: Option<Vec<SubsonicAlbum>>,
+    pub artist: Option<Vec<SubsonicArtist>>,
+}
+
+/// 收藏列表响应包装
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct Starred2Wrapper {
+    #[serde(flatten)]
+    base: BaseResponse,
+    starred2: Option<SubsonicStarred2>,
 }

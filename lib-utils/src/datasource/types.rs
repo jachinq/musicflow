@@ -358,3 +358,44 @@ impl Default for AlbumListType {
         AlbumListType::AlphabeticalByName
     }
 }
+
+/// 收藏项目类型
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum StarItemType {
+    /// 歌曲
+    Song,
+    /// 专辑
+    Album,
+    /// 艺术家
+    Artist,
+}
+
+impl StarItemType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            StarItemType::Song => "song",
+            StarItemType::Album => "album",
+            StarItemType::Artist => "artist",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "song" => Some(StarItemType::Song),
+            "album" => Some(StarItemType::Album),
+            "artist" => Some(StarItemType::Artist),
+            _ => None,
+        }
+    }
+}
+
+/// 收藏列表结果
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StarredResult {
+    /// 收藏的歌曲
+    pub songs: Vec<UnifiedMetadata>,
+    /// 收藏的专辑
+    pub albums: Vec<AlbumInfo>,
+    /// 收藏的艺术家
+    pub artists: Vec<ArtistInfo>,
+}

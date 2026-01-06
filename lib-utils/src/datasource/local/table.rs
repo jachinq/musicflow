@@ -50,6 +50,47 @@ pub fn migrate() -> Result<()> {
         conn.pragma_update(None, "user_version", 1)?;
     }
 
+    // 版本 1 -> 版本 2: 扩展 user_favorite 表以支持专辑和艺术家收藏
+    if version < 2 {
+        // 检查 user_favorite 表是否存在 item_type 字段
+        let has_item_type: bool = conn
+            .prepare("SELECT COUNT(*) FROM pragma_table_info('user_favorite') WHERE name='item_type'")?
+            .query_row([], |row| {
+                let count: i32 = row.get(0)?;
+                Ok(count > 0)
+            })?;
+
+        if !has_item_type {
+            // 创建临时表
+            conn.execute(
+                "CREATE TABLE user_favorite_new (
+                    user_id INTEGER NOT NULL,
+                    item_id TEXT NOT NULL,
+                    item_type TEXT NOT NULL DEFAULT 'song',
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY (user_id, item_id, item_type)
+                )",
+                [],
+            )?;
+
+            // 迁移数据（将 song_id 重命名为 item_id，并设置 item_type 为 'song'）
+            conn.execute(
+                "INSERT INTO user_favorite_new (user_id, item_id, item_type, created_at)
+                 SELECT user_id, song_id, 'song', created_at FROM user_favorite",
+                [],
+            )?;
+
+            // 删除旧表
+            conn.execute("DROP TABLE user_favorite", [])?;
+
+            // 重命名新表
+            conn.execute("ALTER TABLE user_favorite_new RENAME TO user_favorite", [])?;
+        }
+
+        // 更新版本号
+        conn.pragma_update(None, "user_version", 2)?;
+    }
+
     Ok(())
 }
 

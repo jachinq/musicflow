@@ -291,4 +291,40 @@ pub trait MusicDataSource: Send + Sync {
         submission: Option<bool>,
         timestamp: Option<u64>,
     ) -> Result<()>;
+
+    /// 收藏项目（歌曲、专辑、艺术家）
+    ///
+    /// # 参数
+    /// * `id` - 项目 ID
+    /// * `item_type` - 项目类型（歌曲/专辑/艺术家）
+    ///
+    /// # 返回
+    /// * `Ok(())` - 收藏成功
+    async fn star(&self, id: &str, item_type: StarItemType) -> Result<()>;
+
+    /// 取消收藏
+    ///
+    /// # 参数
+    /// * `id` - 项目 ID
+    /// * `item_type` - 项目类型（歌曲/专辑/艺术家）
+    ///
+    /// # 返回
+    /// * `Ok(())` - 取消收藏成功
+    async fn unstar(&self, id: &str, item_type: StarItemType) -> Result<()>;
+
+    /// 获取收藏列表
+    ///
+    /// # 返回
+    /// * `Ok(StarredResult)` - 收藏的歌曲、专辑、艺术家列表
+    async fn get_starred(&self) -> Result<StarredResult>;
+
+    /// 检查项目是否已收藏
+    ///
+    /// # 参数
+    /// * `id` - 项目 ID
+    /// * `item_type` - 项目类型
+    ///
+    /// # 返回
+    /// * `Ok(bool)` - true 表示已收藏，false 表示未收藏
+    async fn is_starred(&self, id: &str, item_type: StarItemType) -> Result<bool>;
 }

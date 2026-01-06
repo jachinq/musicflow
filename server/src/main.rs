@@ -27,6 +27,7 @@ mod controller_stream;
 mod controller_tool;
 mod controller_user;
 mod controller_search;
+mod controller_favorite;
 mod adapters;
 
 use controller_album::*;
@@ -39,6 +40,7 @@ use controller_songlist::*;
 use controller_stream::*;
 use controller_tool::*;
 use controller_user::*;
+use controller_favorite::*;
 
 // 每日随机歌曲缓存结构
 struct DailyRandomCache {
@@ -232,7 +234,13 @@ async fn main() -> io::Result<()> {
 
             // 搜索相关接口
             .route("/api/search", get().to(handle_search))
-            
+
+            // 收藏相关接口
+            .route("/api/star", post().to(handle_star))
+            .route("/api/unstar", post().to(handle_unstar))
+            .route("/api/starred", get().to(handle_get_starred))
+            .route("/api/is_starred", get().to(handle_is_starred))
+
             // 添加静态文件服务
             .service(actix_files::Files::new(music_path, &music_dir).show_files_listing())
             .service(actix_files::Files::new("/", &web_dir).index_file("index.html"))
