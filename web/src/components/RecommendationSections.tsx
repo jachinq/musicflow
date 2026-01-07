@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Album } from '../lib/defined';
 import { AlbumCard } from './AlbumCard';
 import { useState, useEffect } from 'react';
@@ -61,6 +61,9 @@ export function RecentlyAlbums() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const count = useRecommendationCount();
+  
+  const { isSmallDevice }= useDevice();
+  const cardSize = useMemo(() => (isSmallDevice? 120 : 140), [isSmallDevice]);
 
   useEffect(() => {
     const fetchRecentlyPlayed = async () => {
@@ -99,7 +102,7 @@ export function RecentlyAlbums() {
           title="最近播放"
           subtitle="继续聆听您喜欢的音乐"
         />
-        <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
+        <div className={`card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(${cardSize}px,1fr))]`}>
           {Array.from({ length: count }).map((_, i) => (
             <AlbumCardSkeleton key={i} />
           ))}
@@ -128,9 +131,9 @@ export function RecentlyAlbums() {
           </button>
         }
       />
-      <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
+      <div className={`card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(${cardSize}px,1fr))]`}>
         {recentAlbums.map((album) => (
-          <AlbumCard key={album.id} album={album} />
+          <AlbumCard key={album.id} album={album} size={cardSize} />
         ))}
       </div>
     </div>
@@ -146,6 +149,9 @@ export function TopAlbums() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const count = useRecommendationCount();
+
+  const { isSmallDevice }= useDevice();
+  const cardSize = useMemo(() => (isSmallDevice? 120 : 140), [isSmallDevice]);
 
   useEffect(() => {
     const fetchTopPlayed = async () => {
@@ -184,7 +190,7 @@ export function TopAlbums() {
           title="热门推荐"
           subtitle="发现最受欢迎的音乐"
         />
-        <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
+        <div className={`card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(${cardSize}px,1fr))]`}>
           {Array.from({ length: count }).map((_, i) => (
             <AlbumCardSkeleton key={i} />
           ))}
@@ -213,9 +219,9 @@ export function TopAlbums() {
           </button>
         }
       />
-      <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
+      <div className={`card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(${cardSize}px,1fr))]`}>
         {topAlbums.map((album) => (
-          <AlbumCard key={album.id} album={album} />
+          <AlbumCard key={album.id} album={album} size={cardSize} />
         ))}
       </div>
     </div>
@@ -231,6 +237,9 @@ export function NewestAlbums() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const count = useRecommendationCount();
+
+  const { isSmallDevice }= useDevice();
+  const cardSize = useMemo(() => (isSmallDevice? 120 : 140), [isSmallDevice]);
 
   useEffect(() => {
     const fetchNewestAlbums = async () => {
@@ -269,7 +278,7 @@ export function NewestAlbums() {
           title="最新专辑"
           subtitle="发现刚刚添加的音乐"
         />
-        <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
+        <div className={`card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(${cardSize}px,1fr))]`}>
           {Array.from({ length: count }).map((_, i) => (
             <AlbumCardSkeleton key={i} />
           ))}
@@ -298,9 +307,9 @@ export function NewestAlbums() {
           </button>
         }
       />
-      <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
+      <div className={`card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(${cardSize}px,1fr))]`}>
         {newestAlbums.map((album) => (
-          <AlbumCard key={album.id} album={album} />
+          <AlbumCard key={album.id} album={album} size={cardSize} />
         ))}
       </div>
     </div>
@@ -321,6 +330,9 @@ export function RandomSongs() {
   const { playSingleSong, setAllSongs, setCurrentSong } = usePlaylist();
   const navigate = useNavigate();
   const count = useRecommendationCount();
+
+  const { isSmallDevice }= useDevice();
+  const cardSize = useMemo(() => (isSmallDevice? 'small' : 'medium'), [isSmallDevice]);
 
   // 加载随机歌曲
   const loadRandomSongs = useCallback(() => {
@@ -410,11 +422,9 @@ export function RandomSongs() {
       </div>
 
       <div className="relative overflow-hidden">
-        <div className="card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
+        <div className={`card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(${cardSize ==='small'? '120px' : '140px'},1fr))]`}>
           {randomSongs.map((music: any) => (
-            <div key={music.id} className="flex-shrink-0 w-[140px]">
-              <MusicCard music={music} onPlay={playSingleSong} />
-            </div>
+            <MusicCard music={music} onPlay={playSingleSong} size={cardSize}/>
           ))}
         </div>
       </div>

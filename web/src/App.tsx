@@ -20,7 +20,7 @@ import { Header } from "./components/Header";
 import { MyRoutes } from "./lib/defined";
 import ErrorBoundary from "./components/ErrorBoundary";
 import LoadingBar from "./components/LoadingBar";
-import { MobileBottomNav } from "./components/MobileBottomNav";
+// import { MobileBottomNav } from "./components/MobileBottomNav";
 import { PageTransition } from "./components/PageTransition";
 import { getStarredList } from "./lib/api";
 
@@ -52,7 +52,7 @@ function App() {
             <Header />
 
             <div
-              className={`${currentSong && "mb-[100px]"
+              className={`${currentSong && "sm:mb-[100px] mb-[200px]"
                 } flex justify-center items-center w-full h-full `}
             >
               <div className="max-w-[1560px] w-full">
@@ -77,7 +77,7 @@ function App() {
             </div>
 
             {currentSong && <AudioPlayer />}
-            <MobileBottomNav />
+            {/* <MobileBottomNav /> */}
           </div>
           <Toaster />
         </Router>

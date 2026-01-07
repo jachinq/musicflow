@@ -259,6 +259,18 @@
   transform: scale(0.95);
 }
 
+/* 桌面歌词按钮激活状态 */
+.control-button.active {
+  color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.control-button.active:hover {
+  color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.2);
+  transform: scale(1.1);
+}
+
 /* 播放/暂停按钮 */
 .play-button {
   width: 56px;
@@ -395,7 +407,7 @@
 @media (max-width: 768px) {
   .audio-player-container {
     height: 100px;
-    bottom: 64px;
+    /* bottom: 64px; */
   }
 
   .song-info {

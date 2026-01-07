@@ -11,6 +11,7 @@ import {
   ChevronLast,
   ListMusic,
   Loader2,
+  Monitor,
   PauseCircle,
   PlayCircle,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import {
 import { useSettingStore } from "../store/setting";
 import { mediaSessionManager } from "../lib/media-session";
 import { useScrobble } from "../hooks/use-scrobble";
+import { useDesktopLyrics } from "../hooks/use-desktop-lyrics";
 import "../styles/AudioPlayer.css";
 
 export const AudioPlayer = () => {
@@ -58,8 +60,14 @@ export const AudioPlayer = () => {
     setShowPlaylist,
   } = usePlaylist();
 
+  // 获取协议，判断为安全环境
+  const safe_protocol = window.location.protocol === "https:" || window.location.host.startsWith("localhost");
+
   // const {audioRef} = useBlobAudio(currentSong);
   const { play_mode } = useSettingStore();
+
+  // 桌面歌词功能
+  const { isPipOpen, openPipLyrics, closePipLyrics } = useDesktopLyrics();
 
   const pendingTimeRef = useRef(0) // 记录用户拖动进度条时，播放器暂停时的 currentTime
 
@@ -228,6 +236,21 @@ export const AudioPlayer = () => {
     "global",
     10,
     "下一首"
+  );
+
+  // l 键：开启/关闭桌面歌词
+  useKeyboardShortcut(
+    "l",
+    () => {
+      if (isPipOpen) {
+        closePipLyrics();
+      } else {
+        openPipLyrics();
+      }
+    },
+    "global",
+    10,
+    "开启/关闭桌面歌词"
   );
 
   useKeyboardShortcut(
@@ -596,7 +619,7 @@ export const AudioPlayer = () => {
               </div>
             </div>
 
-            {/* 右侧：音量 + 播放列表 */}
+            {/* 右侧：音量 + 桌面歌词 + 播放列表 */}
             <div className="player-right">
               <VolumeControl
                 volume={volume}
@@ -604,6 +627,17 @@ export const AudioPlayer = () => {
                 showVolume={showVolume}
                 setShowVolume={setShowVolume}
               />
+
+              {safe_protocol && // 仅在 https 协议下显示桌面歌词按钮
+                <button
+                  className={`control-button ${isPipOpen ? "active" : ""}`}
+                  onClick={() => isPipOpen ? closePipLyrics() : openPipLyrics()}
+                  aria-label={isPipOpen ? "关闭桌面歌词" : "开启桌面歌词"}
+                  title={isPipOpen ? "关闭桌面歌词" : "开启桌面歌词"}
+                >
+                  <Monitor size={20} />
+                </button>
+              }
 
               <button
                 className="control-button"

@@ -1,5 +1,5 @@
 // components/MusicCard.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Music } from "../lib/defined";
 import { delLyric, getCoverSmallUrl, starSong, unstarSong } from "../lib/api";
 import { Cover } from "./Cover";
@@ -26,6 +26,18 @@ export const MusicCard = ({
   size = 'medium',
   showActions = true
 }: MusicCardProps) => {
+
+  const sizeNum = useMemo(() => {
+    switch (size) {
+      case'small':
+        return 120;
+      case 'large':
+        return 180;
+      default:
+        return 140;
+    }
+  }, [size])
+
   const sizeClasses = {
     small: 'w-[120px] h-[120px]',
     medium: 'w-[140px] h-[140px]',
@@ -143,6 +155,7 @@ export const MusicCard = ({
       >
         <div className={`group relative ${sizeClasses[size]} overflow-hidden`}>
           <Cover
+            size={sizeNum}
             src={getCoverSmallUrl(music.cover_art)}
             roundType="card_text"
             className="group-hover:opacity-75 group-hover:scale-105 transition-all duration-300 ease-in-out"

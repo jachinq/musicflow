@@ -64,7 +64,7 @@ export const Header = () => {
             <div className="rounded-full overflow-hidden">
               <img src="/favicon.ico" alt="" width={28} />
             </div>
-            <span className="hover:text-primary-hover">Musicflow</span>
+            <span className="hover:text-primary-hover sm:block hidden">Musicflow</span>
           </div>
         </Link>
         <div className="w-1/2 flex justify-end items-center gap-2">
