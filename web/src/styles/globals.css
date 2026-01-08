@@ -218,17 +218,35 @@
 }
 
 .mask {
-  @apply bg-background opacity-50 fixed top-0 left-0 w-full h-full z-10 transition-opacity duration-300 ease-in-out;
+  @apply bg-black opacity-50 fixed top-0 left-0 w-full h-full z-10 transition-opacity duration-300 ease-in-out;
 }
 .dialog {
   @apply bg-card rounded-lg shadow-md w-full max-w-xl mx-auto fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20;
 }
 .button {
-  @apply bg-primary text-primary-foreground hover:bg-primary-hover rounded-full px-4 py-2 cursor-pointer select-none text-center;
+  @apply bg-primary text-primary-foreground hover:bg-primary-hover rounded-full px-4 py-2 cursor-pointer select-none text-center transition-all duration-300;
+}
+.button-small {
+  @apply px-2 py-1 text-sm;
 }
 .button-info {
   @apply hover:text-primary-hover rounded-full px-4 py-2 cursor-pointer select-none text-center;
 }
 .button-danger {
   @apply text-destructive-foreground hover:bg-destructive rounded-full px-4 py-2 cursor-pointer select-none text-center;
+}
+
+
+/* 隐藏滚动条 */
+@layer utilities {
+  /* Chrome, Safari 和 Edge */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* IE, Edge 和 Firefox */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE 和 Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }

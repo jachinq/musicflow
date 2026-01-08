@@ -69,7 +69,7 @@ function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean
   const getContainerHeight = () => {
     let height = "max-h-[calc(100vh-60px)]";
     if (currentSong) {
-      height = "max-h-[calc(100vh-270px)]";
+      height = "sm:max-h-[calc(100vh-270px)] max-h-[calc(100vh-500px)]";
     }
     return `${height} text-center overflow-y-scroll overflw-x-hidden my-4 px-8 w-full hide-scrollbar`;
   };
@@ -83,7 +83,7 @@ function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean
   const lyricName = (line: { time: number; text: string }) => {
     let focus = currentLyric?.time === line.time ? lyricNameFocus() : "";
     if (currentSong?.id !== song_id) focus = "";
-    return `${focus} min-h-10 flex items-center transition-all duration-300 justify-center`;
+    return `${focus} min-h-10 flex items-center transition-all duration-300 justify-center sm:text-lg text-sm`;
   };
 
   return (

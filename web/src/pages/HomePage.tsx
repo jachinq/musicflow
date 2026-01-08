@@ -2,7 +2,7 @@
 
 import { FlameKindling, Loader, Rabbit } from "lucide-react";
 import { useHomePageStore } from "../store/home-page";
-import { NewestAlbums, RecentlyAlbums, TopAlbums, RandomSongs } from "../components/RecommendationSections";
+import { NewestAlbums, RecentlyAlbums, TopAlbums, RandomSongs, AlbumsList } from "../components/RecommendationSections";
 
 
 export const HomePage = () => {
@@ -39,13 +39,15 @@ export const HomePage = () => {
       <RandomSongs />
 
       {/* 最新专辑 */}
-      <NewestAlbums />
+      <AlbumsList type="newest" />
 
       {/* 最近播放 */}
-      <RecentlyAlbums />
+      <AlbumsList type="recent" />
+
 
       {/* 热门推荐 */}
-      <TopAlbums />
+      <AlbumsList type="top" />
+
 
       {randomSongs?.length === 0 && <>
         <div className="flex flex-col gap-2 justify-center items-center p-4">

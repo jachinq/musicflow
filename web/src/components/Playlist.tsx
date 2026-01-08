@@ -68,18 +68,17 @@ const Playlist = ({ clearPlaylist }: Props) => {
     return null;
   }
 
-  return <>
-    <div
-      className="mask"
-      style={{ opacity: 0 }}
+  return <div className="relative">
+    <div className="mask"
+      style={{ opacity: 0.3 }}
     // style={{ opacity: showPlaylist ? 0.5 : 0 }}
     ></div>
-    <div className="fixed inset-0 top-[68px] z-50 flex">
+    <div className="fixed sm:inset-0 sm:top-[68px] bottom-0 z-50 flex">
       <div className="flex-1"></div>
 
       <div
         ref={clickAwayRef as any}
-        className={`min-w-[320px] h-[calc(100vh-180px)] bg-secondary overflow-hidden text-secondary-foreground rounded-md transform transition-transform duration-300 ease-in-out ${adaptiveClass()}`}
+        className={`min-w-[320px] sm:h-[calc(100vh-180px)] h-[calc(100vh-100px)] bg-secondary overflow-hidden text-secondary-foreground rounded-md transform transition-transform duration-300 ease-in-out ${adaptiveClass()}`}
         style={{ overscrollBehavior: "contain" }}
       >
         <div className="p-4 flex justify-between items-center sticky top-0 bg-secondary z-10">
@@ -99,7 +98,7 @@ const Playlist = ({ clearPlaylist }: Props) => {
         </div>
         <div ref={containerRef}
           onScroll={(e) => { e.stopPropagation() }}
-          className="flex flex-col gap-2 overflow-y-scroll h-[calc(100vh-280px)]"
+          className="flex flex-col gap-2 overflow-y-scroll sm:h-[calc(100vh-280px)] h-[calc(100vh-200px)]"
           style={{ overscrollBehavior: "contain" }} >
           {displaySongs.map((song) => (
             <div
@@ -152,7 +151,7 @@ const Playlist = ({ clearPlaylist }: Props) => {
         </div>
       </div>
     </div>
-  </>
+  </div>
 };
 
 export default Playlist;

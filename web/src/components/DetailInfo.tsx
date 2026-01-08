@@ -117,12 +117,12 @@ const Genres = ({
           <X
             onClick={(e) => handleDeleteGenre(e, genre)}
             className="hover:text-destructive"
-            size={16}
+            size={12}
           />
         </GenreElement>
       ))}
       <div className="genre" onClick={setShowNewTagForm.bind(null, true)}>
-        <PlusIcon size={16} />
+        <PlusIcon size={12} />
       </div>
       {showNewTagForm && (
         <NewTagForm

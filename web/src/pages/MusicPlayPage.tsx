@@ -110,16 +110,17 @@ function MusicPlayPage() {
 
       {/* 原有页面内容 */}
       <div
-        className="grid gap-8 items-start px-8 overflow-hidden"
+        className="grid sm:gap-8 items-start px-8 overflow-hidden"
         style={{ gridTemplateColumns: gridCols }}
       >
+      
+      {/* 专辑封面 */}
       <div
         className={`flex justify-center w-full ${!isSmallDevice
-          ? "min-h-[calc(100vh-105px)] items-center sticky top-[0px]"
+          ? "min-h-[calc(100vh-105px)] items-center sm:sticky top-[0px]"
           : "p-8 items-start"
           }`}
       >
-
         <div
           className="album-spin-wrapper"
           style={{ borderWidth: album_border_width }}
@@ -139,8 +140,8 @@ function MusicPlayPage() {
         </div>
       </div>
       <div className="grip grid-rows-[120px, 1fr] relative">
-        <div className="flex gap-2 flex-col justify-center items-center w-full pt-8 pb-2  sticky top-[0px] overflow-hidden">
-          <h1 className="text-3xl font-bold">{detailSong?.title}</h1>
+        <div className="flex gap-2 flex-col justify-center items-center w-full sm:pt-8 pb-2  sticky top-[0px] overflow-hidden">
+          <h1 className="sm:text-3xl text-xl font-bold">{detailSong?.title}</h1>
           <div className="flex justify-between items-center gap-4 text-muted-foreground">
             <span className="text-sm">{detailSong?.artist}</span>
           </div>
