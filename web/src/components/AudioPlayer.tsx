@@ -35,7 +35,6 @@ export const AudioPlayer = () => {
   const location = useLocation();
   const [loadStatus, setLoadStatus] = useState<string>("");
 
-  const isDetailPage = useMemo(() => (checkRoute(location, MyRoutes.Player)), [location]);
 
   const {
     currentTime,
@@ -58,6 +57,8 @@ export const AudioPlayer = () => {
     togglePlaylist,
     setAllSongs,
     setShowPlaylist,
+    isDetailPage,
+    setIsDetailPage,
   } = usePlaylist();
 
   // 获取协议，判断为安全环境
@@ -189,6 +190,12 @@ export const AudioPlayer = () => {
       audioRef.current.volume = volume;
     }
   }, [volume]);
+
+  // 检查是否为详情播放页
+  useEffect(()=> {
+    setIsDetailPage(checkRoute(location, MyRoutes.Player));
+    
+  }, [location])
 
   // 空格键控制播放暂停
   useKeyboardShortcut(

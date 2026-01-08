@@ -3,9 +3,7 @@ import { Music2Icon, SettingsIcon, TagIcon, Heart } from "lucide-react";
 import { useState } from "react";
 import { MyRoutes } from "../lib/defined";
 import { toast } from "sonner";
-import { useEffect } from "react";
 import { usePlaylist } from "../store/playlist";
-import { getPlayQueue } from "../lib/api";
 import { SearchInput } from "./SearchInput";
 
 export const Header = () => {
@@ -26,27 +24,6 @@ export const Header = () => {
     // 跳转到搜索结果页面
     navigate(`${MyRoutes.Search}?q=${encodeURIComponent(trimmedText)}`);
   };
-
-    const { setAllSongs, setCurrentSong } = usePlaylist();
-
-  useEffect(() => {
-    // 获取播放列表
-    getPlayQueue(1, 0, (data) => {
-      if (!data || !data.success) {
-        console.error("获取播放列表失败", data);
-        return;
-      }
-      setAllSongs(data.data.list, true);
-      if (data.data.current_song) {
-        // 应用首次加载，标记为用户未交互。不进行自动播放
-        setCurrentSong(data.data.current_song, false);
-      }
-    },
-      (error) => {
-        console.error("获取播放列表失败", error);
-      }
-    );
-  }, [])
 
   return (
     <nav

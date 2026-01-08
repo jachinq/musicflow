@@ -97,13 +97,25 @@ function MusicPlayPage() {
   }
 
   return (
-    <div
-      className="grid gap-8 items-start px-8"
-      style={{ gridTemplateColumns: gridCols }}
-    >
+    <div className="relative h-[calc(100vh-105px)]">
+      {/* 模糊背景层 */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <img
+          src={getCoverMediumUrl(currentSong?.cover_art || '')}
+          className="w-full h-full object-cover scale-110 blur-[60px] opacity-30 transition-opacity duration-500"
+          alt=""
+        />
+        {/* <div className="absolute inset-0 bg-gradient-to-b from-background/80 to-background/95" /> */}
+      </div>
+
+      {/* 原有页面内容 */}
+      <div
+        className="grid gap-8 items-start px-8 overflow-hidden"
+        style={{ gridTemplateColumns: gridCols }}
+      >
       <div
         className={`flex justify-center w-full ${!isSmallDevice
-          ? "min-h-[calc(100vh-150px)] items-center sticky top-[60px]"
+          ? "min-h-[calc(100vh-105px)] items-center sticky top-[0px]"
           : "p-8 items-start"
           }`}
       >
@@ -126,12 +138,11 @@ function MusicPlayPage() {
           />
         </div>
       </div>
-      <div className="grip grid-rows-[180px, 1fr] relative">
-        <div className="flex gap-2 flex-col justify-center items-center w-full py-8 bg-background sticky top-[60px]">
+      <div className="grip grid-rows-[120px, 1fr] relative">
+        <div className="flex gap-2 flex-col justify-center items-center w-full pt-8 pb-2  sticky top-[0px] overflow-hidden">
           <h1 className="text-3xl font-bold">{detailSong?.title}</h1>
           <div className="flex justify-between items-center gap-4 text-muted-foreground">
-            <span>专辑：{detailSong?.album}</span>
-            <span>歌手：{detailSong?.artist}</span>
+            <span className="text-sm">{detailSong?.artist}</span>
           </div>
           <OptionGroup
             defaultValue={tabId}
@@ -153,6 +164,7 @@ function MusicPlayPage() {
           onClose={() => setShowImageViewer(false)}
         />
       )}
+      </div>
     </div>
   );
 }

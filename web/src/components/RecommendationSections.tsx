@@ -424,7 +424,7 @@ export function RandomSongs() {
       <div className="relative overflow-hidden">
         <div className={`card-container grid gap-4 w-full justify-center grid-cols-[repeat(auto-fill,minmax(${cardSize ==='small'? '120px' : '140px'},1fr))]`}>
           {randomSongs.map((music: any) => (
-            <MusicCard music={music} onPlay={playSingleSong} size={cardSize}/>
+            <MusicCard key={music.id} music={music} onPlay={playSingleSong} size={cardSize}/>
           ))}
         </div>
       </div>

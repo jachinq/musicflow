@@ -27,7 +27,7 @@ export const DetailInfo = ({ song, contentH = false }: { song?: Music, contentH?
   };
 
   return (
-    <div className={`flex flex-col items-center px-8 py-4 ${contentH? "h-full" : "min-h-[calc(100vh-260px)]"}`}>
+    <div className={`flex flex-col items-center px-8 py-4 ${contentH? "h-full" : "min-h-[calc(100vh-270px)]"}`}>
       <div className="flex flex-col gap-4">
         <ShowItem name="名称" value={song.title} />
         <ShowItem name="歌手" value={song.artist || (song.artists && song.artists.join(" / "))} className="cursor-pointer hover:text-primary-hover" onClick={() => { gotoArtist() }}/>
@@ -113,7 +113,7 @@ const Genres = ({
   return (
     <div className="flex flex-wrap gap-2">
       {genres.map((genre, index) => (
-        <GenreElement key={genre + index} genre={genre} className="flex items-center gap-1">
+        <GenreElement key={genre + index} genre={genre} className="flex items-center gap-1 text-xs">
           <X
             onClick={(e) => handleDeleteGenre(e, genre)}
             className="hover:text-destructive"

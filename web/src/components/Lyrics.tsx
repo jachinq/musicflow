@@ -20,7 +20,7 @@ function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean
           setLyrics([]);
           return
         };
-        const limit = 6; // 前后各显示n行空白
+        const limit = 4; // 前后各显示n行空白
         const empty: lyric = { time: 0, text: "", id: 0, song_id: "" };
         let firstList = [];
         for (let i = 0; i < limit; i++) {
@@ -69,7 +69,7 @@ function Lyrics({song_id, filterEmpty}: {song_id?: string, filterEmpty?: boolean
   const getContainerHeight = () => {
     let height = "max-h-[calc(100vh-60px)]";
     if (currentSong) {
-      height = "max-h-[calc(100vh-220px)]";
+      height = "max-h-[calc(100vh-270px)]";
     }
     return `${height} text-center overflow-y-scroll overflw-x-hidden my-4 px-8 w-full hide-scrollbar`;
   };

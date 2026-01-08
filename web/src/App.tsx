@@ -2,7 +2,7 @@
 import "./styles/globals.css";
 import { Toaster } from "sonner";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { HomePage } from "./pages/HomePage";
 import MusicPlayPage from "./pages/MusicPlayPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -22,14 +22,33 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import LoadingBar from "./components/LoadingBar";
 // import { MobileBottomNav } from "./components/MobileBottomNav";
 import { PageTransition } from "./components/PageTransition";
-import { getStarredList } from "./lib/api";
+import { getPlayQueue, getStarredList } from "./lib/api";
 
 function App() {
-  const { currentSong } = usePlaylist();
+  const { currentSong, isDetailPage, setAllSongs, setCurrentSong } = usePlaylist();
   const { setStarredSongs } = useFavoriteStore();
 
-  // 应用启动时初始化收藏数据
+  // 应用启动时初始化
   useEffect(() => {
+
+    // 获取播放列表
+    getPlayQueue(1, 0, (data) => {
+      if (!data || !data.success) {
+        console.error("获取播放列表失败", data);
+        return;
+      }
+      setAllSongs(data.data.list, true);
+      if (data.data.current_song) {
+        // 应用首次加载，标记为用户未交互。不进行自动播放
+        setCurrentSong(data.data.current_song, false);
+      }
+    },
+      (error) => {
+        console.error("获取播放列表失败", error);
+      }
+    );
+
+    // 收藏数据
     getStarredList(
       (result) => {
         if (result && result.success) {
@@ -41,7 +60,7 @@ function App() {
         console.error("初始化收藏数据失败:", error);
       }
     );
-  }, [setStarredSongs]);
+  }, []);
 
   return (
     <ErrorBoundary>
@@ -49,7 +68,7 @@ function App() {
         <Router>
           <LoadingBar />
           <div className="min-w-[320px] min-h-screen ">
-            <Header />
+            {!isDetailPage && <Header />}
 
             <div
               className={`${currentSong && "sm:mb-[100px] mb-[200px]"

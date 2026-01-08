@@ -72,10 +72,12 @@ interface PlaylistState {
   displaySongs: Music[];
   currentSong: Music | null;
   loadedCount: number;
-  isLoadMore: boolean
+  isLoadMore: boolean;
+  isDetailPage: boolean;
   loadMore: () => void;
   setOpenPlaylist: (show: boolean) => void;
   setShowPlaylist: (show: boolean) => void;
+  setIsDetailPage: (show: boolean) => void;
   togglePlaylist: (open?: boolean) => void;
   setAllSongs: (songs: Music[], initial?: boolean) => void;
   setCurrentSong: (song: Music, userInteract?: boolean) => void;
@@ -93,8 +95,10 @@ export const usePlaylist = create<PlaylistState>((set, get) => ({
   displaySongs: [],
   currentSong: null,
   loadedCount: 0,
+  isDetailPage: false,
   setOpenPlaylist: (show) => set(() => ({ openPlaylist: show })),
   setShowPlaylist: (show) => set(() => ({ showPlaylist: show })),
+  setIsDetailPage: (value) => set(() => ({ isDetailPage: value })),
   isLoadMore: false,
   togglePlaylist: (open?: boolean) =>
     set(() => {

@@ -11,9 +11,9 @@
       "music_dir": "../music"
     },
     "subsonic": {
-      "server_url": "http://localhost:4040/",
-      "username": "admin",
-      "password": "admin",
+      "server_url": "http://192.168.2.127:10021/",
+      "username": "jachin",
+      "password": "176866",
       "use_token_auth": true,
       "api_version": "1.16.1",
       "client_name": "MusicFlow",
