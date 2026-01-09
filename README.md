@@ -95,10 +95,20 @@ docker-compose up -d
 - 2026-01-01: Version 2.0.0. 
   - Support subsonic api.
   - Improve ui experience.
-- 2026-01-03: Version 2.0.1. 
+- 2026-01-03: Version 2.1.0. 
   - Web Media Session API(change AudioContext to Audio for support).
   - Use Subsonic API for play queue.
   - Loacl mode now no use database.
+  - scrobble feature
+- 2026-01-04: Version 2.2.0.
+  - Home page design, more albums show.
+  - Local mode support scrobble and albums sort.
+  - Now change random songs to Daily recommed songs.
+- 2026-01-05: Version 2.3.0.
+  - Start songs.
+  - Add song to playlist.
+  - Pwa support and new App Icon.
+  - Audio play detail page UI improvement.
 
 
 # License
